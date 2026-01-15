@@ -36,6 +36,7 @@ private:
 class Highlight {
 public:
     constexpr Highlight(sf::Color light, sf::Color dark): lightHighlight{light}, darkHighlight{dark} {};
+    bool operator==(Highlight other) const { return lightHighlight == other.lightHighlight && darkHighlight == other.darkHighlight; }
     sf::Color lightHighlight;
     sf::Color darkHighlight;
 };
@@ -52,6 +53,7 @@ public:
     bool hasHighlight() const;
     void setHighlight(Highlight highlight);
     void clearHighlight();
+    void clearHighlight(Highlight highlight);
     void toggleHighlight(Highlight highlight);
 
 private:
@@ -85,16 +87,25 @@ public:
     // Darker green, legal move dark highlight color
     // rgb(68, 151, 48)
     static constexpr sf::Color DARK_LEGAL_SQUARE_COLOR{68, 151, 48};
-    // Lighter red, legal move light highlight color
+    // Lighter green, legal move light highlight color
     // rgb(91, 177, 70)
     static constexpr sf::Color LIGHT_LEGAL_SQUARE_COLOR{91, 177, 70};
     static constexpr Highlight LEGAL_HIGHLIGHT{LIGHT_LEGAL_SQUARE_COLOR, DARK_LEGAL_SQUARE_COLOR};
+    // Darker yellow, selected move dark highlight color
+    // rgb(200, 221, 80)
+    static constexpr sf::Color DARK_SELECTED_SQUARE_COLOR{200, 221, 80};
+    // Lighter yellow, selected move light highlight color
+    // rgb(237, 253, 142)
+    static constexpr sf::Color LIGHT_SELECTED_SQUARE_COLOR{237, 253, 142};
+    static constexpr Highlight SELECTED_HIGHLIGHT{LIGHT_SELECTED_SQUARE_COLOR, DARK_SELECTED_SQUARE_COLOR};
 
     Board() {};
     Square& at(int i);
     void draw(sf::RenderWindow& window) const;
+    void draw(sf::RenderWindow& window, std::optional<int> heldSquare) const;
     void updateBoardFromGame(const Game& game);
-    void resetAllHighlights();
+    void clearAllHighlights();
+    void clearAllHighlights(Highlight highlight);
     static int getSquareIndexFromCoordinates(int x, int y);
 
 private:

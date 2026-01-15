@@ -25,6 +25,7 @@ class Piece {
 public:
     Piece();
     Piece(PieceType type, Color color);
+    bool operator==(Piece other) const { return type_ == other.type_ && color_ == other.color_; }
     PieceType type() const;
     Color color() const;
     bool exists() const;
@@ -41,6 +42,10 @@ protected:
 class Move {
 public:
     Move(int sourceSquare, int targetSquare, Piece sourcePiece, Piece targetPiece);
+    bool operator==(Move other) const { return sourceSquare_ == other.sourceSquare_ &&
+                                               targetSquare_ == other.targetSquare_ &&
+                                               sourcePiece_ == other.sourcePiece_ &&
+                                               targetPiece_ == other.targetPiece_; }
     int sourceSquare() const;
     int targetSquare() const;
     Piece sourcePiece() const;
@@ -65,6 +70,7 @@ public:
     bool tryMove(const Move move);
     void makeMove(const Move move);
     bool isMoveLegal(const Move move) const;
+    std::vector<Move> generateLegalMoves(int sourceSquare) const;
     std::vector<Move> generatePseudoLegalMoves(int sourceSquare) const;
     std::vector<Move> generatePseudoLegalPawnMoves(int sourceSquare) const;
     std::vector<Move> generatePseudoLegalKnightMoves(int sourceSquare) const;
@@ -75,6 +81,7 @@ public:
     std::array<Piece, 64> board() const;
     static std::string intToAlgebraicNotation(int square);
     static bool onBoard(int square);
+    static bool onBoard(int col, int row);
 
 private:
     Color currentTurn_;

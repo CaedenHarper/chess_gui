@@ -407,11 +407,92 @@ std::vector<Move> Game::generatePseudoLegalPawnMoves(int sourceSquare) const {
 std::vector<Move> Game::generatePseudoLegalKnightMoves(int sourceSquare) const {
     std::vector<Move> out;
 
+    const Piece sourcePiece = board_.at(sourceSquare);
+    const Color sourceColor = sourcePiece.color();
+
+    const int row = sourceSquare / 8;
+    const int col = sourceSquare % 8;
+
+    // 8 possible moves
+    // comments are from whites POV, but they are symmetrical for black
+    constexpr int deltas[8][2] {
+        // col (x), row (y)
+        {-2, -1}, // left up
+        {-1, -2}, // up left
+        {1, -2}, // up right
+        {2, -1}, // right up
+        {2, 1}, // right down
+        {1, 2}, // down right
+        {-1, 2}, // down left
+        {-2, 1}, // left down
+    };
+
+    for(int i = 0; i < 8; i++) {
+        const int col2 = col + deltas[i][0];
+        const int row2 = row + deltas[i][1];
+        const int square2 = row2 * 8 + col2;
+        if(!onBoard(square2)) continue;
+        
+        const Piece piece2 = board_.at(square2);
+
+        // Can move if target square is empty or has enemy
+        if (!piece2.exists() || piece2.color() != sourceColor) {
+            out.push_back(Move{sourceSquare, square2, sourcePiece, piece2});
+        }
+    }
+
     return out;
 }
 
 std::vector<Move> Game::generatePseudoLegalBishopMoves(int sourceSquare) const {
     std::vector<Move> out;
+
+    const Piece sourcePiece = board_.at(sourceSquare);
+    const Color sourceColor = sourcePiece.color();
+
+    const int row = sourceSquare / 8;
+    const int col = sourceSquare % 8;
+
+    // four possible moves (which are repeated)
+    constexpr int deltas[4][2] {
+        // col (x), row (y)
+        {-1, -1}, // up left
+        {1, -1}, // up right
+        {-1, 1}, // down left
+        {1, 1}, // down right
+    };
+
+    for(int i = 0; i < 4; i++) {
+        const int dcol = deltas[i][0];
+        const int drow = deltas[i][1];
+
+        // start with one delta and continue until off board, or until a piece is hit
+        int curCol = col + dcol;
+        int curRow = row + drow;
+        while(onBoard(curCol, curRow)) {
+            const int curSquare = curRow * 8 + curCol;
+            const Piece curPiece = board_.at(curSquare);
+
+            if(!curPiece.exists()) {
+                // empty square; we can continue
+                out.push_back(Move{sourceSquare, curSquare, sourcePiece, curPiece});
+            } else {
+                // theres a piece here
+                
+                if(curPiece.color() != sourceColor) {
+                    // enemy piece, we can capture
+                    out.push_back(Move{sourceSquare, curSquare, sourcePiece, curPiece});
+                }
+
+                // since square is occupied we stop
+                break;
+            }
+
+            // check next square
+            curCol += dcol;
+            curRow += drow;
+        }
+    }
 
     return out;
 }
@@ -419,19 +500,159 @@ std::vector<Move> Game::generatePseudoLegalBishopMoves(int sourceSquare) const {
 std::vector<Move> Game::generatePseudoLegalRookMoves(int sourceSquare) const {
     std::vector<Move> out;
 
+    const Piece sourcePiece = board_.at(sourceSquare);
+    const Color sourceColor = sourcePiece.color();
+
+    const int row = sourceSquare / 8;
+    const int col = sourceSquare % 8;
+
+    // four possible moves (which are repeated)
+    constexpr int deltas[4][2] {
+        // col (x), row (y)
+        {0, 1}, // up
+        {0, -1}, // down
+        {1, 0}, // right
+        {-1, 0}, // left
+    };
+
+    for(int i = 0; i < 4; i++) {
+        const int dcol = deltas[i][0];
+        const int drow = deltas[i][1];
+
+        // start with one delta and continue until off board, or until a piece is hit
+        int curCol = col + dcol;
+        int curRow = row + drow;
+        while(onBoard(curCol, curRow)) {
+            const int curSquare = curRow * 8 + curCol;
+            const Piece curPiece = board_.at(curSquare);
+
+            if(!curPiece.exists()) {
+                // empty square; we can continue
+                out.push_back(Move{sourceSquare, curSquare, sourcePiece, curPiece});
+            } else {
+                // theres a piece here
+                
+                if(curPiece.color() != sourceColor) {
+                    // enemy piece, we can capture
+                    out.push_back(Move{sourceSquare, curSquare, sourcePiece, curPiece});
+                }
+
+                // since square is occupied we stop
+                break;
+            }
+
+            // check next square
+            curCol += dcol;
+            curRow += drow;
+        }
+    }
+
     return out;
 }
 
 std::vector<Move> Game::generatePseudoLegalQueenMoves(int sourceSquare) const {
     std::vector<Move> out;
 
+    const Piece sourcePiece = board_.at(sourceSquare);
+    const Color sourceColor = sourcePiece.color();
+
+    const int row = sourceSquare / 8;
+    const int col = sourceSquare % 8;
+
+    // eight possible moves (which are repeated)
+    constexpr int deltas[9][2] {
+        // col (x), row (y)
+        // rook moves
+        {0, 1}, // up
+        {0, -1}, // down
+        {1, 0}, // right
+        {-1, 0}, // left
+        // bishop moves
+        {-1, -1}, // up left
+        {1, -1}, // up right
+        {-1, 1}, // down left
+        {1, 1}, // down right
+    };
+
+    for(int i = 0; i < 9; i++) {
+        const int dcol = deltas[i][0];
+        const int drow = deltas[i][1];
+
+        // start with one delta and continue until off board, or until a piece is hit
+        int curCol = col + dcol;
+        int curRow = row + drow;
+        while(onBoard(curCol, curRow)) {
+            const int curSquare = curRow * 8 + curCol;
+            const Piece curPiece = board_.at(curSquare);
+
+            if(!curPiece.exists()) {
+                // empty square; we can continue
+                out.push_back(Move{sourceSquare, curSquare, sourcePiece, curPiece});
+            } else {
+                // theres a piece here
+                
+                if(curPiece.color() != sourceColor) {
+                    // enemy piece, we can capture
+                    out.push_back(Move{sourceSquare, curSquare, sourcePiece, curPiece});
+                }
+
+                // since square is occupied we stop
+                break;
+            }
+
+            // check next square
+            curCol += dcol;
+            curRow += drow;
+        }
+    }
+
     return out;
 }
 
+// TODO: castling
 std::vector<Move> Game::generatePseudoLegalKingMoves(int sourceSquare) const {
     std::vector<Move> out;
 
+    const Piece sourcePiece = board_.at(sourceSquare);
+    const Color sourceColor = sourcePiece.color();
+
+    const int row = sourceSquare / 8;
+    const int col = sourceSquare % 8;
+
+    // 8 possible moves
+    // comments are from whites POV, but they are symmetrical for black
+    constexpr int deltas[8][2] {
+        // col (x), row (y)
+        {-1, -1}, // up left
+        {0, -1}, // up
+        {1, -1}, // up right
+        {-1, 0}, // left
+        {1, 0}, // right
+        {-1, 1}, // down left
+        {0, 1}, // down
+        {1, 1}, // down right
+    };
+
+    for(int i = 0; i < 8; i++) {
+        const int col2 = col + deltas[i][0];
+        const int row2 = row + deltas[i][1];
+        const int square2 = row2 * 8 + col2;
+        if(!onBoard(square2)) continue;
+        
+        const Piece piece2 = board_.at(square2);
+
+        // Can move if target square is empty or has enemy
+        if (!piece2.exists() || piece2.color() != sourceColor) {
+            out.push_back(Move{sourceSquare, square2, sourcePiece, piece2});
+        }
+    }
+
     return out;
+}
+
+std::vector<Move> Game::generateLegalMoves(int sourceSquare) const {
+    // TODO: implement verification that king does NOT get checked
+    return generatePseudoLegalMoves(sourceSquare);
 }
 
 std::vector<Move> Game::generatePseudoLegalMoves(int sourceSquare) const {
@@ -447,14 +668,16 @@ std::vector<Move> Game::generatePseudoLegalMoves(int sourceSquare) const {
 }
 
 bool Game::isMoveLegal(const Move move) const {
-    std::vector<Move> legalMoves = generatePseudoLegalMoves(move.sourceSquare());
-    if(legalMoves.empty()) return false;
-    
-    return true;
-    // TODO: check if king would be checked
+    std::vector<Move> legalMoves = generateLegalMoves(move.sourceSquare());
+    return std::find(legalMoves.begin(), legalMoves.end(), move) != legalMoves.end();
 }
 
 bool Game::tryMove(const Move move) {
+    // only allow current turn's player to make moves
+    if(move.sourcePiece().color() != currentTurn_) {
+        return false;
+    }
+
     if(!isMoveLegal(move)) {
         return false;
     }
@@ -486,6 +709,16 @@ std::string Game::intToAlgebraicNotation(int n) {
     return file + rank;
 }
 
+/*
+    Check if square is on board.
+*/
 bool Game::onBoard(int square) {
     return 0 <= square && square <= 63;
+}
+
+/*
+    Check if column and row combination is on board.
+*/
+bool Game::onBoard(int col, int row) {
+    return 0 <= col && col <= 7 && 0 <= row && row <= 7;
 }

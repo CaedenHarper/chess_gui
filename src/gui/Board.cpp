@@ -48,19 +48,19 @@ PieceSprite::PieceSprite(Piece piece) : Piece(piece.type(), piece.color()) {
 }
 
 const sf::Sprite* PieceSprite::sprite() const {
-    return sprite_.has_value() ? &sprite_.value() : nullptr;
+    return sprite_ ? &sprite_.value() : nullptr;
 }
 
 void PieceSprite::rebuild() {
     // if we need to destroy sprite
     if (type_ == PieceType::None) {
-        sprite_ = std::nullopt;
+        sprite_.reset();
         return;
     }
 
     // we need sprite
     // either reuse existing texture or create new one if it does not exist
-    if(sprite_.has_value()) {
+    if(sprite_) {
         sprite_.value().setTexture(TextureCache::get(type_, color_), true);
     } else {
         sprite_ = sf::Sprite{TextureCache::get(type_, color_)};
@@ -68,7 +68,7 @@ void PieceSprite::rebuild() {
 }
 
 void PieceSprite::fitToSquare(float squareSizePx) {
-    if (!sprite_.has_value()) return;
+    if (!sprite_) return;
 
     // size of the texture region the sprite uses
     const sf::FloatRect bounds = sprite_->getLocalBounds(); // {left, top, width, height}
@@ -83,14 +83,14 @@ void PieceSprite::fitToSquare(float squareSizePx) {
 }
 
 void PieceSprite::centerOrigin() {
-    if (!sprite_.has_value()) return;
+    if (!sprite_) return;
     sf::FloatRect b = sprite_->getLocalBounds(); // {left, top, width, height}
     sprite_->setOrigin({b.position.x + b.size.x / 2.f, b.position.y + b.size.y / 2.f});
 }
 
 // TODO: should it be an error to try and use this when sprite does not exist?
 void PieceSprite::updateSpritePosition(float x, float y) {
-    if (sprite_.has_value()) sprite_.value().setPosition({x, y});
+    if (sprite_) sprite_.value().setPosition({x, y});
 }
 
 PieceSprite& Square::pieceSprite() {
@@ -114,15 +114,27 @@ void Square::setHighlight(Highlight highlight) {
 }
 
 void Square::toggleHighlight(Highlight highlight) {
-    if(highlight_.has_value()) {
-        highlight_ = std::nullopt;
+    if(highlight_) {
+        highlight_.reset();
     } else {
         highlight_ = highlight;
     }
 }
 
+/*
+    Clear all highlights.
+*/
 void Square::clearHighlight() {
-    highlight_ = std::nullopt;
+    highlight_.reset();
+}
+
+/*
+    Clear all highlights that match the inputted type.
+*/
+void Square::clearHighlight(Highlight highlight) {
+    if(highlight_ && highlight_.value() == highlight) {
+        highlight_.reset();
+    }
 }
 
 /*
@@ -146,6 +158,14 @@ Square& Board::at(int i) {
     Draw board to window.
 */
 void Board::draw(sf::RenderWindow& window) const {
+    // other overload skips over nothing given std::nullopt
+    draw(window, std::nullopt);
+}
+
+/*
+    Draw board to window, skipping over heldSquare. If heldSquare does not exist, draws normally.
+*/
+void Board::draw(sf::RenderWindow& window, std::optional<int> heldSquare) const {
     // draw row by row
     for(int squareIndex = 0; squareIndex < 64; squareIndex++) {
         // get row and col from index
@@ -171,7 +191,8 @@ void Board::draw(sf::RenderWindow& window) const {
         squareShape.setPosition({xpos, ypos});
         window.draw(squareShape);
 
-        if(squareObject.isEmpty()) continue;
+        // skip empty squares or square that is currently held
+        if(squareObject.isEmpty() || (heldSquare && heldSquare.value() == squareIndex)) continue;
 
         if (const sf::Sprite* sp = squareObject.pieceSprite().sprite()) {
             window.draw(*sp);
@@ -179,10 +200,21 @@ void Board::draw(sf::RenderWindow& window) const {
     }
 }
 
-void Board::resetAllHighlights() {
+/*
+    Clear all highlights.
+*/
+void Board::clearAllHighlights() {
     for(Square& square : board_) square.clearHighlight();
 }
 
+/*
+    Clear all highlights that match inputted highlight.
+*/
+void Board::clearAllHighlights(Highlight highlight) {
+    for(Square& square : board_) square.clearHighlight(highlight);
+}
+
+// TODO: consider making more performant by checking equality before updating for each piece
 void Board::updateBoardFromGame(const Game& game) {
     int squareIndex = 0;
     for(const Piece& piece : game.board()) {
