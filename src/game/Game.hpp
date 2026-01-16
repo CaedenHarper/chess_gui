@@ -69,24 +69,27 @@ public:
     std::optional<Move> parseMove(const std::string s) const;
     bool tryMove(const Move move);
     void makeMove(const Move move);
-    bool isMoveLegal(const Move move) const;
-    std::vector<Move> generateLegalMoves(int sourceSquare) const;
-    std::vector<Move> generatePseudoLegalMoves(int sourceSquare) const;
-    std::vector<Move> generatePseudoLegalPawnMoves(int sourceSquare) const;
-    std::vector<Move> generatePseudoLegalKnightMoves(int sourceSquare) const;
-    std::vector<Move> generatePseudoLegalBishopMoves(int sourceSquare) const;
-    std::vector<Move> generatePseudoLegalRookMoves(int sourceSquare) const;
-    std::vector<Move> generatePseudoLegalQueenMoves(int sourceSquare) const;
-    std::vector<Move> generatePseudoLegalKingMoves(int sourceSquare) const;
+    void undoMove(const Move move);
+    bool isMoveLegal(const Move move);
+    std::vector<Move> generateLegalMoves(int sourceSquare);
+    std::vector<Move> generatePseudoLegalMoves(int sourceSquare);
+    std::vector<Move> generatePseudoLegalPawnMoves(int sourceSquare);
+    std::vector<Move> generatePseudoLegalKnightMoves(int sourceSquare);
+    std::vector<Move> generatePseudoLegalBishopMoves(int sourceSquare);
+    std::vector<Move> generatePseudoLegalRookMoves(int sourceSquare);
+    std::vector<Move> generatePseudoLegalQueenMoves(int sourceSquare);
+    std::vector<Move> generatePseudoLegalKingMoves(int sourceSquare);
+    bool isSquareAttacked(int targetSquare, Color attackingColor) const;
+    bool isInCheck(Color colorToFind) const;
+    std::optional<int> findKingSquare(Color colorToFind) const;
     std::array<Piece, 64> board() const;
     static std::string intToAlgebraicNotation(int square);
     static bool onBoard(int square);
     static bool onBoard(int col, int row);
+    static Color oppositeColor(Color c);
 
 private:
     Color currentTurn_;
-    bool canWhiteCastle_;
-    bool canBlackCastle_;
     std::array<Piece, 64> board_;
     std::optional<Move> parseLongNotation_(const std::string sourceS, const std::string targetS) const;
     std::optional<Move> parseAlgebraicNotation_(const std::string s) const;

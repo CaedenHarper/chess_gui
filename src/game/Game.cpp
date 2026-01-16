@@ -350,7 +350,7 @@ std::optional<Move> Game::parseMove(const std::string s) const {
 }
 
 // TODO: en passent
-std::vector<Move> Game::generatePseudoLegalPawnMoves(int sourceSquare) const {
+std::vector<Move> Game::generatePseudoLegalPawnMoves(int sourceSquare) {
     /* 
         Four pawn capture types:
         1. One move forward (TODO: promotion)
@@ -404,7 +404,7 @@ std::vector<Move> Game::generatePseudoLegalPawnMoves(int sourceSquare) const {
 }
 
 
-std::vector<Move> Game::generatePseudoLegalKnightMoves(int sourceSquare) const {
+std::vector<Move> Game::generatePseudoLegalKnightMoves(int sourceSquare) {
     std::vector<Move> out;
 
     const Piece sourcePiece = board_.at(sourceSquare);
@@ -415,7 +415,7 @@ std::vector<Move> Game::generatePseudoLegalKnightMoves(int sourceSquare) const {
 
     // 8 possible moves
     // comments are from whites POV, but they are symmetrical for black
-    constexpr int deltas[8][2] {
+    constexpr int knightDeltas[8][2] {
         // col (x), row (y)
         {-2, -1}, // left up
         {-1, -2}, // up left
@@ -428,11 +428,11 @@ std::vector<Move> Game::generatePseudoLegalKnightMoves(int sourceSquare) const {
     };
 
     for(int i = 0; i < 8; i++) {
-        const int col2 = col + deltas[i][0];
-        const int row2 = row + deltas[i][1];
-        const int square2 = row2 * 8 + col2;
-        if(!onBoard(square2)) continue;
+        const int col2 = col + knightDeltas[i][0];
+        const int row2 = row + knightDeltas[i][1];
+        if(!onBoard(col2, row2)) continue;
         
+        const int square2 = row2 * 8 + col2;
         const Piece piece2 = board_.at(square2);
 
         // Can move if target square is empty or has enemy
@@ -444,7 +444,7 @@ std::vector<Move> Game::generatePseudoLegalKnightMoves(int sourceSquare) const {
     return out;
 }
 
-std::vector<Move> Game::generatePseudoLegalBishopMoves(int sourceSquare) const {
+std::vector<Move> Game::generatePseudoLegalBishopMoves(int sourceSquare) {
     std::vector<Move> out;
 
     const Piece sourcePiece = board_.at(sourceSquare);
@@ -497,7 +497,7 @@ std::vector<Move> Game::generatePseudoLegalBishopMoves(int sourceSquare) const {
     return out;
 }
 
-std::vector<Move> Game::generatePseudoLegalRookMoves(int sourceSquare) const {
+std::vector<Move> Game::generatePseudoLegalRookMoves(int sourceSquare) {
     std::vector<Move> out;
 
     const Piece sourcePiece = board_.at(sourceSquare);
@@ -550,7 +550,7 @@ std::vector<Move> Game::generatePseudoLegalRookMoves(int sourceSquare) const {
     return out;
 }
 
-std::vector<Move> Game::generatePseudoLegalQueenMoves(int sourceSquare) const {
+std::vector<Move> Game::generatePseudoLegalQueenMoves(int sourceSquare) {
     std::vector<Move> out;
 
     const Piece sourcePiece = board_.at(sourceSquare);
@@ -610,7 +610,7 @@ std::vector<Move> Game::generatePseudoLegalQueenMoves(int sourceSquare) const {
 }
 
 // TODO: castling
-std::vector<Move> Game::generatePseudoLegalKingMoves(int sourceSquare) const {
+std::vector<Move> Game::generatePseudoLegalKingMoves(int sourceSquare) {
     std::vector<Move> out;
 
     const Piece sourcePiece = board_.at(sourceSquare);
@@ -621,7 +621,7 @@ std::vector<Move> Game::generatePseudoLegalKingMoves(int sourceSquare) const {
 
     // 8 possible moves
     // comments are from whites POV, but they are symmetrical for black
-    constexpr int deltas[8][2] {
+    constexpr int kingDeltas[8][2] {
         // col (x), row (y)
         {-1, -1}, // up left
         {0, -1}, // up
@@ -634,11 +634,11 @@ std::vector<Move> Game::generatePseudoLegalKingMoves(int sourceSquare) const {
     };
 
     for(int i = 0; i < 8; i++) {
-        const int col2 = col + deltas[i][0];
-        const int row2 = row + deltas[i][1];
-        const int square2 = row2 * 8 + col2;
-        if(!onBoard(square2)) continue;
+        const int col2 = col + kingDeltas[i][0];
+        const int row2 = row + kingDeltas[i][1];
+        if(!onBoard(col2, row2)) continue;
         
+        const int square2 = row2 * 8 + col2;
         const Piece piece2 = board_.at(square2);
 
         // Can move if target square is empty or has enemy
@@ -650,12 +650,22 @@ std::vector<Move> Game::generatePseudoLegalKingMoves(int sourceSquare) const {
     return out;
 }
 
-std::vector<Move> Game::generateLegalMoves(int sourceSquare) const {
-    // TODO: implement verification that king does NOT get checked
-    return generatePseudoLegalMoves(sourceSquare);
+// TODO: eventually make generateLegalMoves const by finding a workaround other than simply undoing moves
+std::vector<Move> Game::generateLegalMoves(int sourceSquare) {
+    std::vector<Move> pseudoMoves = generatePseudoLegalMoves(sourceSquare);
+    std::vector<Move> legalMoves;
+
+    // only allow moves that do not leave king in check
+    for(Move move : pseudoMoves) {
+        makeMove(move);
+        if(!isInCheck(move.sourcePiece().color())) legalMoves.push_back(move);
+        undoMove(move);
+    }
+
+    return legalMoves;
 }
 
-std::vector<Move> Game::generatePseudoLegalMoves(int sourceSquare) const {
+std::vector<Move> Game::generatePseudoLegalMoves(int sourceSquare) {
     switch(board_.at(sourceSquare).type()) {
         case PieceType::None: return std::vector<Move>{};
         case PieceType::Pawn: return generatePseudoLegalPawnMoves(sourceSquare);
@@ -667,7 +677,8 @@ std::vector<Move> Game::generatePseudoLegalMoves(int sourceSquare) const {
     }
 }
 
-bool Game::isMoveLegal(const Move move) const {
+// TODO: eventually make isMoveLegal const, see above^
+bool Game::isMoveLegal(const Move move) {
     std::vector<Move> legalMoves = generateLegalMoves(move.sourceSquare());
     return std::find(legalMoves.begin(), legalMoves.end(), move) != legalMoves.end();
 }
@@ -691,11 +702,144 @@ bool Game::tryMove(const Move move) {
     Make a move regardless of if it is legal or not.
 */
 void Game::makeMove(const Move move) {
-    Piece emptySquare = Piece{};
     board_.at(move.targetSquare()) = move.sourcePiece();
-    board_.at(move.sourceSquare()) = emptySquare;
-    // swap current turn color
-    currentTurn_ = currentTurn_ == Color::White ? Color::Black : Color::White;
+    board_.at(move.sourceSquare()) = Piece{};
+    currentTurn_ = oppositeColor(currentTurn_);
+}
+
+/*
+    Undo a move. This does not verify that the previous move matches the move we are undoing to.
+*/
+void Game::undoMove(const Move move) {
+    board_.at(move.sourceSquare()) = move.sourcePiece();
+    board_.at(move.targetSquare()) = move.targetPiece();
+    currentTurn_ = oppositeColor(currentTurn_);
+}
+
+// TODO: consider extracting common deltas (e.g., knightDeltas) into Game class
+/*
+    Find if square is attacked. Greedily exits as soon as we find an attacking piece.
+*/
+bool Game::isSquareAttacked(int targetSquare, Color attackingColor) const {
+    const int targetRow = targetSquare / 8;
+    const int targetColumn = targetSquare % 8;
+
+    // 1. Pawn attacks (only diagonals)
+    // White attacks row - 1, Black attacks row + 1
+    const int pawnDir = (attackingColor == Color::White) ? -1 : +1;
+    const int attackingPawnRow = targetRow - pawnDir; // square where an attacking pawn would sit
+    if (attackingPawnRow >= 0 && attackingPawnRow <= 7) {
+        for (const int deltaColumn : {-1, +1}) {
+            const int curCol = targetColumn + deltaColumn;
+            // out of range
+            if (!onBoard(attackingPawnRow, curCol)) continue;
+
+            const int sq = attackingPawnRow * 8 + curCol;
+            const Piece p = board_.at(sq);
+            if (p.type() == PieceType::Pawn && p.color() == attackingColor) return true;
+        }
+    }
+
+    // 2. Knight attacks
+    constexpr int knightDeltas[8][2] {
+        // col (x), row (y)
+        {-2, -1}, // left up
+        {-1, -2}, // up left
+        {1, -2}, // up right
+        {2, -1}, // right up
+        {2, 1}, // right down
+        {1, 2}, // down right
+        {-1, 2}, // down left
+        {-2, 1}, // left down
+    };
+    for (int i = 0; i < 8; i++) {
+        const int curCol = targetColumn + knightDeltas[i][0];
+        const int curRow = targetRow + knightDeltas[i][1];
+        // out of bounds
+        if (!onBoard(curRow, curCol)) continue;
+
+        const int curSquare = curRow * 8 + curCol;
+        const Piece p = board_.at(curSquare);
+        if (p.type() == PieceType::Knight && p.color() == attackingColor) return true;
+    }
+
+    // 3. King attacks
+    constexpr int kingDeltas[8][2] {
+        // col (x), row (y)
+        {-1, -1}, // up left
+        {0, -1}, // up
+        {1, -1}, // up right
+        {-1, 0}, // left
+        {1, 0}, // right
+        {-1, 1}, // down left
+        {0, 1}, // down
+        {1, 1}, // down right
+    };
+    for (int i = 0; i < 8; i++) {
+        const int curCol = targetColumn + kingDeltas[i][0];
+        const int curRow = targetColumn + kingDeltas[i][1];
+        // out of bounds
+        if (!onBoard(curRow, curCol)) continue;
+
+        const int curSquare = curRow * 8 + curCol;
+        const Piece p = board_.at(curSquare);
+        if (p.type() == PieceType::King && p.color() == attackingColor) return true;
+    }
+
+    // Sliding attack helper function
+    auto rayHits = [&](int dRow, int dCol, PieceType a, PieceType b) -> bool {
+        int curRow = targetRow + dRow;
+        int curCol = targetColumn + dCol;
+        while (onBoard(curRow, curCol)) {
+            int sq = curRow * 8 + curCol;
+            const Piece p = board_.at(sq);
+            if (p.exists()) {
+                if (p.color() == attackingColor && (p.type() == a || p.type() == b)) return true;
+                // this direction is blocked
+                return false;
+            }
+            // this direction is not blocked, continue
+            curRow += dRow;
+            curCol += dCol;
+        }
+        // didn't find anything
+        return false;
+    };
+
+    // 4. orthogonal rays: rook or queen
+    if (rayHits(+1, 0, PieceType::Rook, PieceType::Queen)) return true;
+    if (rayHits(-1, 0, PieceType::Rook, PieceType::Queen)) return true;
+    if (rayHits(0, +1, PieceType::Rook, PieceType::Queen)) return true;
+    if (rayHits(0, -1, PieceType::Rook, PieceType::Queen)) return true;
+
+    // 5. diagonal rays: bishop or queen
+    if (rayHits(+1, +1, PieceType::Bishop, PieceType::Queen)) return true;
+    if (rayHits(+1, -1, PieceType::Bishop, PieceType::Queen)) return true;
+    if (rayHits(-1, +1, PieceType::Bishop, PieceType::Queen)) return true;
+    if (rayHits(-1, -1, PieceType::Bishop, PieceType::Queen)) return true;
+
+    // didn't find anything
+    return false;
+}
+
+
+// TODO: optimize
+bool Game::isInCheck(Color colorToFind) const {
+    // TODO: this throws if game is inactive
+    int kingSquare = findKingSquare(colorToFind).value();
+    return isSquareAttacked(kingSquare, oppositeColor(colorToFind));
+}
+
+/*
+    Find a given color's king. Should never return nullopt if game is active.
+*/
+std::optional<int> Game::findKingSquare(Color colorToFind) const {
+    int squareIndex = 0;
+    for(const Piece& piece : board_) {
+        if(piece.type() == PieceType::King && piece.color() == colorToFind) return squareIndex;
+        squareIndex++;
+    }
+    return std::nullopt;
 }
 
 std::string Game::intToAlgebraicNotation(int n) {
@@ -721,4 +865,8 @@ bool Game::onBoard(int square) {
 */
 bool Game::onBoard(int col, int row) {
     return 0 <= col && col <= 7 && 0 <= row && row <= 7;
+}
+
+Color Game::oppositeColor(Color c) {
+    return (c == Color::White) ? Color::Black : Color::White;
 }
