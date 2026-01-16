@@ -1,5 +1,6 @@
 #include <SFML/Graphics/Sprite.hpp>
 #include <map>
+#include <iostream>
 #include <optional>
 #include <string>
 
@@ -22,6 +23,12 @@ const sf::Texture& TextureCache::get(PieceType type, Color color) {
     }
 
     tex.setSmooth(true);
+
+    // Generate mipmap to increase texture quality when downscaled
+    if (!tex.generateMipmap()) {
+        std::cerr << "Warning: mipmap generation failed for " << path << "\n";
+    }
+
     // insert into cache and return
     auto [insertedIt, _] = cache.emplace(path, std::move(tex));
     return insertedIt->second;
@@ -228,7 +235,7 @@ void Board::updateBoardFromGame(const Game& game) {
         square.pieceSprite() = PieceSprite{piece};
         // fit to center of square
         square.pieceSprite().centerOrigin();
-        square.pieceSprite().fitToSquare(squareWidth * 0.95f);
+        square.pieceSprite().fitToSquare(squareWidth * 0.97f);
         square.pieceSprite().updateSpritePosition(xpos + squareWidth/2.f, ypos + squareHeight/2.f);
 
         squareIndex++;
