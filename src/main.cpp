@@ -3,6 +3,7 @@
 #include <optional>
 #include <string>
 
+#include <SFML/Audio.hpp>
 #include <SFML/Graphics.hpp>
 
 #include "game/Game.hpp"
@@ -55,6 +56,12 @@ void runGUIGame() {
     sf::RenderWindow window{sf::VideoMode{{STARTING_WINDOW_WIDTH, STARTING_WINDOW_HEIGHT}}, WINDOW_TITLE};
     // enable vsync
     window.setVerticalSyncEnabled(true);
+
+    // init sounds
+    // TODO: potentially throw / recover from file missing
+    const sf::SoundBuffer PIECE_MOVEMENT_BUFFER{"assets/sounds/piece_movement.wav"};
+    sf::Sound PIECE_MOVEMENT_SOUND{PIECE_MOVEMENT_BUFFER};
+    PIECE_MOVEMENT_SOUND.setVolume(75.f);
 
     // init current held square for making moves
     std::optional<int> heldSquare;
@@ -121,6 +128,7 @@ void runGUIGame() {
                     const Move potentialMove = Move{sourceSquare, targetSquare, game.board().at(sourceSquare), game.board().at(targetSquare)};
                     if(game.tryMove(potentialMove)) {
                         board.updateBoardFromGame(game);
+                        PIECE_MOVEMENT_SOUND.play();
                     }
 
                     heldSquare.reset();
@@ -172,6 +180,7 @@ void runGUIGame() {
                     // if move is legal, try it
                     if (game.tryMove(potentialMove)) {
                         board.updateBoardFromGame(game);
+                        PIECE_MOVEMENT_SOUND.play();
                         // successfully making a move resets any legal move highlights
                         board.clearAllHighlights(Board::LEGAL_HIGHLIGHT);
                     }

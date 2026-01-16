@@ -35,7 +35,7 @@ add_executable(chess
 )
 
 # link sfml
-target_link_libraries(chess PRIVATE SFML::Graphics)
+target_link_libraries(chess PRIVATE SFML::Audio SFML::Graphics)
 
 # Built with c++17
 target_compile_features(chess PRIVATE cxx_std_17)
