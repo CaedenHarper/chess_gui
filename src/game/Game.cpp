@@ -93,8 +93,19 @@ std::string Piece::to_string_long() const {
     }
 }
 
+/*
+    Create a move. Determines if move is a promotion.
+*/
 Move::Move(int sourceSquare, int targetSquare, Piece sourcePiece, Piece targetPiece) 
- : sourceSquare_{sourceSquare}, targetSquare_{targetSquare}, sourcePiece_{sourcePiece}, targetPiece_{targetPiece} {
+ :
+ sourceSquare_{sourceSquare},
+ targetSquare_{targetSquare},
+ sourcePiece_{sourcePiece},
+ targetPiece_{targetPiece},
+ promotionPiece_{PieceType::Queen, sourcePiece.color()} {
+    const int targetRow = targetSquare / 8;
+    const int finalRow = (sourcePiece.color() == Color::White) ? 0 : 7; // rank 7 for white, rank 0 for black
+    isPromotion_ = targetRow == finalRow;
 }
 
 int Move::sourceSquare() const {
@@ -111,6 +122,14 @@ Piece Move::sourcePiece() const {
 
 Piece Move::targetPiece() const {
     return targetPiece_;
+}
+
+bool Move::isPromotion() const {
+    return isPromotion_;
+}
+
+Piece Move::promotionPiece() const {
+    return promotionPiece_;
 }
 
 std::string Move::to_string() const {
@@ -367,7 +386,7 @@ std::vector<Move> Game::generatePseudoLegalPawnMoves(int sourceSquare) {
     const int col = sourceSquare % 8;
 
     const int dir = (sourceColor == Color::White) ? -1 : 1; // this function is from black's pov
-    const int startRow = (sourceColor == Color::White) ? 6 : 1;  // rank 2 / rank 7
+    const int startRow = (sourceColor == Color::White) ? 6 : 1;  // rank 7 / rank 2
 
     // Case 1 and 2
     const int one = sourceSquare + dir * 8;
@@ -391,13 +410,17 @@ std::vector<Move> Game::generatePseudoLegalPawnMoves(int sourceSquare) {
     // Case 3
     if (col > 0 && onBoard(capLeft)) {
         const Piece p = board_.at(capLeft);
-        if (p.exists() && p.color() != sourceColor) out.push_back(Move{sourceSquare, capLeft, sourcePiece, p});
+        if (p.exists() && p.color() != sourceColor) {
+            out.push_back(Move{sourceSquare, capLeft, sourcePiece, p});
+        }
     }
 
     // Case 4
     if (col < 7 && onBoard(capRight)) {
         const Piece p = board_.at(capRight);
-        if (p.exists() && p.color() != sourceColor) out.push_back(Move{sourceSquare, capRight, sourcePiece, p});
+        if (p.exists() && p.color() != sourceColor) { 
+            out.push_back(Move{sourceSquare, capRight, sourcePiece, p});
+        }
     }
 
     return out;
@@ -680,21 +703,27 @@ std::vector<Move> Game::generatePseudoLegalMoves(int sourceSquare) {
 // TODO: eventually make isMoveLegal const, see above^
 bool Game::isMoveLegal(const Move move) {
     std::vector<Move> legalMoves = generateLegalMoves(move.sourceSquare());
-    return std::find(legalMoves.begin(), legalMoves.end(), move) != legalMoves.end();
+    for(Move m : legalMoves) {
+        if(m == move) return true;
+    }
+    // we didn't find anything!
+    return false;
 }
 
 bool Game::tryMove(const Move move) {
     // only allow current turn's player to make moves
     if(move.sourcePiece().color() != currentTurn_) {
+        std::cerr << "[DEBUG] Attempted move: " + move.to_string() + " is not legal because it is not the correct player's turn\n";
         return false;
     }
 
     if(!isMoveLegal(move)) {
+        std::cerr << "[DEBUG] Attempted move: " + move.to_string() + " is not legal per isMoveLegal\n";
         return false;
     }
 
     // move is legal, so make it
-    this->makeMove(move);
+    makeMove(move);
     return true;
 }
 
@@ -702,7 +731,8 @@ bool Game::tryMove(const Move move) {
     Make a move regardless of if it is legal or not.
 */
 void Game::makeMove(const Move move) {
-    board_.at(move.targetSquare()) = move.sourcePiece();
+    // TODO: fully implement promotion; for now Queen is assumed in all cases
+    board_.at(move.targetSquare()) = move.isPromotion() ? move.promotionPiece() : move.sourcePiece();
     board_.at(move.sourceSquare()) = Piece{};
     currentTurn_ = oppositeColor(currentTurn_);
 }

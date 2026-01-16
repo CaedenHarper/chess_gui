@@ -45,18 +45,26 @@ public:
     bool operator==(Move other) const { return sourceSquare_ == other.sourceSquare_ &&
                                                targetSquare_ == other.targetSquare_ &&
                                                sourcePiece_ == other.sourcePiece_ &&
-                                               targetPiece_ == other.targetPiece_; }
+                                               targetPiece_ == other.targetPiece_ &&
+                                               isPromotion_ == other.isPromotion_ &&
+                                               promotionPiece_ == other.promotionPiece_; }
     int sourceSquare() const;
     int targetSquare() const;
     Piece sourcePiece() const;
     Piece targetPiece() const;
+    bool isPromotion() const;
+    Piece promotionPiece() const;
     std::string to_string() const;
 
 private:
+    Move(int sourceSquare, int targetSquare, Piece sourcePiece, Piece targetPiece, bool isPromotion_);
     const int sourceSquare_;
     const int targetSquare_;
     const Piece sourcePiece_;
     const Piece targetPiece_;
+    // TODO: add logic for promotion pieces other than queen
+    Piece promotionPiece_;
+    bool isPromotion_;
 };
 
 class Game {

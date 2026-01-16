@@ -123,15 +123,17 @@ void runGUIGame() {
                         board.clearAllHighlights(Board::SELECTED_HIGHLIGHT);
                         continue;
                     }
-
+                    
                     // Try to make click-click move; if successful, update visual board
-                    const Move potentialMove = Move{sourceSquare, targetSquare, game.board().at(sourceSquare), game.board().at(targetSquare)};
+                    const Move potentialMove{sourceSquare, targetSquare, game.board().at(sourceSquare), game.board().at(targetSquare)};
                     if(game.tryMove(potentialMove)) {
                         board.updateBoardFromGame(game);
                         PIECE_MOVEMENT_SOUND.play();
                     }
 
                     heldSquare.reset();
+                    board.clearAllHighlights(Board::SELECTED_HIGHLIGHT);
+                    board.clearAllHighlights(Board::LEGAL_HIGHLIGHT);
                 }
                 
                 // RIGHT CLICK
@@ -186,6 +188,8 @@ void runGUIGame() {
                     }
 
                     heldSquare.reset();
+                    board.clearAllHighlights(Board::SELECTED_HIGHLIGHT);
+                    board.clearAllHighlights(Board::LEGAL_HIGHLIGHT);
                 }
             }
         }
