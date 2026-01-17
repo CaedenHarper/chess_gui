@@ -2,16 +2,17 @@
 #include <map>
 #include <iostream>
 #include <optional>
+#include <stdexcept>
 #include <string>
 
 #include <SFML/Graphics.hpp>
 
 #include "Board.hpp"
 
-const sf::Texture& TextureCache::get(PieceType type, Color color) {
+const sf::Texture& TextureCache::get(const PieceType type, const Color color) {
     static std::map<std::string, sf::Texture> cache;
 
-    std::string path = makePath(type, color);
+    std::string path = makePath_(type, color);
     // see if we can find it early from cache
     auto it = cache.find(path);
     if (it != cache.end()) return it->second;
@@ -34,7 +35,7 @@ const sf::Texture& TextureCache::get(PieceType type, Color color) {
     return insertedIt->second;
 }
 
-std::string TextureCache::makePath(PieceType type, Color color) {
+std::string TextureCache::makePath_(const PieceType type, const Color color) {
     std::string path = "assets/pieces/";
     path += (color == Color::White ? "w" : "b");
     switch (type) {
@@ -74,14 +75,14 @@ void PieceSprite::rebuild() {
     }
 }
 
-void PieceSprite::fitToSquare(float squareSizePx) {
+void PieceSprite::fitToSquare(const float squareSize) {
     if (!sprite_) return;
 
     // size of the texture region the sprite uses
     const sf::FloatRect bounds = sprite_->getLocalBounds(); // {left, top, width, height}
 
-    const float sx = squareSizePx / bounds.size.x;
-    const float sy = squareSizePx / bounds.size.y;
+    const float sx = squareSize / bounds.size.x;
+    const float sy = squareSize / bounds.size.y;
 
     // preserve aspect ratio
     const float s = std::min(sx, sy);
@@ -95,8 +96,7 @@ void PieceSprite::centerOrigin() {
     sprite_->setOrigin({b.position.x + b.size.x / 2.f, b.position.y + b.size.y / 2.f});
 }
 
-// TODO: should it be an error to try and use this when sprite does not exist?
-void PieceSprite::updateSpritePosition(float x, float y) {
+void PieceSprite::updateSpritePosition(const float x, const float y) {
     if (sprite_) sprite_.value().setPosition({x, y});
 }
 
@@ -109,7 +109,9 @@ bool Square::isEmpty() const {
 }
 
 Highlight Square::highlight() const {
-    return highlight_.value();
+    if(highlight_) return highlight_.value();
+    // no highlight, throw
+    throw std::runtime_error("Attempted to retrieve highlight from Square with no highlight.");
 }
 
 bool Square::hasHighlight() const {
@@ -128,32 +130,19 @@ void Square::toggleHighlight(Highlight highlight) {
     }
 }
 
-/*
-    Clear all highlights.
-*/
 void Square::clearHighlight() {
     highlight_.reset();
 }
 
-/*
-    Clear all highlights that match the inputted type.
-*/
 void Square::clearHighlight(Highlight highlight) {
     if(highlight_ && highlight_.value() == highlight) {
         highlight_.reset();
     }
 }
 
-/*
-    Get the board square from x, y coordinates.
-*/
 int Board::getSquareIndexFromCoordinates(int x, int y) {
-    // get current screen (and therefore board) width from window
-    const float squareWidth = Board::BOARD_WIDTH/8.f;
-    const float squareHeight = Board::BOARD_HEIGHT/8.f;
-
-    int row = static_cast<int>(y / squareWidth);
-    int col = static_cast<int>(x / squareHeight);
+    int row = static_cast<int>(y / SQUARE_WIDTH);
+    int col = static_cast<int>(x / SQUARE_HEIGHT);
     return 8 * row + col;
 }
 
@@ -161,18 +150,12 @@ Square& Board::at(int i) {
     return board_.at(i);
 }
 
-/*
-    Draw board to window.
-*/
 void Board::draw(sf::RenderWindow& window) const {
     // other overload skips over nothing given std::nullopt
     draw(window, std::nullopt);
 }
 
-/*
-    Draw board to window, skipping over heldSquare. If heldSquare does not exist, draws normally.
-*/
-void Board::draw(sf::RenderWindow& window, std::optional<int> heldSquare) const {
+void Board::draw(sf::RenderWindow& window, const std::optional<int> heldSquare) const {
     // draw row by row
     for(int squareIndex = 0; squareIndex < 64; squareIndex++) {
         // get row and col from index
@@ -181,7 +164,7 @@ void Board::draw(sf::RenderWindow& window, std::optional<int> heldSquare) const 
         const bool isLight = row%2 == col%2;
         Square squareObject = board_.at(squareIndex);
 
-        sf::RectangleShape squareShape{{squareWidth, squareHeight}};
+        sf::RectangleShape squareShape{{SQUARE_WIDTH, SQUARE_HEIGHT}};
 
         // determine square color
         sf::Color color;
@@ -193,8 +176,8 @@ void Board::draw(sf::RenderWindow& window, std::optional<int> heldSquare) const 
         squareShape.setFillColor(color);
 
         // set position based on row/col
-        float xpos = squareWidth * col;
-        float ypos = squareHeight * row;
+        float xpos = SQUARE_WIDTH * col;
+        float ypos = SQUARE_HEIGHT * row;
         squareShape.setPosition({xpos, ypos});
         window.draw(squareShape);
 
@@ -207,36 +190,30 @@ void Board::draw(sf::RenderWindow& window, std::optional<int> heldSquare) const 
     }
 }
 
-/*
-    Clear all highlights.
-*/
 void Board::clearAllHighlights() {
     for(Square& square : board_) square.clearHighlight();
 }
 
-/*
-    Clear all highlights that match inputted highlight.
-*/
-void Board::clearAllHighlights(Highlight highlight) {
+void Board::clearAllHighlights(const Highlight highlight) {
     for(Square& square : board_) square.clearHighlight(highlight);
 }
 
-// TODO: consider making more performant by checking equality before updating for each piece
 void Board::updateBoardFromGame(const Game& game) {
+    // TODO: consider making more performant by checking equality before updating for each piece
     int squareIndex = 0;
     for(const Piece& piece : game.board()) {
         int row = squareIndex / 8;
         int col = squareIndex % 8;
 
-        float xpos = squareWidth * col;
-        float ypos = squareWidth * row;
+        float xpos = SQUARE_WIDTH * col;
+        float ypos = SQUARE_WIDTH * row;
 
         Square& square = board_.at(squareIndex);
         square.pieceSprite() = PieceSprite{piece};
         // fit to center of square
         square.pieceSprite().centerOrigin();
-        square.pieceSprite().fitToSquare(squareWidth * 0.97f);
-        square.pieceSprite().updateSpritePosition(xpos + squareWidth/2.f, ypos + squareHeight/2.f);
+        square.pieceSprite().fitToSquare(SQUARE_WIDTH * 0.97f);
+        square.pieceSprite().updateSpritePosition(xpos + SQUARE_WIDTH/2.f, ypos + SQUARE_HEIGHT/2.f);
 
         squareIndex++;
     }

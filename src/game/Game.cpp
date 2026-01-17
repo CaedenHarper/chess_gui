@@ -4,15 +4,9 @@
 #include <optional>
 #include <vector>
 
-/*
-    Constructor with no arguments returns an empty square.
-*/
 Piece::Piece() : type_{PieceType::None}, color_{Color::None} {
 }
 
-/*
-    Construct a Piece.
-*/
 Piece::Piece(PieceType type, Color color) : type_{type}, color_{color} {
 }
 
@@ -28,7 +22,7 @@ bool Piece::exists() const {
     return type_ != PieceType::None;
 }
 
-PieceType Piece::charToPieceType(char c) {
+PieceType Piece::charToPieceType(const char c) {
     if(c == 'P' || c == 'p') {
         return PieceType::Pawn;
     } else if(c == 'N' || c == 'n') {
@@ -47,7 +41,7 @@ PieceType Piece::charToPieceType(char c) {
     }
 }
 
-Piece Piece::charToPiece(char c) {
+Piece Piece::charToPiece(const char c) {
     switch (c) {
         case 'P': return Piece{PieceType::Pawn, Color::White};
         case 'p': return Piece{PieceType::Pawn, Color::Black};
@@ -93,9 +87,6 @@ std::string Piece::to_string_long() const {
     }
 }
 
-/*
-    Create a move. Determines if move is a promotion.
-*/
 Move::Move(int sourceSquare, int targetSquare, Piece sourcePiece, Piece targetPiece) 
  :
  sourceSquare_{sourceSquare},
@@ -134,9 +125,8 @@ Piece Move::promotionPiece() const {
 
 std::string Move::to_string() const {
     return ( 
-        sourcePiece_.to_string_long() + " on " + Game::intToAlgebraicNotation(sourceSquare_) +
-        " (" + std::to_string(sourceSquare_) + ") to " + targetPiece_.to_string_long() + " on " + Game::intToAlgebraicNotation(targetSquare_) +
-        " (" + std::to_string(targetSquare_) +")"
+        sourcePiece_.to_string_long() + " on " + Game::intToAlgebraicNotation(sourceSquare_) + " to " +
+        targetPiece_.to_string_long() + " on " + Game::intToAlgebraicNotation(targetSquare_)
     );
 }
 
@@ -151,21 +141,21 @@ std::array<Piece, 64> Game::board() const {
     return board_;
 }
 
-/*
-Print in format:
-  +---------------+
-8 |r|n|b|k|q|b|n|r|
-7 |p|p|p|p|p|p|p|p|
-6 | |#| |#| |#| |#|
-5 |#| |#| |#| |#| |
-4 | |#| |#| |#| |#|
-3 |#| |#| |#| |#| |
-2 |P|P|P|P|P|P|P|P|
-1 |R|N|B|K|Q|B|N|R|
-  +---------------+
-   a b c d e f g h
-*/
 std::string Game::to_string() const {
+    /*
+    Print in format:
+    +---------------+
+    8 |r|n|b|k|q|b|n|r|
+    7 |p|p|p|p|p|p|p|p|
+    6 | |#| |#| |#| |#|
+    5 |#| |#| |#| |#| |
+    4 | |#| |#| |#| |#|
+    3 |#| |#| |#| |#| |
+    2 |P|P|P|P|P|P|P|P|
+    1 |R|N|B|K|Q|B|N|R|
+    +---------------+
+    a b c d e f g h
+    */
     // starting border
     std::string o = "  +---------------+\n";
 
@@ -196,9 +186,6 @@ std::string Game::to_string() const {
     return o + "  +---------------+\n   a b c d e f g h";
 }
 
-/*
-    Load FEN into game board.
-*/
 void Game::loadFEN(const std::string FEN) {
     /*
     Fen has 6 fields:
@@ -327,9 +314,8 @@ std::optional<Move> Game::parseLongNotation_(const std::string sourceS, const st
     return Move{sourceSquare, targetSquare, board_.at(sourceSquare), board_.at(targetSquare)};
 }
 
-// (-Wunused-parameter)
-std::optional<Move> Game::parseAlgebraicNotation_(const std::string s) const {   // NOLINT
-    std::cerr << "parseAlgebraicNotation: Not yet implemented!";
+std::optional<Move> Game::parseAlgebraicNotation_(const std::string s) const {
+    std::cerr << "parseAlgebraicNotation: Not yet implemented! " << s;
     return std::nullopt;
 }
 
@@ -369,10 +355,10 @@ std::optional<Move> Game::parseMove(const std::string s) const {
 }
 
 // TODO: en passent
-std::vector<Move> Game::generatePseudoLegalPawnMoves(int sourceSquare) {
+std::vector<Move> Game::generatePseudoLegalPawnMoves_(const int sourceSquare) {
     /* 
         Four pawn capture types:
-        1. One move forward (TODO: promotion)
+        1. One move forward
         2. Two moves forward, has to start on 2nd rank
         3. Capture left, has to be opposite color piece (or en passent)
         4. Capture right, has to be opposite color piece (or en passent)
@@ -427,7 +413,7 @@ std::vector<Move> Game::generatePseudoLegalPawnMoves(int sourceSquare) {
 }
 
 
-std::vector<Move> Game::generatePseudoLegalKnightMoves(int sourceSquare) {
+std::vector<Move> Game::generatePseudoLegalKnightMoves_(const int sourceSquare) {
     std::vector<Move> out;
 
     const Piece sourcePiece = board_.at(sourceSquare);
@@ -467,7 +453,7 @@ std::vector<Move> Game::generatePseudoLegalKnightMoves(int sourceSquare) {
     return out;
 }
 
-std::vector<Move> Game::generatePseudoLegalBishopMoves(int sourceSquare) {
+std::vector<Move> Game::generatePseudoLegalBishopMoves_(const int sourceSquare) {
     std::vector<Move> out;
 
     const Piece sourcePiece = board_.at(sourceSquare);
@@ -520,7 +506,7 @@ std::vector<Move> Game::generatePseudoLegalBishopMoves(int sourceSquare) {
     return out;
 }
 
-std::vector<Move> Game::generatePseudoLegalRookMoves(int sourceSquare) {
+std::vector<Move> Game::generatePseudoLegalRookMoves_(const int sourceSquare) {
     std::vector<Move> out;
 
     const Piece sourcePiece = board_.at(sourceSquare);
@@ -573,7 +559,7 @@ std::vector<Move> Game::generatePseudoLegalRookMoves(int sourceSquare) {
     return out;
 }
 
-std::vector<Move> Game::generatePseudoLegalQueenMoves(int sourceSquare) {
+std::vector<Move> Game::generatePseudoLegalQueenMoves_(const int sourceSquare) {
     std::vector<Move> out;
 
     const Piece sourcePiece = board_.at(sourceSquare);
@@ -633,7 +619,7 @@ std::vector<Move> Game::generatePseudoLegalQueenMoves(int sourceSquare) {
 }
 
 // TODO: castling
-std::vector<Move> Game::generatePseudoLegalKingMoves(int sourceSquare) {
+std::vector<Move> Game::generatePseudoLegalKingMoves_(const int sourceSquare) {
     std::vector<Move> out;
 
     const Piece sourcePiece = board_.at(sourceSquare);
@@ -673,9 +659,9 @@ std::vector<Move> Game::generatePseudoLegalKingMoves(int sourceSquare) {
     return out;
 }
 
-// TODO: eventually make generateLegalMoves const by finding a workaround other than simply undoing moves
-std::vector<Move> Game::generateLegalMoves(int sourceSquare) {
-    std::vector<Move> pseudoMoves = generatePseudoLegalMoves(sourceSquare);
+std::vector<Move> Game::generateLegalMoves(const int sourceSquare) {
+    // TODO: eventually make generateLegalMoves const by finding a workaround other than simply undoing moves
+    std::vector<Move> pseudoMoves = generatePseudoLegalMoves_(sourceSquare);
     std::vector<Move> legalMoves;
 
     // only allow moves that do not leave king in check
@@ -688,20 +674,20 @@ std::vector<Move> Game::generateLegalMoves(int sourceSquare) {
     return legalMoves;
 }
 
-std::vector<Move> Game::generatePseudoLegalMoves(int sourceSquare) {
+std::vector<Move> Game::generatePseudoLegalMoves_(const int sourceSquare) {
     switch(board_.at(sourceSquare).type()) {
         case PieceType::None: return std::vector<Move>{};
-        case PieceType::Pawn: return generatePseudoLegalPawnMoves(sourceSquare);
-        case PieceType::Knight: return generatePseudoLegalKnightMoves(sourceSquare);
-        case PieceType::Bishop: return generatePseudoLegalBishopMoves(sourceSquare);
-        case PieceType::Rook: return generatePseudoLegalRookMoves(sourceSquare);
-        case PieceType::Queen: return generatePseudoLegalQueenMoves(sourceSquare);
-        case PieceType::King: return generatePseudoLegalKingMoves(sourceSquare);
+        case PieceType::Pawn: return generatePseudoLegalPawnMoves_(sourceSquare);
+        case PieceType::Knight: return generatePseudoLegalKnightMoves_(sourceSquare);
+        case PieceType::Bishop: return generatePseudoLegalBishopMoves_(sourceSquare);
+        case PieceType::Rook: return generatePseudoLegalRookMoves_(sourceSquare);
+        case PieceType::Queen: return generatePseudoLegalQueenMoves_(sourceSquare);
+        case PieceType::King: return generatePseudoLegalKingMoves_(sourceSquare);
     }
 }
 
-// TODO: eventually make isMoveLegal const, see above^
 bool Game::isMoveLegal(const Move move) {
+    // TODO: eventually make isMoveLegal const, see above^
     std::vector<Move> legalMoves = generateLegalMoves(move.sourceSquare());
     for(Move m : legalMoves) {
         if(m == move) return true;
@@ -750,7 +736,7 @@ void Game::undoMove(const Move move) {
 /*
     Find if square is attacked. Greedily exits as soon as we find an attacking piece.
 */
-bool Game::isSquareAttacked(int targetSquare, Color attackingColor) const {
+bool Game::isSquareAttacked(const int targetSquare, const Color attackingColor) const {
     const int targetRow = targetSquare / 8;
     const int targetColumn = targetSquare % 8;
 
@@ -852,18 +838,14 @@ bool Game::isSquareAttacked(int targetSquare, Color attackingColor) const {
     return false;
 }
 
-
-// TODO: optimize
-bool Game::isInCheck(Color colorToFind) const {
+bool Game::isInCheck(const Color colorToFind) const {
+    // TODO: optimize
     // TODO: this throws if game is inactive
     int kingSquare = findKingSquare(colorToFind).value();
     return isSquareAttacked(kingSquare, oppositeColor(colorToFind));
 }
 
-/*
-    Find a given color's king. Should never return nullopt if game is active.
-*/
-std::optional<int> Game::findKingSquare(Color colorToFind) const {
+std::optional<int> Game::findKingSquare(const Color colorToFind) const {
     int squareIndex = 0;
     for(const Piece& piece : board_) {
         if(piece.type() == PieceType::King && piece.color() == colorToFind) return squareIndex;
@@ -872,7 +854,7 @@ std::optional<int> Game::findKingSquare(Color colorToFind) const {
     return std::nullopt;
 }
 
-std::string Game::intToAlgebraicNotation(int n) {
+std::string Game::intToAlgebraicNotation(const int n) {
     int col = n%8;
     std::string file = std::string{(char)('a' + col)};
     
@@ -883,20 +865,14 @@ std::string Game::intToAlgebraicNotation(int n) {
     return file + rank;
 }
 
-/*
-    Check if square is on board.
-*/
-bool Game::onBoard(int square) {
+bool Game::onBoard(const int square) {
     return 0 <= square && square <= 63;
 }
 
-/*
-    Check if column and row combination is on board.
-*/
-bool Game::onBoard(int col, int row) {
+bool Game::onBoard(const int col, int row) {
     return 0 <= col && col <= 7 && 0 <= row && row <= 7;
 }
 
-Color Game::oppositeColor(Color c) {
+Color Game::oppositeColor(const Color c) {
     return (c == Color::White) ? Color::Black : Color::White;
 }
