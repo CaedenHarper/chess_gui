@@ -93,10 +93,11 @@ Move::Move(int sourceSquare, int targetSquare, Piece sourcePiece, Piece targetPi
  targetSquare_{targetSquare},
  sourcePiece_{sourcePiece},
  targetPiece_{targetPiece},
- promotionPiece_{PieceType::Queen, sourcePiece.color()} {
-    const int targetRow = targetSquare / 8;
-    const int finalRow = (sourcePiece.color() == Color::White) ? 0 : 7; // rank 7 for white, rank 0 for black
-    isPromotion_ = targetRow == finalRow && sourcePiece.type() == PieceType::Pawn;
+ isPromotion_{isPotentialPawnPromotion_(targetSquare, sourcePiece)},
+ promotionPiece_{PieceType::Queen, sourcePiece.color()},
+ isKingSideCastle_{isPotentialKingSideCastle_(sourceSquare, targetSquare, sourcePiece, targetPiece)},
+ isQueenSideCastle_{isPotentialQueenSideCastle_(sourceSquare, targetSquare, sourcePiece, targetPiece)} {
+
 }
 
 int Move::sourceSquare() const {
@@ -123,6 +124,66 @@ Piece Move::promotionPiece() const {
     return promotionPiece_;
 }
 
+bool Move::isKingSideCastle() const {
+    return isKingSideCastle_;
+}
+
+bool Move::isQueenSideCastle() const {
+    return isQueenSideCastle_;
+}
+
+bool Move::isPotentialPawnPromotion_(int targetSquare, Piece sourcePiece) {
+    const int targetRow = targetSquare / 8;
+    const int finalRow = (sourcePiece.color() == Color::White) ? 0 : 7; // rank 7 for white, rank 0 for black
+    return targetRow == finalRow && sourcePiece.type() == PieceType::Pawn;
+}
+
+bool Move::isPotentialKingSideCastle_(int sourceSquare, int targetSquare, Piece sourcePiece, Piece targetPiece) {
+    if (sourcePiece.color() == Color::White) {
+        return (
+            sourceSquare == Game::WHITE_KING_STARTING_SQUARE &&
+            targetSquare == Game::WHITE_KINGSIDE_TARGET_SQUARE &&
+            sourcePiece.type() == PieceType::King &&
+            !targetPiece.exists()
+        );
+    }
+
+    if (sourcePiece.color() == Color::Black) {
+        return (
+            sourceSquare == Game::BLACK_KING_STARTING_SQUARE &&
+            targetSquare == Game::BLACK_KINGSIDE_TARGET_SQUARE &&
+            sourcePiece.type() == PieceType::King &&
+            !targetPiece.exists()
+        );
+    }
+
+    // fallback; should only hit for empty sourcePiece
+    return false;
+}
+
+bool Move::isPotentialQueenSideCastle_(int sourceSquare, int targetSquare, Piece sourcePiece, Piece targetPiece) {
+    if (sourcePiece.color() == Color::White) {
+        return (
+            sourceSquare == Game::WHITE_KING_STARTING_SQUARE &&
+            targetSquare == Game::WHITE_QUEENSIDE_TARGET_SQUARE &&
+            sourcePiece.type() == PieceType::King &&
+            !targetPiece.exists()
+        );
+    }
+
+    if (sourcePiece.color() == Color::Black) {
+        return (
+            sourceSquare == Game::BLACK_KING_STARTING_SQUARE &&
+            targetSquare == Game::BLACK_QUEENSIDE_TARGET_SQUARE &&
+            sourcePiece.type() == PieceType::King &&
+            !targetPiece.exists()
+        );
+    }
+
+    // fallback; should only hit for empty sourcePiece
+    return false;
+}
+
 std::string Move::to_string() const {
     return ( 
         sourcePiece_.to_string_long() + " on " + Game::intToAlgebraicNotation(sourceSquare_) + " to " +
@@ -130,7 +191,12 @@ std::string Move::to_string() const {
     );
 }
 
-Game::Game() : currentTurn_{Color::White} {
+Game::Game()
+    : currentTurn_{Color::White},
+    canWhiteKingSideCastle_{true},
+    canBlackKingSideCastle_{true},
+    canWhiteQueenSideCastle_{true},
+    canBlackQueenSideCastle_{true} {
 }
 
 Color Game::currentTurn() const {
@@ -275,6 +341,22 @@ void Game::loadFEN(const std::string FEN) {
 
 bool Game::isFinished() const {
     return false;
+}
+
+void Game::setWhiteKingSideCastle(bool b) {
+    canWhiteKingSideCastle_ = b;
+}
+
+void Game::setBlackKingSideCastle(bool b) {
+    canBlackKingSideCastle_ = b;
+}
+
+void Game::setWhiteQueenSideCastle(bool b) {
+    canWhiteQueenSideCastle_ = b;
+}
+
+void Game::setBlackQueenSideCastle(bool b) {
+    canBlackQueenSideCastle_ = b;
 }
 
 std::optional<Move> Game::parseLongNotation_(const std::string sourceS, const std::string targetS) const {
@@ -618,7 +700,6 @@ std::vector<Move> Game::generatePseudoLegalQueenMoves_(const int sourceSquare) {
     return out;
 }
 
-// TODO: castling
 std::vector<Move> Game::generatePseudoLegalKingMoves_(const int sourceSquare) {
     std::vector<Move> out;
 
@@ -656,6 +737,44 @@ std::vector<Move> Game::generatePseudoLegalKingMoves_(const int sourceSquare) {
         }
     }
 
+    // --- CASTLING ---
+
+    if(sourceColor == Color::White) {
+        // King side castling
+        if(
+            canWhiteKingSideCastle_ &&
+            sourceSquare == Game::WHITE_KING_STARTING_SQUARE &&
+            !board_.at(WHITE_KINGSIDE_PASSING_SQUARE).exists() &&
+            !board_.at(WHITE_KINGSIDE_TARGET_SQUARE).exists()
+        ) out.push_back(Move{sourceSquare, Game::WHITE_KINGSIDE_TARGET_SQUARE, sourcePiece, board_.at(Game::WHITE_KINGSIDE_TARGET_SQUARE)});
+
+        // Queen side castling
+        if(
+            canWhiteQueenSideCastle_ &&
+            sourceSquare == Game::WHITE_KING_STARTING_SQUARE &&
+            !board_.at(WHITE_QUEENSIDE_PASSING_SQUARE).exists() &&
+            !board_.at(WHITE_QUEENSIDE_TARGET_SQUARE).exists()
+        ) out.push_back(Move{sourceSquare, Game::WHITE_QUEENSIDE_TARGET_SQUARE, sourcePiece, board_.at(Game::WHITE_QUEENSIDE_TARGET_SQUARE)});
+    }
+
+    if(sourceColor == Color::Black) {
+        // King side castling
+        if(
+            canBlackKingSideCastle_ &&
+            sourceSquare == Game::BLACK_KING_STARTING_SQUARE &&
+            !board_.at(BLACK_KINGSIDE_PASSING_SQUARE).exists() &&
+            !board_.at(BLACK_KINGSIDE_TARGET_SQUARE).exists()
+        ) out.push_back(Move{sourceSquare, Game::BLACK_KINGSIDE_TARGET_SQUARE, sourcePiece, board_.at(Game::BLACK_KINGSIDE_TARGET_SQUARE)});
+
+        // Queen side castling
+        if(
+            canBlackQueenSideCastle_ &&
+            sourceSquare == Game::BLACK_KING_STARTING_SQUARE &&
+            !board_.at(BLACK_QUEENSIDE_PASSING_SQUARE).exists() &&
+            !board_.at(BLACK_QUEENSIDE_TARGET_SQUARE).exists()
+        ) out.push_back(Move{sourceSquare, Game::BLACK_QUEENSIDE_TARGET_SQUARE, sourcePiece, board_.at(Game::BLACK_QUEENSIDE_TARGET_SQUARE)});
+    }
+
     return out;
 }
 
@@ -666,8 +785,44 @@ std::vector<Move> Game::generateLegalMoves(const int sourceSquare) {
 
     // only allow moves that do not leave king in check
     for(Move move : pseudoMoves) {
+        const Color moveColor = move.sourcePiece().color();
+        const Color enemyColor = oppositeColor(moveColor);
+
         makeMove(move);
-        if(!isInCheck(move.sourcePiece().color())) legalMoves.push_back(move);
+        // assume move is legal
+        bool legal = true;
+
+        // can't cause king to be in check
+        if(isInCheck(moveColor)) legal = false;
+        
+        // castling legality rules
+        const int KING_STARTING_SQUARE = (moveColor == Color::White) ? Game::WHITE_KING_STARTING_SQUARE : Game::BLACK_KING_STARTING_SQUARE;
+
+        const int KINGSIDE_PASSING_SQUARE = (moveColor == Color::White) ? Game::WHITE_KINGSIDE_PASSING_SQUARE : Game::BLACK_KINGSIDE_PASSING_SQUARE;
+        const int KINGSIDE_TARGET_SQUARE = (moveColor == Color::White) ? Game::WHITE_KINGSIDE_TARGET_SQUARE : Game::BLACK_KINGSIDE_TARGET_SQUARE;
+
+        if(move.isKingSideCastle()) {
+            if(
+                isSquareAttacked(KING_STARTING_SQUARE, enemyColor) ||   // king cant start in check
+                isSquareAttacked(KINGSIDE_PASSING_SQUARE, enemyColor) ||   // king cant pass through check 
+                isSquareAttacked(KINGSIDE_TARGET_SQUARE, enemyColor)      // king cant end in check
+            ) legal = false;
+        }
+
+        const int QUEENSIDE_PASSING_SQUARE = (moveColor == Color::White) ? Game::WHITE_QUEENSIDE_PASSING_SQUARE : Game::BLACK_QUEENSIDE_PASSING_SQUARE;
+        const int QUEENSIDE_TARGET_SQUARE = (moveColor == Color::White) ? Game::WHITE_QUEENSIDE_TARGET_SQUARE : Game::BLACK_QUEENSIDE_TARGET_SQUARE;
+
+        if(move.isQueenSideCastle()) {
+            if(
+                isSquareAttacked(KING_STARTING_SQUARE, enemyColor) ||   // king cant start in check
+                isSquareAttacked(QUEENSIDE_PASSING_SQUARE, enemyColor) ||   // king cant pass through check 
+                isSquareAttacked(QUEENSIDE_TARGET_SQUARE, enemyColor)      // king cant end in check
+            ) legal = false;
+        }
+
+
+        if(legal) legalMoves.push_back(move);
+
         undoMove(move);
     }
 
@@ -713,30 +868,92 @@ bool Game::tryMove(const Move move) {
     return true;
 }
 
-/*
-    Make a move regardless of if it is legal or not.
-*/
 void Game::makeMove(const Move move) {
-    // TODO: fully implement promotion; for now Queen is assumed in all cases
-    board_.at(move.targetSquare()) = move.isPromotion() ? move.promotionPiece() : move.sourcePiece();
-    board_.at(move.sourceSquare()) = Piece{};
+    const bool isSourcePieceWhite = move.sourcePiece().color() == Color::White;
+    // flip current turn
     currentTurn_ = oppositeColor(currentTurn_);
+
+    // update castling flags
+    if(
+        move.sourceSquare() == Game::WHITE_KING_STARTING_SQUARE ||
+        move.sourceSquare() == Game::WHITE_KINGSIDE_ROOK_STARTING_SQUARE
+    ) setWhiteKingSideCastle(false);
+    if(
+        move.sourceSquare() == Game::WHITE_KING_STARTING_SQUARE ||
+        move.sourceSquare() == Game::WHITE_QUEENSIDE_ROOK_STARTING_SQUARE
+    ) setWhiteQueenSideCastle(false);
+    if(
+        move.sourceSquare() == Game::BLACK_KING_STARTING_SQUARE ||
+        move.sourceSquare() == Game::BLACK_KINGSIDE_ROOK_STARTING_SQUARE
+    ) setBlackKingSideCastle(false);
+    if(
+        move.sourceSquare() == Game::BLACK_KING_STARTING_SQUARE ||
+        move.sourceSquare() == Game::BLACK_QUEENSIDE_ROOK_STARTING_SQUARE
+    ) setBlackQueenSideCastle(false);
+
+    // TODO: fully implement promotion; for now Queen is assumed in all cases
+    // handle pawn promotion
+    if(move.isPromotion()) {
+        board_.at(move.targetSquare()) = move.promotionPiece();
+        board_.at(move.sourceSquare()) = Piece{};
+        return;
+    }
+
+    // handle king side castle
+    if(move.isKingSideCastle()) {
+        const int KINGSIDE_PASSING_SQUARE = isSourcePieceWhite ? WHITE_KINGSIDE_PASSING_SQUARE : BLACK_KINGSIDE_PASSING_SQUARE;
+        const int KINGSIDE_ROOK_SQUARE = isSourcePieceWhite ? WHITE_KINGSIDE_ROOK_STARTING_SQUARE : BLACK_KINGSIDE_ROOK_STARTING_SQUARE;
+        // also move rook
+        board_.at(KINGSIDE_PASSING_SQUARE) = Piece{PieceType::Rook, move.sourcePiece().color()};
+        board_.at(KINGSIDE_ROOK_SQUARE) = Piece{};
+    }
+
+    // handle queen side castle
+    if(move.isQueenSideCastle()) {
+        const int QUEENSIDE_PASSING_SQUARE = isSourcePieceWhite ? WHITE_QUEENSIDE_PASSING_SQUARE : BLACK_QUEENSIDE_PASSING_SQUARE;
+        const int QUEENSIDE_ROOK_SQUARE = isSourcePieceWhite ? WHITE_QUEENSIDE_ROOK_STARTING_SQUARE : BLACK_QUEENSIDE_ROOK_STARTING_SQUARE;
+        // also move rook
+        board_.at(QUEENSIDE_PASSING_SQUARE) = Piece{PieceType::Rook, move.sourcePiece().color()};
+        board_.at(QUEENSIDE_ROOK_SQUARE) = Piece{};
+    }
+
+    board_.at(move.targetSquare()) = move.sourcePiece();
+    board_.at(move.sourceSquare()) = Piece{};
 }
 
-/*
-    Undo a move. This does not verify that the previous move matches the move we are undoing to.
-*/
 void Game::undoMove(const Move move) {
+    const bool isSourcePieceWhite = move.sourcePiece().color() == Color::White;
+    // flip current turn
+    currentTurn_ = oppositeColor(currentTurn_);
+
+    // handle king side castle
+    if(move.isKingSideCastle()) {
+        const int KINGSIDE_PASSING_SQUARE = isSourcePieceWhite ? WHITE_KINGSIDE_PASSING_SQUARE : BLACK_KINGSIDE_PASSING_SQUARE;
+        const int KINGSIDE_ROOK_SQUARE = isSourcePieceWhite ? WHITE_KINGSIDE_ROOK_STARTING_SQUARE : BLACK_KINGSIDE_ROOK_STARTING_SQUARE;
+        // also move rook
+        board_.at(KINGSIDE_PASSING_SQUARE) = Piece{};
+        board_.at(KINGSIDE_ROOK_SQUARE) = Piece{PieceType::Rook, move.sourcePiece().color()};
+        // undo castling flag
+        isSourcePieceWhite ? setWhiteKingSideCastle(true) : setBlackKingSideCastle(true);
+    }
+
+    // handle queen side castle
+    if(move.isQueenSideCastle()) {
+        const int QUEENSIDE_PASSING_SQUARE = isSourcePieceWhite ? WHITE_QUEENSIDE_PASSING_SQUARE : BLACK_QUEENSIDE_PASSING_SQUARE;
+        const int QUEENSIDE_ROOK_SQUARE = isSourcePieceWhite ? WHITE_QUEENSIDE_ROOK_STARTING_SQUARE : BLACK_QUEENSIDE_ROOK_STARTING_SQUARE;
+        // also move rook
+        board_.at(QUEENSIDE_PASSING_SQUARE) = Piece{};
+        board_.at(QUEENSIDE_ROOK_SQUARE) = Piece{PieceType::Rook, move.sourcePiece().color()};
+        // undo castling flag
+        isSourcePieceWhite ? setWhiteQueenSideCastle(true) : setBlackQueenSideCastle(true);
+    }
+
     board_.at(move.sourceSquare()) = move.sourcePiece();
     board_.at(move.targetSquare()) = move.targetPiece();
-    currentTurn_ = oppositeColor(currentTurn_);
 }
 
-// TODO: consider extracting common deltas (e.g., knightDeltas) into Game class
-/*
-    Find if square is attacked. Greedily exits as soon as we find an attacking piece.
-*/
 bool Game::isSquareAttacked(const int targetSquare, const Color attackingColor) const {
+    // TODO: consider extracting common deltas (e.g., knightDeltas) into Game class
     const int targetRow = targetSquare / 8;
     const int targetColumn = targetSquare % 8;
 
@@ -748,7 +965,7 @@ bool Game::isSquareAttacked(const int targetSquare, const Color attackingColor) 
         for (const int deltaColumn : {-1, +1}) {
             const int curCol = targetColumn + deltaColumn;
             // out of range
-            if (!onBoard(attackingPawnRow, curCol)) continue;
+            if (!onBoard(curCol, attackingPawnRow)) continue;
 
             const int sq = attackingPawnRow * 8 + curCol;
             const Piece p = board_.at(sq);
@@ -772,7 +989,7 @@ bool Game::isSquareAttacked(const int targetSquare, const Color attackingColor) 
         const int curCol = targetColumn + knightDeltas[i][0];
         const int curRow = targetRow + knightDeltas[i][1];
         // out of bounds
-        if (!onBoard(curRow, curCol)) continue;
+        if (!onBoard(curCol, curRow)) continue;
 
         const int curSquare = curRow * 8 + curCol;
         const Piece p = board_.at(curSquare);
@@ -793,9 +1010,9 @@ bool Game::isSquareAttacked(const int targetSquare, const Color attackingColor) 
     };
     for (int i = 0; i < 8; i++) {
         const int curCol = targetColumn + kingDeltas[i][0];
-        const int curRow = targetColumn + kingDeltas[i][1];
+        const int curRow = targetRow + kingDeltas[i][1];
         // out of bounds
-        if (!onBoard(curRow, curCol)) continue;
+        if (!onBoard(curCol, curRow)) continue;
 
         const int curSquare = curRow * 8 + curCol;
         const Piece p = board_.at(curSquare);
@@ -806,7 +1023,7 @@ bool Game::isSquareAttacked(const int targetSquare, const Color attackingColor) 
     auto rayHits = [&](int dRow, int dCol, PieceType a, PieceType b) -> bool {
         int curRow = targetRow + dRow;
         int curCol = targetColumn + dCol;
-        while (onBoard(curRow, curCol)) {
+        while (onBoard(curCol, curRow)) {
             int sq = curRow * 8 + curCol;
             const Piece p = board_.at(sq);
             if (p.exists()) {

@@ -79,10 +79,16 @@ public:
     Piece sourcePiece() const;
     // Retrieve target square.
     Piece targetPiece() const;
+
     // Retrieve if this move is a pawn promotion.
     bool isPromotion() const;
     // Retrieve piece to promote to.
     Piece promotionPiece() const;
+
+    // Retrieve if this move is a king side castle.
+    bool isKingSideCastle() const;
+    // Retrieve if this move is a king side castle.
+    bool isQueenSideCastle() const;
     
     // Retrieve a string representation of the move. E.g., "White Pawn on e2 to Empty Square on e4".
     std::string to_string() const;
@@ -96,16 +102,51 @@ private:
     const Piece sourcePiece_;
     // A move's target square.
     const Piece targetPiece_;
-    // TODO: add logic for promotion pieces other than queen
+
     // If a move is a pawn promotion.
-    bool isPromotion_;
+    const bool isPromotion_;
+    // TODO: add logic for promotion pieces other than queen
     // Piece to promote to. Undefined behavior if move is not a pawn promotion.
-    Piece promotionPiece_;
+    const Piece promotionPiece_;
+    
+    // If a move is a king side castle.
+    const bool isKingSideCastle_;
+    // If a move is a queen side castle.
+    const bool isQueenSideCastle_;
+
+    // If a potential move is a pawn promotion.
+    static bool isPotentialPawnPromotion_(int targetSquare, Piece sourcePiece);
+    // If a potential move is a king side castle.
+    static bool isPotentialKingSideCastle_(int sourceSquare, int targetSquare, Piece sourcePiece, Piece targetPiece);
+    // If a potential move is a queen side castle.
+    static bool isPotentialQueenSideCastle_(int sourceSquare, int targetSquare, Piece sourcePiece, Piece targetPiece);
 };
 
 // A chess game. Contains information for the game and helpers to generate and validate moves.
 class Game {
 public:
+    // Constants for castling.
+    static constexpr int WHITE_KING_STARTING_SQUARE = 60;
+    static constexpr int BLACK_KING_STARTING_SQUARE = 4;
+
+    static constexpr int WHITE_KINGSIDE_TARGET_SQUARE = 62;
+    static constexpr int BLACK_KINGSIDE_TARGET_SQUARE = 6;
+
+    static constexpr int WHITE_QUEENSIDE_TARGET_SQUARE = 58;
+    static constexpr int BLACK_QUEENSIDE_TARGET_SQUARE = 2;
+
+    static constexpr int WHITE_KINGSIDE_PASSING_SQUARE = 61;
+    static constexpr int BLACK_KINGSIDE_PASSING_SQUARE = 5;
+
+    static constexpr int WHITE_QUEENSIDE_PASSING_SQUARE = 59;
+    static constexpr int BLACK_QUEENSIDE_PASSING_SQUARE = 3;
+
+    static constexpr int WHITE_KINGSIDE_ROOK_STARTING_SQUARE = 63;
+    static constexpr int BLACK_KINGSIDE_ROOK_STARTING_SQUARE = 7;
+
+    static constexpr int WHITE_QUEENSIDE_ROOK_STARTING_SQUARE = 56;
+    static constexpr int BLACK_QUEENSIDE_ROOK_STARTING_SQUARE = 0;
+
     // Construct a new game with an empty board. Current turn defaults to white.
     Game();
     // Update the board given a FEN.
@@ -119,6 +160,11 @@ public:
     std::string to_string() const;
     // If the game is finished.
     bool isFinished() const;
+
+    void setWhiteKingSideCastle(bool b);
+    void setBlackKingSideCastle(bool b);
+    void setWhiteQueenSideCastle(bool b);
+    void setBlackQueenSideCastle(bool b);
 
     // Try a move and return if the move was made. The move is only made if it is legal.
     bool tryMove(Move move);
@@ -156,6 +202,10 @@ private:
     std::array<Piece, 64> board_;
     // The game's current turn.
     Color currentTurn_;
+    bool canWhiteKingSideCastle_;
+    bool canBlackKingSideCastle_;
+    bool canWhiteQueenSideCastle_;
+    bool canBlackQueenSideCastle_;
     // Attempt to parse long notation (e.g., "g1 f3") to a move.
     std::optional<Move> parseLongNotation_(std::string sourceS, std::string targetS) const;
     // Attempt to parse algebraic notation (e.g., "Nf3") to a move.

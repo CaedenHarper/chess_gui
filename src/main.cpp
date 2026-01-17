@@ -194,6 +194,12 @@ void runGUIGame() {
             }
         }
 
+        // highlight attacked squares
+        for(int i = 0; i < 64; i++) {
+            // if(game.isSquareAttacked(i, Color::White)) board.at(i).setHighlight(Board::RIGHT_CLICK_HIGHLIGHT);
+            // if(game.isSquareAttacked(i, Color::Black)) board.at(i).setHighlight(Board::RIGHT_CLICK_HIGHLIGHT);
+        }
+        
         // clear the window
         window.clear(sf::Color::Black);
 
