@@ -105,7 +105,7 @@ Move::Move(int sourceSquare, int targetSquare, Piece sourcePiece, Piece targetPi
  promotionPiece_{PieceType::Queen, sourcePiece.color()} {
     const int targetRow = targetSquare / 8;
     const int finalRow = (sourcePiece.color() == Color::White) ? 0 : 7; // rank 7 for white, rank 0 for black
-    isPromotion_ = targetRow == finalRow;
+    isPromotion_ = targetRow == finalRow && sourcePiece.type() == PieceType::Pawn;
 }
 
 int Move::sourceSquare() const {
