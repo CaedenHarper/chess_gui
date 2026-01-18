@@ -186,7 +186,8 @@ Game::Game()
     canWhiteKingSideCastle_{true},
     canBlackKingSideCastle_{true},
     canWhiteQueenSideCastle_{true},
-    canBlackQueenSideCastle_{true} {
+    canBlackQueenSideCastle_{true},
+    currentEnPassantSquare{std::nullopt} {
 }
 
 Color Game::currentTurn() const {
@@ -478,7 +479,7 @@ std::vector<Move> Game::generatePseudoLegalPawnMoves_(const int sourceSquare) {
         }
 
         // en passant
-        if (capLeft == currentEnPassantSquare) {
+        if (currentEnPassantSquare.has_value() && capLeft == currentEnPassantSquare.value()) {
             out.emplace_back(sourceSquare, capLeft, sourcePiece, capPiece);
         }
     }
@@ -491,7 +492,7 @@ std::vector<Move> Game::generatePseudoLegalPawnMoves_(const int sourceSquare) {
         }
 
         // en passant
-        if (capRight == currentEnPassantSquare) {
+        if (currentEnPassantSquare.has_value() && capRight == currentEnPassantSquare.value()) {
             out.emplace_back(sourceSquare, capRight, sourcePiece, capPiece);
         }
     }
@@ -942,6 +943,11 @@ void Game::undoMove(const Move move) {
         board_.at(capturedIndex) = Piece{PieceType::Pawn, oppositeColor(move.sourcePiece().color())};
         // undo en passant flag
         currentEnPassantSquare = move.targetSquare();
+    }
+
+    // If the last move was a double pawn we undo the en passant square that we set
+    if(move.isDoublePawn()) {
+        currentEnPassantSquare.reset();
     }
 
     board_.at(move.sourceSquare()) = move.sourcePiece();
