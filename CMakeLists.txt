@@ -40,3 +40,15 @@ target_link_libraries(chess PRIVATE SFML::Audio SFML::Graphics)
 # Built with c++17
 target_compile_features(chess PRIVATE cxx_std_17)
 target_compile_options(chess PRIVATE -Wall -Wextra -Wpedantic)
+
+# Enable testing by exporting chess library
+add_library(chess_lib
+    src/game/Game.cpp
+    src/gui/Board.cpp
+)
+target_include_directories(chess_lib PUBLIC include)
+
+target_link_libraries(chess_lib PUBLIC SFML::Graphics SFML::Window)
+
+enable_testing()
+add_subdirectory(tests)
