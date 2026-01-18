@@ -72,24 +72,29 @@ public:
                                                isPromotion_ == other.isPromotion_ &&
                                                promotionPiece_ == other.promotionPiece_; }
     // Retrieve source square.
-    int sourceSquare() const;
+    int sourceSquare() const { return sourceSquare_; }
     // Retrieve target square.
-    int targetSquare() const;
+    int targetSquare() const { return targetSquare_; }
     // Retrieve source piece.
-    Piece sourcePiece() const;
+    Piece sourcePiece() const { return sourcePiece_; }
     // Retrieve target square.
-    Piece targetPiece() const;
+    Piece targetPiece() const { return targetPiece_; }
 
     // Retrieve if this move is a pawn promotion.
-    bool isPromotion() const;
+    bool isPromotion() const { return isPromotion_; }
     // Retrieve piece to promote to.
-    Piece promotionPiece() const;
+    Piece promotionPiece() const { return promotionPiece_; }
 
     // Retrieve if this move is a king side castle.
-    bool isKingSideCastle() const;
+    bool isKingSideCastle() const { return isKingSideCastle_; }
     // Retrieve if this move is a king side castle.
-    bool isQueenSideCastle() const;
-    
+    bool isQueenSideCastle() const { return isQueenSideCastle_; }
+
+    // Retrieve if this move is a double pawn move.
+    bool isDoublePawn() const { return isDoublePawn_; }
+    // Retrieve if this move is an en passant pawn capture.
+    bool isEnPassant() const { return isEnPassant_; }
+
     // Retrieve a string representation of the move. E.g., "White Pawn on e2 to Empty Square on e4".
     std::string to_string() const;
 
@@ -114,12 +119,21 @@ private:
     // If a move is a queen side castle.
     bool isQueenSideCastle_;
 
-    // If a potential move is a pawn promotion.
+    // If a move is a double pawn move.
+    bool isDoublePawn_;
+    // If a move is an en passant pawn capture.
+    bool isEnPassant_;
+
+    // If a move is a potential pawn promotion.
     static bool isPotentialPawnPromotion_(int targetSquare, Piece sourcePiece);
-    // If a potential move is a king side castle.
+    // If a move is a potential king side castle.
     static bool isPotentialKingSideCastle_(int sourceSquare, int targetSquare, Piece sourcePiece, Piece targetPiece);
-    // If a potential move is a queen side castle.
+    // If a move is a potential queen side castle.
     static bool isPotentialQueenSideCastle_(int sourceSquare, int targetSquare, Piece sourcePiece, Piece targetPiece);
+    // If a move is a potential double pawn move.
+    static bool isPotentialDoublePawn_(int sourceSquare, int targetSquare, Piece sourcePiece);
+    // If a move is a potential en passant pawn move.
+    static bool isPotentialEnPassant_(int sourceSquare, int targetSquare, Piece sourcePiece, Piece targetPiece);
 };
 
 // A chess game. Contains information for the game and helpers to generate and validate moves.
@@ -255,6 +269,13 @@ public:
     // If a column and row is on the board, in bounds.
     static bool onBoard(int col, int row);
 
+    // Get column of square.
+    static int getCol(int square);
+    // Get row of square.
+    static int getRow(int square);
+    // Get square index from column and row.
+    static int getSquareIndex(int col, int row);
+
     // Get the opposite color of a given color.
     static Color oppositeColor(Color color);
 
@@ -263,10 +284,13 @@ private:
     std::array<Piece, NUM_SQUARES> board_;
     // The game's current turn.
     Color currentTurn_;
+    // Castling flags.
     bool canWhiteKingSideCastle_;
     bool canBlackKingSideCastle_;
     bool canWhiteQueenSideCastle_;
     bool canBlackQueenSideCastle_;
+    // Current en passant square. Does not exist if no en passant is possible on the board.
+    std::optional<int> currentEnPassantSquare;
     // Attempt to parse long notation (e.g., "g1 f3") to a move.
     std::optional<Move> parseLongNotation_(const std::string& sourceMove, const std::string& targetMove) const;
     // Attempt to parse algebraic notation (e.g., "Nf3") to a move.

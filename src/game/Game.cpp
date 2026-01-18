@@ -99,8 +99,7 @@ std::string Piece::to_string_long() const {
     }
 }
 
-Move::Move(int sourceSquare, int targetSquare, Piece sourcePiece, Piece targetPiece) 
- :
+Move::Move(int sourceSquare, int targetSquare, Piece sourcePiece, Piece targetPiece) :
  sourceSquare_{sourceSquare},
  targetSquare_{targetSquare},
  sourcePiece_{sourcePiece},
@@ -108,44 +107,13 @@ Move::Move(int sourceSquare, int targetSquare, Piece sourcePiece, Piece targetPi
  isPromotion_{isPotentialPawnPromotion_(targetSquare, sourcePiece)},
  promotionPiece_{PieceType::Queen, sourcePiece.color()},
  isKingSideCastle_{isPotentialKingSideCastle_(sourceSquare, targetSquare, sourcePiece, targetPiece)},
- isQueenSideCastle_{isPotentialQueenSideCastle_(sourceSquare, targetSquare, sourcePiece, targetPiece)} {
-
-}
-
-int Move::sourceSquare() const {
-    return sourceSquare_;
-}
-
-int Move::targetSquare() const {
-    return targetSquare_;
-}
-
-Piece Move::sourcePiece() const {
-    return sourcePiece_;
-}
-
-Piece Move::targetPiece() const {
-    return targetPiece_;
-}
-
-bool Move::isPromotion() const {
-    return isPromotion_;
-}
-
-Piece Move::promotionPiece() const {
-    return promotionPiece_;
-}
-
-bool Move::isKingSideCastle() const {
-    return isKingSideCastle_;
-}
-
-bool Move::isQueenSideCastle() const {
-    return isQueenSideCastle_;
+ isQueenSideCastle_{isPotentialQueenSideCastle_(sourceSquare, targetSquare, sourcePiece, targetPiece)},
+ isDoublePawn_{isPotentialDoublePawn_(sourceSquare, targetSquare, sourcePiece)},
+ isEnPassant_{isPotentialEnPassant_(sourceSquare, targetSquare, sourcePiece, targetPiece)} {
 }
 
 bool Move::isPotentialPawnPromotion_(int targetSquare, Piece sourcePiece) {
-    const int targetRow = targetSquare / 8;
+    const int targetRow = Game::getRow(targetSquare);
     const int finalRow = (sourcePiece.color() == Color::White) ? 0 : 7; // rank 7 for white, rank 0 for black
     return targetRow == finalRow && sourcePiece.type() == PieceType::Pawn;
 }
@@ -196,6 +164,16 @@ bool Move::isPotentialQueenSideCastle_(int sourceSquare, int targetSquare, Piece
     return false;
 }
 
+bool Move::isPotentialDoublePawn_(int sourceSquare, int targetSquare, Piece sourcePiece) {
+    // Only double pawn if pawn moves a distance of two rows
+    return sourcePiece.type() == PieceType::Pawn && abs(Game::getRow(targetSquare) - Game::getRow(sourceSquare)) == 2;
+}
+
+bool Move::isPotentialEnPassant_(int sourceSquare, int targetSquare, Piece sourcePiece, Piece targetPiece) {
+    // Only en passant if pawn lands on empty square with a capture (i.e., not on same column)
+    return sourcePiece.type() == PieceType::Pawn && !targetPiece.exists() && Game::getCol(sourceSquare) != Game::getCol(targetSquare);
+}
+
 std::string Move::to_string() const {
     return ( 
         sourcePiece_.to_string_long() + " on " + Game::intToAlgebraicNotation(sourceSquare_) + " to " +
@@ -240,20 +218,20 @@ std::string Game::to_string() const {
     int squareIndex = 0;
     for (const auto& piece : board_) {
         // print line start if at start of row
-        if(squareIndex%8 == 0) {
-            out += std::to_string(8-(squareIndex/8)) + " |";
+        if(getCol(squareIndex) == 0) {
+            out += std::to_string(8 - getRow(squareIndex)) + " |";
         }
     
         if(piece.exists()) {
             out += piece.to_string_short() + "|";
         } else {
             // if piece is none, print square color
-            // square color is white if the square polarity matches the row polarity
-            out += squareIndex%2 == (squareIndex/8)%2 ? " |" : "#|";
+            // square color is white if the col polarity matches row polarity
+            out += getCol(squareIndex) % 2 == getRow(squareIndex) % 2 ? " |" : "#|";
         }
 
         // print line ending if at end of row
-        if(squareIndex%8 == 7) {
+        if(getCol(squareIndex) == 7) {
             out += "\n";
         }
 
@@ -270,7 +248,7 @@ void Game::loadFEN(const std::string& FEN) {
     0 - piece placement
     1 - current color
     2 - castling
-    3 - en passent
+    3 - en passant
     4 - halfmove clock
     5 - current move number
     */
@@ -334,7 +312,7 @@ void Game::loadFEN(const std::string& FEN) {
             continue;
         }
 
-        // TODO: en passent
+        // TODO: en passant
         if(field == 3) {
             continue;
         }
@@ -386,21 +364,21 @@ std::optional<Move> Game::parseLongNotation_(const std::string& sourceMove, cons
         return std::nullopt;
     }
 
-    const char sourceFileC = sourceMove.at(0);
-    const char sourceRankC = sourceMove.at(1);
-    const char targetFileC = targetMove.at(0);
-    const char targetRankC = targetMove.at(1);
+    const char sourceColC = sourceMove.at(0);
+    const char sourceRowC = sourceMove.at(1);
+    const char targetColC = targetMove.at(0);
+    const char targetRowC = targetMove.at(1);
 
-    const int sourceFile = sourceFileC - 'a';
-    const int sourceRank = sourceRankC - '0';
-    const int targetFile = targetFileC - 'a';
-    const int targetRank = targetRankC - '0';
+    const int sourceCol = sourceColC - 'a';
+    const int sourceRow = sourceRowC - '0';
+    const int targetCol = targetColC - 'a';
+    const int targetRow = targetRowC - '0';
 
     // all files and ranks should be in range 0 - 7
-    if(sourceFile < 0 || sourceFile > 7 
-    || sourceRank < 0 || sourceRank > 7
-    || targetFile < 0 || targetFile > 7 
-    || targetRank < 0 || targetRank > 7) {
+    if(sourceCol < 0 || sourceCol > 7 
+    || sourceRow < 0 || sourceRow > 7
+    || targetCol < 0 || targetCol > 7 
+    || targetRow < 0 || targetRow > 7) {
         // TODO: debug statement
         std::cerr << "parseLongNotation: one file or rank is out of bounds\n";
         return std::nullopt;
@@ -408,8 +386,8 @@ std::optional<Move> Game::parseLongNotation_(const std::string& sourceMove, cons
 
     // rank 1 starts at at index 0, whereas Game handles the board starting from the top left (rank 8 being 0)
     // therefore, we need to reflect it across the middle of the board with (8 - rank)
-    const int sourceSquare = (8 * (8 - sourceRank)) + sourceFile; 
-    const int targetSquare = (8 * (8 - targetRank)) + targetFile; 
+    const int sourceSquare = getSquareIndex(sourceCol, 8 - sourceRow);
+    const int targetSquare = getSquareIndex(targetCol, 8 - targetRow); 
 
     return Move{sourceSquare, targetSquare, board_.at(sourceSquare), board_.at(targetSquare)};
 }
@@ -454,22 +432,21 @@ std::optional<Move> Game::parseMove(const std::string& move) const {
     return parseLongNotation_(firstPart, secondPart);
 }
 
-// TODO: en passent
 std::vector<Move> Game::generatePseudoLegalPawnMoves_(const int sourceSquare) {
     /* 
         Four pawn capture types:
         1. One move forward
         2. Two moves forward, has to start on 2nd rank
-        3. Capture left, has to be opposite color piece (or en passent)
-        4. Capture right, has to be opposite color piece (or en passent)
+        3. Capture left, has to be opposite color piece (or en passant)
+        4. Capture right, has to be opposite color piece (or en passant)
     */
     std::vector<Move> out;
 
     const Piece sourcePiece = board_.at(sourceSquare);
     const Color sourceColor = sourcePiece.color();
 
-    const int row = sourceSquare / 8;
-    const int col = sourceSquare % 8;
+    const int row = getRow(sourceSquare);
+    const int col = getCol(sourceSquare);
 
     const int dir = (sourceColor == Color::White) ? -1 : 1; // this function is from black's pov
     const int startRow = (sourceColor == Color::White) ? 6 : 1;  // rank 7 / rank 2
@@ -499,12 +476,22 @@ std::vector<Move> Game::generatePseudoLegalPawnMoves_(const int sourceSquare) {
         if (capPiece.exists() && capPiece.color() != sourceColor) {
             out.emplace_back(sourceSquare, capLeft, sourcePiece, capPiece);
         }
+
+        // en passant
+        if (capLeft == currentEnPassantSquare) {
+            out.emplace_back(sourceSquare, capLeft, sourcePiece, capPiece);
+        }
     }
 
     // Case 4
     if (col < 7 && onBoard(capRight)) {
         const Piece capPiece = board_.at(capRight);
         if (capPiece.exists() && capPiece.color() != sourceColor) { 
+            out.emplace_back(sourceSquare, capRight, sourcePiece, capPiece);
+        }
+
+        // en passant
+        if (capRight == currentEnPassantSquare) {
             out.emplace_back(sourceSquare, capRight, sourcePiece, capPiece);
         }
     }
@@ -519,8 +506,8 @@ std::vector<Move> Game::generatePseudoLegalKnightMoves_(const int sourceSquare) 
     const Piece sourcePiece = board_.at(sourceSquare);
     const Color sourceColor = sourcePiece.color();
 
-    const int row = sourceSquare / 8;
-    const int col = sourceSquare % 8;
+    const int row = getRow(sourceSquare);
+    const int col = getCol(sourceSquare);
 
     for(int i = 0; i < 8; i++) {
         const int col2 = col + knightDeltas.at(i).at(0);
@@ -529,7 +516,7 @@ std::vector<Move> Game::generatePseudoLegalKnightMoves_(const int sourceSquare) 
             continue;
         }
         
-        const int square2 = (row2 * 8) + col2;
+        const int square2 = getSquareIndex(col2, row2);
         const Piece piece2 = board_.at(square2);
 
         // Can move if target square is empty or has enemy
@@ -547,8 +534,8 @@ std::vector<Move> Game::generatePseudoLegalBishopMoves_(const int sourceSquare) 
     const Piece sourcePiece = board_.at(sourceSquare);
     const Color sourceColor = sourcePiece.color();
 
-    const int row = sourceSquare / 8;
-    const int col = sourceSquare % 8;
+    const int row = getRow(sourceSquare);
+    const int col = getCol(sourceSquare);
 
     for(int i = 0; i < 4; i++) {
         const int dcol = bishopDeltas.at(i).at(0);
@@ -558,7 +545,7 @@ std::vector<Move> Game::generatePseudoLegalBishopMoves_(const int sourceSquare) 
         int curCol = col + dcol;
         int curRow = row + drow;
         while(onBoard(curCol, curRow)) {
-            const int curSquare = (curRow * 8) + curCol;
+            const int curSquare = getSquareIndex(curCol, curRow);
             const Piece curPiece = board_.at(curSquare);
 
             if(!curPiece.exists()) {
@@ -591,8 +578,8 @@ std::vector<Move> Game::generatePseudoLegalRookMoves_(const int sourceSquare) {
     const Piece sourcePiece = board_.at(sourceSquare);
     const Color sourceColor = sourcePiece.color();
 
-    const int row = sourceSquare / 8;
-    const int col = sourceSquare % 8;
+    const int row = getRow(sourceSquare);
+    const int col = getCol(sourceSquare);
 
     for(int i = 0; i < 4; i++) {
         const int dcol = rookDeltas.at(i).at(0);
@@ -602,7 +589,7 @@ std::vector<Move> Game::generatePseudoLegalRookMoves_(const int sourceSquare) {
         int curCol = col + dcol;
         int curRow = row + drow;
         while(onBoard(curCol, curRow)) {
-            const int curSquare = (curRow * 8) + curCol;
+            const int curSquare = getSquareIndex(curCol, curRow);
             const Piece curPiece = board_.at(curSquare);
 
             if(!curPiece.exists()) {
@@ -635,8 +622,8 @@ std::vector<Move> Game::generatePseudoLegalQueenMoves_(const int sourceSquare) {
     const Piece sourcePiece = board_.at(sourceSquare);
     const Color sourceColor = sourcePiece.color();
 
-    const int row = sourceSquare / 8;
-    const int col = sourceSquare % 8;
+    const int row = getRow(sourceSquare);
+    const int col = getCol(sourceSquare);
 
     for(int i = 0; i < 8; i++) {
         const int dCol = queenDeltas.at(i).at(0);
@@ -646,7 +633,7 @@ std::vector<Move> Game::generatePseudoLegalQueenMoves_(const int sourceSquare) {
         int curCol = col + dCol;
         int curRow = row + dRow;
         while(onBoard(curCol, curRow)) {
-            const int curSquare = (curRow * 8) + curCol;
+            const int curSquare = getSquareIndex(curCol, curRow);
             const Piece curPiece = board_.at(curSquare);
 
             if(!curPiece.exists()) {
@@ -679,8 +666,8 @@ std::vector<Move> Game::generatePseudoLegalKingMoves_(const int sourceSquare) {
     const Piece sourcePiece = board_.at(sourceSquare);
     const Color sourceColor = sourcePiece.color();
 
-    const int row = sourceSquare / 8;
-    const int col = sourceSquare % 8;
+    const int row = getRow(sourceSquare);
+    const int col = getCol(sourceSquare);
 
     for(int i = 0; i < 8; i++) {
         const int col2 = col + kingDeltas.at(i).at(0);
@@ -689,7 +676,7 @@ std::vector<Move> Game::generatePseudoLegalKingMoves_(const int sourceSquare) {
             continue;
         }
         
-        const int square2 = (row2 * 8) + col2;
+        const int square2 = getSquareIndex(col2, row2);
         const Piece piece2 = board_.at(square2);
 
         // Can move if target square is empty or has enemy
@@ -846,6 +833,8 @@ void Game::makeMove(const Move move) {
     const bool isSourcePieceWhite = move.sourcePiece().color() == Color::White;
     // flip current turn
     currentTurn_ = oppositeColor(currentTurn_);
+    // remove en passant (we may set it again later in this function)
+    currentEnPassantSquare.reset(); 
 
     // update castling flags
     if(
@@ -873,6 +862,21 @@ void Game::makeMove(const Move move) {
         setBlackQueenSideCastle(false);
     }
 
+    // update en passant flag
+    if(move.isDoublePawn()) {
+        const int sourceRow = getRow(move.sourceSquare());
+        const int towardsCenter = isSourcePieceWhite ? -1 : +1;
+        const int passedRow = sourceRow + towardsCenter; // row that was passed in the double move
+        currentEnPassantSquare = getSquareIndex(getCol(move.sourceSquare()), passedRow); 
+    }
+
+    // If en passant capture, remove the captured pawn
+    if (move.isEnPassant()) {
+        const int towardsCenter = isSourcePieceWhite ? -1 : +1;
+        const int capturedIndex = move.targetSquare() - (towardsCenter * 8);
+        board_.at(capturedIndex) = Piece{};
+    }
+
     // TODO: fully implement promotion; for now Queen is assumed in all cases
     // handle pawn promotion
     if(move.isPromotion()) {
@@ -881,7 +885,7 @@ void Game::makeMove(const Move move) {
         return;
     }
 
-    // handle king side castle
+    // If king side castle, also move the rook
     if(move.isKingSideCastle()) {
         const int KINGSIDE_PASSING_SQUARE = isSourcePieceWhite ? WHITE_KINGSIDE_PASSING_SQUARE : BLACK_KINGSIDE_PASSING_SQUARE;
         const int KINGSIDE_ROOK_SQUARE = isSourcePieceWhite ? WHITE_KINGSIDE_ROOK_STARTING_SQUARE : BLACK_KINGSIDE_ROOK_STARTING_SQUARE;
@@ -890,7 +894,7 @@ void Game::makeMove(const Move move) {
         board_.at(KINGSIDE_ROOK_SQUARE) = Piece{};
     }
 
-    // handle queen side castle
+    // If queen side castle, also move the queen
     if(move.isQueenSideCastle()) {
         const int QUEENSIDE_PASSING_SQUARE = isSourcePieceWhite ? WHITE_QUEENSIDE_PASSING_SQUARE : BLACK_QUEENSIDE_PASSING_SQUARE;
         const int QUEENSIDE_ROOK_SQUARE = isSourcePieceWhite ? WHITE_QUEENSIDE_ROOK_STARTING_SQUARE : BLACK_QUEENSIDE_ROOK_STARTING_SQUARE;
@@ -930,14 +934,24 @@ void Game::undoMove(const Move move) {
         isSourcePieceWhite ? setWhiteQueenSideCastle(true) : setBlackQueenSideCastle(true);
     }
 
+    // handle en passant
+    if(move.isEnPassant()) {
+        const int towardsCenter = isSourcePieceWhite ? -1 : +1;
+        const int capturedIndex = move.targetSquare() - (towardsCenter * 8);
+        // replace captured pawn
+        board_.at(capturedIndex) = Piece{PieceType::Pawn, oppositeColor(move.sourcePiece().color())};
+        // undo en passant flag
+        currentEnPassantSquare = move.targetSquare();
+    }
+
     board_.at(move.sourceSquare()) = move.sourcePiece();
     board_.at(move.targetSquare()) = move.targetPiece();
 }
 
 bool Game::isSquareAttacked(const int targetSquare, const Color attackingColor) const {
     // TODO: consider extracting common deltas (e.g., knightDeltas) into Game class
-    const int targetRow = targetSquare / 8;
-    const int targetColumn = targetSquare % 8;
+    const int targetRow = getRow(targetSquare);
+    const int targetColumn = getCol(targetSquare);
 
     // 1. Pawn attacks (only diagonals)
     // White attacks row - 1, Black attacks row + 1
@@ -951,7 +965,7 @@ bool Game::isSquareAttacked(const int targetSquare, const Color attackingColor) 
                 continue;
             }
 
-            const int attackingPawnSquare = (attackingPawnRow * 8) + curCol;
+            const int attackingPawnSquare = getSquareIndex(curCol, attackingPawnRow);
             const Piece possibleAttackingPawn = board_.at(attackingPawnSquare);
             if (possibleAttackingPawn.type() == PieceType::Pawn && possibleAttackingPawn.color() == attackingColor) {
                 return true;
@@ -968,7 +982,7 @@ bool Game::isSquareAttacked(const int targetSquare, const Color attackingColor) 
             continue;
         }
 
-        const int curSquare = (curRow * 8) + curCol;
+        const int curSquare = getSquareIndex(curCol, curRow);
         const Piece possibleKnight = board_.at(curSquare);
         if (possibleKnight.type() == PieceType::Knight && possibleKnight.color() == attackingColor) {
             return true;
@@ -984,7 +998,7 @@ bool Game::isSquareAttacked(const int targetSquare, const Color attackingColor) 
             continue;
         }
 
-        const int curSquare = (curRow * 8) + curCol;
+        const int curSquare = getSquareIndex(curCol, curRow);
         const Piece possibleKing = board_.at(curSquare);
         if (possibleKing.type() == PieceType::King && possibleKing.color() == attackingColor) {
             return true;
@@ -996,7 +1010,7 @@ bool Game::isSquareAttacked(const int targetSquare, const Color attackingColor) 
         int curRow = targetRow + dRow;
         int curCol = targetColumn + dCol;
         while (onBoard(curCol, curRow)) {
-            const int curSquare = (curRow * 8) + curCol;
+            const int curSquare = getSquareIndex(curCol, curRow);
             const Piece attackingPiece = board_.at(curSquare);
             if (attackingPiece.exists()) {
                 // if not right piece, we are blocked and can return
@@ -1061,11 +1075,11 @@ std::optional<int> Game::findKingSquare(const Color colorToFind) const {
 }
 
 std::string Game::intToAlgebraicNotation(const int square) {
-    const int col = square%8;
+    const int col = getCol(square);
     const std::string file = std::string{static_cast<char>('a' + col)};
     
-    // first reflect n over middle of chessboard
-    const int row = 7-(square/8);
+    // reflect n over middle of chessboard
+    const int row = 7 - getRow(square);
     const std::string rank = std::string{ static_cast<char>('1' + row)};
 
     return file + rank;
@@ -1077,6 +1091,18 @@ bool Game::onBoard(const int square) {
 
 bool Game::onBoard(const int col, int row) {
     return 0 <= col && col <= 7 && 0 <= row && row <= 7;
+}
+
+int Game::getCol(int square) {
+    return square % 8;
+}
+
+int Game::getRow(int square) {
+    return square / 8;
+}
+
+int Game::getSquareIndex(int col, int row) {
+    return (8 * row) + col;
 }
 
 Color Game::oppositeColor(const Color color) {
