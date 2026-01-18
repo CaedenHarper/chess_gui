@@ -5,6 +5,7 @@ Checks:
   - '-llvmlibc-implementation-in-namespace'   # This is not a llvmlibc project
   - '-llvmlibc-callee-namespace'              # This is not a llvmlibc project
   - '-llvmlibc-inline-function-decl'          # This is not a llvmlibc project
+  - '-altera-id-dependent-backward-branch'    # This is not necessary for this project
 
   # --- Might change one day ---
   - '-altera-unroll-loops'                                        # Performance boost not really needed, may be worth investigating some day

@@ -72,7 +72,7 @@ Piece Piece::charToPiece(const char piece) {
 }
 
 std::string Piece::to_string_short() const {
-    bool isWhite = color_ == Color::White;
+    const bool isWhite = color_ == Color::White;
 
     switch (type_) {
         case PieceType::None: return "?";
@@ -86,7 +86,7 @@ std::string Piece::to_string_short() const {
 }
 
 std::string Piece::to_string_long() const {
-    std::string color = color_ == Color::White ? "White " : "Black ";
+    const std::string color = color_ == Color::White ? "White " : "Black ";
 
     switch (type_) {
         case PieceType::None: return "Empty Square";
@@ -288,9 +288,9 @@ void Game::loadFEN(const std::string& FEN) {
         if(field == 0) {
             if(c >= '1' && c <= '8') {
                 // Numbers indicate n empty squares
-                int numberEmptySquares = c-'0';
+                const int numberEmptySquares = c-'0';
                 for(int i = 0; i < numberEmptySquares; i++) {
-                    Piece emptySquare = Piece{};
+                    const Piece emptySquare = Piece{};
                     board_.at(piecePlacementIndex) = emptySquare;
                     piecePlacementIndex++;
                 }
@@ -303,7 +303,7 @@ void Game::loadFEN(const std::string& FEN) {
             }
             
             // We either have a proper piece or an invalid FEN
-            Piece newPiece = Piece::charToPiece(c);
+            const Piece newPiece = Piece::charToPiece(c);
             if(!newPiece.exists()) {
                 // TODO: parsing error
                 std::cerr << "loadFEN parsing error!\n";
@@ -386,15 +386,15 @@ std::optional<Move> Game::parseLongNotation_(const std::string& sourceMove, cons
         return std::nullopt;
     }
 
-    char sourceFileC = sourceMove.at(0);
-    char sourceRankC = sourceMove.at(1);
-    char targetFileC = targetMove.at(0);
-    char targetRankC = targetMove.at(1);
+    const char sourceFileC = sourceMove.at(0);
+    const char sourceRankC = sourceMove.at(1);
+    const char targetFileC = targetMove.at(0);
+    const char targetRankC = targetMove.at(1);
 
-    int sourceFile = sourceFileC - 'a';
-    int sourceRank = sourceRankC - '0';
-    int targetFile = targetFileC - 'a';
-    int targetRank = targetRankC - '0';
+    const int sourceFile = sourceFileC - 'a';
+    const int sourceRank = sourceRankC - '0';
+    const int targetFile = targetFileC - 'a';
+    const int targetRank = targetRankC - '0';
 
     // all files and ranks should be in range 0 - 7
     if(sourceFile < 0 || sourceFile > 7 
@@ -408,8 +408,8 @@ std::optional<Move> Game::parseLongNotation_(const std::string& sourceMove, cons
 
     // rank 1 starts at at index 0, whereas Game handles the board starting from the top left (rank 8 being 0)
     // therefore, we need to reflect it across the middle of the board with (8 - rank)
-    int sourceSquare = (8 * (8 - sourceRank)) + sourceFile; 
-    int targetSquare = (8 * (8 - targetRank)) + targetFile; 
+    const int sourceSquare = (8 * (8 - sourceRank)) + sourceFile; 
+    const int targetSquare = (8 * (8 - targetRank)) + targetFile; 
 
     return Move{sourceSquare, targetSquare, board_.at(sourceSquare), board_.at(targetSquare)};
 }
@@ -429,7 +429,7 @@ std::optional<Move> Game::parseMove(const std::string& move) const {
     std::string firstPart;
     std::string secondPart;
     // iterate through and split based on first part before space vs. second part. any unknown characters are ignored. any spaces after the first space are ignored.
-    for(char c : move) { // NOLINT(readability-identifier-length)
+    for(const char c : move) { // NOLINT(readability-identifier-length)
         if(c == ' ' && currentPart == 0) {
             currentPart = 1;
             continue;
@@ -749,11 +749,11 @@ std::vector<Move> Game::generatePseudoLegalKingMoves_(const int sourceSquare) {
 
 std::vector<Move> Game::generateLegalMoves(const int sourceSquare) {
     // TODO: eventually make generateLegalMoves const by finding a workaround other than simply undoing moves
-    std::vector<Move> pseudoMoves = generatePseudoLegalMoves_(sourceSquare);
+    const std::vector<Move> pseudoMoves = generatePseudoLegalMoves_(sourceSquare);
     std::vector<Move> legalMoves;
 
     // only allow moves that do not leave king in check
-    for(Move move : pseudoMoves) {
+    for(const Move move : pseudoMoves) {
         const Color moveColor = move.sourcePiece().color();
         const Color enemyColor = oppositeColor(moveColor);
 
@@ -1045,7 +1045,7 @@ bool Game::isSquareAttacked(const int targetSquare, const Color attackingColor) 
 bool Game::isInCheck(const Color colorToFind) const {
     // TODO: optimize
     // TODO: this throws if game is inactive
-    int kingSquare = findKingSquare(colorToFind).value();
+    const int kingSquare = findKingSquare(colorToFind).value();
     return isSquareAttacked(kingSquare, oppositeColor(colorToFind));
 }
 
@@ -1061,12 +1061,12 @@ std::optional<int> Game::findKingSquare(const Color colorToFind) const {
 }
 
 std::string Game::intToAlgebraicNotation(const int square) {
-    int col = square%8;
-    std::string file = std::string{static_cast<char>('a' + col)};
+    const int col = square%8;
+    const std::string file = std::string{static_cast<char>('a' + col)};
     
     // first reflect n over middle of chessboard
-    int row = 7-(square/8);
-    std::string rank = std::string{ static_cast<char>('1' + row)};
+    const int row = 7-(square/8);
+    const std::string rank = std::string{ static_cast<char>('1' + row)};
 
     return file + rank;
 }

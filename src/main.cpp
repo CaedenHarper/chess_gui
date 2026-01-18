@@ -26,7 +26,7 @@ void runCLIGame() {
             std::cout << "Invalid move. Try again.\n";
             continue;
         }
-        Move move = possibleMove.value();
+        const Move move = possibleMove.value();
         std::cout << "Parsed move: " << move.to_string() << "\n";
 
         if(!game.tryMove(move)) {
@@ -82,7 +82,7 @@ void runGUIGame() {
                     // first clear all highlights
                     board.clearAllHighlights();
 
-                    sf::Vector2i mousePos = mouseObject->position;
+                    const sf::Vector2i mousePos = mouseObject->position;
                     int targetSquare = Board::getSquareIndexFromCoordinates(mousePos.x, mousePos.y);
                     
                     // square does not exist; reset any selected piece and continue
@@ -107,8 +107,8 @@ void runGUIGame() {
                         board.at(targetSquare).setHighlight(Board::SELECTED_HIGHLIGHT);
 
                         // highlight legal moves
-                        std::vector<Move> legalMoves = game.generateLegalMoves(targetSquare);
-                        for(Move move : legalMoves) {
+                        const std::vector<Move> legalMoves = game.generateLegalMoves(targetSquare);
+                        for(const Move move : legalMoves) {
                             board.at(move.targetSquare()).setHighlight(Board::LEGAL_HIGHLIGHT);
                         }
 
@@ -147,8 +147,8 @@ void runGUIGame() {
                     // right click cancels any held square
                     heldSquare.reset();
 
-                    sf::Vector2i mousePos = mouseObject->position;
-                    int targetSquare = Board::getSquareIndexFromCoordinates(mousePos.x, mousePos.y);
+                    const sf::Vector2i mousePos = mouseObject->position;
+                    const int targetSquare = Board::getSquareIndexFromCoordinates(mousePos.x, mousePos.y);
                     
                     // swap highlight status of square
                     if(Game::onBoard(targetSquare)) {
@@ -182,7 +182,7 @@ void runGUIGame() {
                     }
 
                     // move is on board and different square
-                    Move potentialMove{sourceSquare, targetSquare, game.board().at(sourceSquare), game.board().at(targetSquare)};
+                    const Move potentialMove{sourceSquare, targetSquare, game.board().at(sourceSquare), game.board().at(targetSquare)};
                     // if move is legal, try it
                     if (game.tryMove(potentialMove)) {
                         board.updateBoardFromGame(game);

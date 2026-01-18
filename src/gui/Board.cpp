@@ -11,7 +11,7 @@
 const sf::Texture& TextureCache::get(const PieceType type, const Color color) {
     static std::map<std::string, sf::Texture> cache;
 
-    std::string path = makePath_(type, color);
+    const std::string path = makePath_(type, color);
     // see if we can find it early from cache
     auto possibleTextureIter = cache.find(path);
     if (possibleTextureIter != cache.end()) {
@@ -130,8 +130,8 @@ void Square::clearHighlight(Highlight highlight) {
 }
 
 int Board::getSquareIndexFromCoordinates(int xPos, int yPos) {
-    int row = static_cast<int>(yPos / SQUARE_WIDTH);
-    int col = static_cast<int>(xPos / SQUARE_HEIGHT);
+    const int row = static_cast<int>(yPos / SQUARE_WIDTH);
+    const int col = static_cast<int>(xPos / SQUARE_HEIGHT);
     return (8 * row) + col;
 }
 
@@ -165,8 +165,8 @@ void Board::draw(sf::RenderWindow& window, const std::optional<int> heldSquare) 
         squareShape.setFillColor(color);
 
         // set position based on row/col
-        float xpos = SQUARE_WIDTH * col;
-        float ypos = SQUARE_HEIGHT * row;
+        const float xpos = SQUARE_WIDTH * col;
+        const float ypos = SQUARE_HEIGHT * row;
         squareShape.setPosition({xpos, ypos});
         window.draw(squareShape);
 
@@ -197,18 +197,18 @@ void Board::updateBoardFromGame(const Game& game) {
     // TODO: consider making more performant by checking equality before updating for each piece
     int squareIndex = 0;
     for(const Piece& piece : game.board()) {
-        int row = squareIndex / 8;
-        int col = squareIndex % 8;
+        const int row = squareIndex / 8;
+        const int col = squareIndex % 8;
 
-        float xpos = SQUARE_WIDTH * col;
-        float ypos = SQUARE_WIDTH * row;
+        const float xPos = SQUARE_WIDTH * col;
+        const float yPos = SQUARE_WIDTH * row;
 
         Square& square = board_.at(squareIndex);
         square.pieceSprite() = PieceSprite{piece};
         // fit to center of square
         square.pieceSprite().centerOrigin();
         square.pieceSprite().fitToSquare(SQUARE_WIDTH * 0.97F);
-        square.pieceSprite().updateSpritePosition(xpos + (SQUARE_WIDTH / 2.F), ypos + (SQUARE_HEIGHT / 2.F));
+        square.pieceSprite().updateSpritePosition(xPos + (SQUARE_WIDTH / 2.F), yPos + (SQUARE_HEIGHT / 2.F));
 
         squareIndex++;
     }
