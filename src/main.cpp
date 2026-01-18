@@ -1,4 +1,3 @@
-#include <SFML/System/Vector2.hpp>
 #include <iostream>
 #include <optional>
 #include <string>
@@ -8,11 +7,6 @@
 
 #include "game/Game.hpp"
 #include "gui/Board.hpp"
-
-constexpr int STARTING_WINDOW_WIDTH = 800;
-constexpr int STARTING_WINDOW_HEIGHT = 800;
-const char* WINDOW_TITLE = "Chess";
-const std::string STARTING_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 void runCLIGame() {
     // init game
@@ -44,9 +38,13 @@ void runCLIGame() {
 }
 
 void runGUIGame() {
+    constexpr int STARTING_WINDOW_WIDTH = 800;
+    constexpr int STARTING_WINDOW_HEIGHT = 800;
+    const std::string WINDOW_TITLE = "Chess";
+
     // init game
     Game game;
-    game.loadFEN(STARTING_FEN);
+    game.loadFEN(std::string{Game::STARTING_FEN});
 
     // init board
     Board board;
@@ -61,28 +59,30 @@ void runGUIGame() {
     // TODO: potentially throw / recover from file missing
     const sf::SoundBuffer PIECE_MOVEMENT_BUFFER{"assets/sounds/piece_movement.wav"};
     sf::Sound PIECE_MOVEMENT_SOUND{PIECE_MOVEMENT_BUFFER};
-    PIECE_MOVEMENT_SOUND.setVolume(75.f);
+    PIECE_MOVEMENT_SOUND.setVolume(75.F);
 
     // init current held square for making moves
     std::optional<int> heldSquare;
     // init helpers for dragging logic
     bool isDragging = false;
-    sf::Vector2f dragPosPx{0.f, 0.f};
+    sf::Vector2f dragPosPx{0.F, 0.F};
 
     // main window loop
     while (window.isOpen()) {
         while (const std::optional<sf::Event> event = window.pollEvent()) {
             // close the window
-            if (event->is<sf::Event::Closed>()) window.close();
+            if (event->is<sf::Event::Closed>()) {
+                window.close();
+            }
 
             // check mouse clicks
-            if (const auto* mouseButtonPressed = event->getIf<sf::Event::MouseButtonPressed>()) {
+            if (const auto* mouseObject = event->getIf<sf::Event::MouseButtonPressed>()) {
                 // LEFT CLICK
-                if(mouseButtonPressed->button == sf::Mouse::Button::Left) {
+                if(mouseObject->button == sf::Mouse::Button::Left) {
                     // first clear all highlights
                     board.clearAllHighlights();
 
-                    sf::Vector2i mousePos = mouseButtonPressed->position;
+                    sf::Vector2i mousePos = mouseObject->position;
                     int targetSquare = Board::getSquareIndexFromCoordinates(mousePos.x, mousePos.y);
                     
                     // square does not exist; reset any selected piece and continue
@@ -108,7 +108,9 @@ void runGUIGame() {
 
                         // highlight legal moves
                         std::vector<Move> legalMoves = game.generateLegalMoves(targetSquare);
-                        for(Move move : legalMoves) board.at(move.targetSquare()).setHighlight(Board::LEGAL_HIGHLIGHT);
+                        for(Move move : legalMoves) {
+                            board.at(move.targetSquare()).setHighlight(Board::LEGAL_HIGHLIGHT);
+                        }
 
                         dragPosPx = {static_cast<float>(mousePos.x), static_cast<float>(mousePos.y)};
 
@@ -137,7 +139,7 @@ void runGUIGame() {
                 }
                 
                 // RIGHT CLICK
-                if(mouseButtonPressed->button == sf::Mouse::Button::Right) {
+                if(mouseObject->button == sf::Mouse::Button::Right) {
                     // clear all left click highlights
                     board.clearAllHighlights(Board::LEGAL_HIGHLIGHT);
                     board.clearAllHighlights(Board::SELECTED_HIGHLIGHT);
@@ -145,25 +147,27 @@ void runGUIGame() {
                     // right click cancels any held square
                     heldSquare.reset();
 
-                    sf::Vector2i mousePos = mouseButtonPressed->position;
+                    sf::Vector2i mousePos = mouseObject->position;
                     int targetSquare = Board::getSquareIndexFromCoordinates(mousePos.x, mousePos.y);
                     
                     // swap highlight status of square
-                    if(Game::onBoard(targetSquare)) board.at(targetSquare).toggleHighlight(Board::RIGHT_CLICK_HIGHLIGHT);
+                    if(Game::onBoard(targetSquare)) {
+                        board.at(targetSquare).toggleHighlight(Board::RIGHT_CLICK_HIGHLIGHT);
+                    }
                 }
             }
 
             // check mouse movement
-            if (const auto* mm = event->getIf<sf::Event::MouseMoved>()) {
-                dragPosPx = sf::Vector2f{static_cast<float>(mm->position.x), static_cast<float>(mm->position.y)};
+            if (const auto* mouseObject = event->getIf<sf::Event::MouseMoved>()) {
+                dragPosPx = sf::Vector2f{static_cast<float>(mouseObject->position.x), static_cast<float>(mouseObject->position.y)};
             }
 
             // check mouse unclicks
-            if (const auto* mr = event->getIf<sf::Event::MouseButtonReleased>()) {
+            if (const auto* mouseObject = event->getIf<sf::Event::MouseButtonReleased>()) {
                 // try to make dragged move
-                if (mr->button == sf::Mouse::Button::Left && heldSquare) {
+                if (mouseObject->button == sf::Mouse::Button::Left && heldSquare) {
                     const int sourceSquare = heldSquare.value();
-                    const int targetSquare = Board::getSquareIndexFromCoordinates(mr->position.x, mr->position.y);
+                    const int targetSquare = Board::getSquareIndexFromCoordinates(mouseObject->position.x, mouseObject->position.y);
                     
                     // out of bounds
                     if(!Game::onBoard(targetSquare)) {
@@ -195,7 +199,7 @@ void runGUIGame() {
         }
 
         // highlight attacked squares
-        for(int i = 0; i < 64; i++) {
+        for(int i = 0; i < Game::NUM_SQUARES; i++) {
             // if(game.isSquareAttacked(i, Color::White)) board.at(i).setHighlight(Board::RIGHT_CLICK_HIGHLIGHT);
             // if(game.isSquareAttacked(i, Color::Black)) board.at(i).setHighlight(Board::RIGHT_CLICK_HIGHLIGHT);
         }
@@ -208,8 +212,8 @@ void runGUIGame() {
 
         // if heldSquare and we are dragging, we copy sprite to mouse
         if(heldSquare && isDragging) {
-            if (const sf::Sprite* sp = board.at(*heldSquare).pieceSprite().sprite()) {
-                sf::Sprite dragSprite = *sp;
+            if (const sf::Sprite* sprite = board.at(*heldSquare).pieceSprite().sprite()) {
+                sf::Sprite dragSprite = *sprite;
                 dragSprite.setPosition(dragPosPx);
                 window.draw(dragSprite);
             }

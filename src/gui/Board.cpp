@@ -1,6 +1,5 @@
-#include <SFML/Graphics/Sprite.hpp>
-#include <map>
 #include <iostream>
+#include <map>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -14,24 +13,26 @@ const sf::Texture& TextureCache::get(const PieceType type, const Color color) {
 
     std::string path = makePath_(type, color);
     // see if we can find it early from cache
-    auto it = cache.find(path);
-    if (it != cache.end()) return it->second;
+    auto possibleTextureIter = cache.find(path);
+    if (possibleTextureIter != cache.end()) {
+        return possibleTextureIter->second;
+    }
 
     // error if we can't load texture
-    sf::Texture tex;
-    if (!tex.loadFromFile(path)) {
+    sf::Texture texture;
+    if (!texture.loadFromFile(path)) {
         throw std::runtime_error("Failed to load " + path);
     }
 
-    tex.setSmooth(true);
+    texture.setSmooth(true);
 
     // Generate mipmap to increase texture quality when downscaled
-    if (!tex.generateMipmap()) {
+    if (!texture.generateMipmap()) {
         std::cerr << "Warning: mipmap generation failed for " << path << "\n";
     }
 
     // insert into cache and return
-    auto [insertedIt, _] = cache.emplace(path, std::move(tex));
+    auto [insertedIt, alreadyExisted] = cache.emplace(path, std::move(texture));
     return insertedIt->second;
 }
 
@@ -76,50 +77,42 @@ void PieceSprite::rebuild() {
 }
 
 void PieceSprite::fitToSquare(const float squareSize) {
-    if (!sprite_) return;
+    if (!sprite_) {
+        return;
+    }
 
     // size of the texture region the sprite uses
     const sf::FloatRect bounds = sprite_->getLocalBounds(); // {left, top, width, height}
 
-    const float sx = squareSize / bounds.size.x;
-    const float sy = squareSize / bounds.size.y;
+    const float xSize = squareSize / bounds.size.x;
+    const float ySize = squareSize / bounds.size.y;
 
     // preserve aspect ratio
-    const float s = std::min(sx, sy);
+    const float finalSize = std::min(xSize, ySize);
 
-    sprite_->setScale({s, s});
+    sprite_->setScale({finalSize, finalSize});
 }
 
 void PieceSprite::centerOrigin() {
-    if (!sprite_) return;
-    sf::FloatRect b = sprite_->getLocalBounds(); // {left, top, width, height}
-    sprite_->setOrigin({b.position.x + b.size.x / 2.f, b.position.y + b.size.y / 2.f});
+    if (!sprite_) {
+        return;
+    }
+    const sf::FloatRect bounds = sprite_->getLocalBounds(); // {left, top, width, height}
+    sprite_->setOrigin({bounds.position.x + (bounds.size.x / 2.F), bounds.position.y + (bounds.size.y / 2.F)});
 }
 
-void PieceSprite::updateSpritePosition(const float x, const float y) {
-    if (sprite_) sprite_.value().setPosition({x, y});
-}
-
-PieceSprite& Square::pieceSprite() {
-    return pieceSprite_;
-}
-
-bool Square::isEmpty() const {
-    return !pieceSprite_.exists();
+void PieceSprite::updateSpritePosition(const float xPos, const float yPos) {
+    if (sprite_) {
+        sprite_.value().setPosition({xPos, yPos});
+    }
 }
 
 Highlight Square::highlight() const {
-    if(highlight_) return highlight_.value();
+    if(highlight_) {
+        return highlight_.value();
+    }
     // no highlight, throw
     throw std::runtime_error("Attempted to retrieve highlight from Square with no highlight.");
-}
-
-bool Square::hasHighlight() const {
-    return highlight_.has_value();
-}
-
-void Square::setHighlight(Highlight highlight) {
-    highlight_ = highlight;
 }
 
 void Square::toggleHighlight(Highlight highlight) {
@@ -130,24 +123,20 @@ void Square::toggleHighlight(Highlight highlight) {
     }
 }
 
-void Square::clearHighlight() {
-    highlight_.reset();
-}
-
 void Square::clearHighlight(Highlight highlight) {
     if(highlight_ && highlight_.value() == highlight) {
         highlight_.reset();
     }
 }
 
-int Board::getSquareIndexFromCoordinates(int x, int y) {
-    int row = static_cast<int>(y / SQUARE_WIDTH);
-    int col = static_cast<int>(x / SQUARE_HEIGHT);
-    return 8 * row + col;
+int Board::getSquareIndexFromCoordinates(int xPos, int yPos) {
+    int row = static_cast<int>(yPos / SQUARE_WIDTH);
+    int col = static_cast<int>(xPos / SQUARE_HEIGHT);
+    return (8 * row) + col;
 }
 
-Square& Board::at(int i) {
-    return board_.at(i);
+Square& Board::at(int squareIndex) {
+    return board_.at(squareIndex);
 }
 
 void Board::draw(sf::RenderWindow& window) const {
@@ -169,7 +158,7 @@ void Board::draw(sf::RenderWindow& window, const std::optional<int> heldSquare) 
         // determine square color
         sf::Color color;
         if(squareObject.hasHighlight()) {
-            color = isLight ? squareObject.highlight().lightHighlight : squareObject.highlight().darkHighlight;
+            color = isLight ? squareObject.highlight().lightHighlight() : squareObject.highlight().darkHighlight();
         } else {
             color = isLight ? LIGHT_SQUARE_COLOR : DARK_SQUARE_COLOR;
         }
@@ -182,20 +171,26 @@ void Board::draw(sf::RenderWindow& window, const std::optional<int> heldSquare) 
         window.draw(squareShape);
 
         // skip empty squares or square that is currently held
-        if(squareObject.isEmpty() || (heldSquare && heldSquare.value() == squareIndex)) continue;
+        if(squareObject.isEmpty() || (heldSquare && heldSquare.value() == squareIndex)) {
+            continue;
+        }
 
-        if (const sf::Sprite* sp = squareObject.pieceSprite().sprite()) {
-            window.draw(*sp);
+        if (const sf::Sprite* sprite = squareObject.pieceSprite().sprite()) {
+            window.draw(*sprite);
         }
     }
 }
 
 void Board::clearAllHighlights() {
-    for(Square& square : board_) square.clearHighlight();
+    for(Square& square : board_) {
+        square.clearHighlight();
+    }
 }
 
 void Board::clearAllHighlights(const Highlight highlight) {
-    for(Square& square : board_) square.clearHighlight(highlight);
+    for(Square& square : board_) {
+        square.clearHighlight(highlight);
+    }
 }
 
 void Board::updateBoardFromGame(const Game& game) {
@@ -212,8 +207,8 @@ void Board::updateBoardFromGame(const Game& game) {
         square.pieceSprite() = PieceSprite{piece};
         // fit to center of square
         square.pieceSprite().centerOrigin();
-        square.pieceSprite().fitToSquare(SQUARE_WIDTH * 0.97f);
-        square.pieceSprite().updateSpritePosition(xpos + SQUARE_WIDTH/2.f, ypos + SQUARE_HEIGHT/2.f);
+        square.pieceSprite().fitToSquare(SQUARE_WIDTH * 0.97F);
+        square.pieceSprite().updateSpritePosition(xpos + (SQUARE_WIDTH / 2.F), ypos + (SQUARE_HEIGHT / 2.F));
 
         squareIndex++;
     }

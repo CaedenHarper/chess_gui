@@ -47,9 +47,9 @@ public:
     std::string to_string_long() const;
     
     // Determine piece type from char. E.g., 'P' -> Pawn
-    static PieceType charToPieceType(char c);
+    static PieceType charToPieceType(char piece);
     // Determine piece from char. Uppercase for white, lowercase for black. E.g., 'P' -> White Pawn
-    static Piece charToPiece(char c);
+    static Piece charToPiece(char piece);
 
 protected:
     // A piece's type.
@@ -95,24 +95,24 @@ public:
 
 private:
     // A move's source square.
-    const int sourceSquare_;
+    int sourceSquare_;
     // A move's target square.
-    const int targetSquare_;
+    int targetSquare_;
     // A move's source piece.
-    const Piece sourcePiece_;
+    Piece sourcePiece_;
     // A move's target square.
-    const Piece targetPiece_;
+    Piece targetPiece_;
 
     // If a move is a pawn promotion.
-    const bool isPromotion_;
+    bool isPromotion_;
     // TODO: add logic for promotion pieces other than queen
     // Piece to promote to. Undefined behavior if move is not a pawn promotion.
-    const Piece promotionPiece_;
+    Piece promotionPiece_;
     
     // If a move is a king side castle.
-    const bool isKingSideCastle_;
+    bool isKingSideCastle_;
     // If a move is a queen side castle.
-    const bool isQueenSideCastle_;
+    bool isQueenSideCastle_;
 
     // If a potential move is a pawn promotion.
     static bool isPotentialPawnPromotion_(int targetSquare, Piece sourcePiece);
@@ -125,6 +125,12 @@ private:
 // A chess game. Contains information for the game and helpers to generate and validate moves.
 class Game {
 public:
+    static constexpr int NUM_SQUARES = 64;
+
+    // stringview for constexpr
+    // Starting game's FEN string.
+    static constexpr std::string_view STARTING_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
     // Constants for castling.
     static constexpr int WHITE_KING_STARTING_SQUARE = 60;
     static constexpr int BLACK_KING_STARTING_SQUARE = 4;
@@ -147,24 +153,79 @@ public:
     static constexpr int WHITE_QUEENSIDE_ROOK_STARTING_SQUARE = 56;
     static constexpr int BLACK_QUEENSIDE_ROOK_STARTING_SQUARE = 0;
 
+    // Constants for some piece's movements
+    static constexpr std::array<std::array<int, 2>, 8> knightDeltas {{
+        // col (x), row (y)
+        {-2, -1}, // left up
+        {-1, -2}, // up left
+        {1, -2}, // up right
+        {2, -1}, // right up
+        {2, 1}, // right down
+        {1, 2}, // down right
+        {-1, 2}, // down left
+        {-2, 1}, // left down
+    }};
+
+    static constexpr std::array<std::array<int, 2>, 4> bishopDeltas {{
+        // col (x), row (y)
+        {-1, -1}, // up left
+        {1, -1}, // up right
+        {-1, 1}, // down left
+        {1, 1}, // down right
+    }};
+
+    static constexpr std::array<std::array<int, 2>, 4> rookDeltas {{
+        // col (x), row (y)
+        {0, 1}, // up
+        {0, -1}, // down
+        {1, 0}, // right
+        {-1, 0}, // left
+    }};
+
+    static constexpr std::array<std::array<int, 2>, 8> queenDeltas {{
+        // col (x), row (y)
+        // rook moves
+        {0, 1}, // up
+        {0, -1}, // down
+        {1, 0}, // right
+        {-1, 0}, // left
+        // bishop moves
+        {-1, -1}, // up left
+        {1, -1}, // up right
+        {-1, 1}, // down left
+        {1, 1}, // down right
+    }};
+
+    static constexpr std::array<std::array<int, 2>, 8> kingDeltas {{
+        // col (x), row (y)
+        {-1, -1}, // up left
+        {0, -1}, // up
+        {1, -1}, // up right
+        {-1, 0}, // left
+        {1, 0}, // right
+        {-1, 1}, // down left
+        {0, 1}, // down
+        {1, 1}, // down right
+    }};
+
     // Construct a new game with an empty board. Current turn defaults to white.
     Game();
     // Update the board given a FEN.
-    void loadFEN(std::string FEN);
+    void loadFEN(const std::string& FEN);
 
     // Retrieve board.
-    std::array<Piece, 64> board() const;
+    std::array<Piece, NUM_SQUARES> board() const;
     // Retrieve the color of the current player's turn.
     Color currentTurn() const;
     // Retrieve a string representation of the current state of the board.
     std::string to_string() const;
     // If the game is finished.
-    bool isFinished() const;
+    bool isFinished();
 
-    void setWhiteKingSideCastle(bool b);
-    void setBlackKingSideCastle(bool b);
-    void setWhiteQueenSideCastle(bool b);
-    void setBlackQueenSideCastle(bool b);
+    void setWhiteKingSideCastle(bool canCastle);
+    void setBlackKingSideCastle(bool canCastle);
+    void setWhiteQueenSideCastle(bool canCastle);
+    void setBlackQueenSideCastle(bool canCastle);
 
     // Try a move and return if the move was made. The move is only made if it is legal.
     bool tryMove(Move move);
@@ -177,7 +238,7 @@ public:
     // Generate all legal moves from a given square.
     std::vector<Move> generateLegalMoves(int sourceSquare);
     // Attempt to parse arbitrary notation (e.g., "g1 f3" or "Nf3") to a move.
-    std::optional<Move> parseMove(std::string s) const;
+    std::optional<Move> parseMove(const std::string& move) const;
 
     // If the given color is in check.
     bool isInCheck(Color colorToFind) const;
@@ -195,11 +256,11 @@ public:
     static bool onBoard(int col, int row);
 
     // Get the opposite color of a given color.
-    static Color oppositeColor(Color c);
+    static Color oppositeColor(Color color);
 
 private:
     // The game's board of pieces.
-    std::array<Piece, 64> board_;
+    std::array<Piece, NUM_SQUARES> board_;
     // The game's current turn.
     Color currentTurn_;
     bool canWhiteKingSideCastle_;
@@ -207,9 +268,9 @@ private:
     bool canWhiteQueenSideCastle_;
     bool canBlackQueenSideCastle_;
     // Attempt to parse long notation (e.g., "g1 f3") to a move.
-    std::optional<Move> parseLongNotation_(std::string sourceS, std::string targetS) const;
+    std::optional<Move> parseLongNotation_(const std::string& sourceMove, const std::string& targetMove) const;
     // Attempt to parse algebraic notation (e.g., "Nf3") to a move.
-    std::optional<Move> parseAlgebraicNotation_(std::string s) const;
+    std::optional<Move> parseAlgebraicNotation_(const std::string& move) const;
 
     // Generate all pseudo legal moves from a given square. Pseudo legal moves only take piece movement into account, no king check status.
     std::vector<Move> generatePseudoLegalMoves_(int sourceSquare);

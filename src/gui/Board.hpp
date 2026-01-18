@@ -1,7 +1,6 @@
 #pragma once
 
 #include <SFML/Graphics.hpp>
-#include <sys/stat.h>
 
 #include "../game/Game.hpp"
 
@@ -20,9 +19,9 @@ private:
 class PieceSprite : public Piece {
 public:
     // Construct empty PieceSprite with empty square Piece.
-    PieceSprite() {};
+    PieceSprite() = default;
     // Construct PieceSprite from Piece.
-    PieceSprite(Piece piece);
+    explicit PieceSprite(Piece piece);
 
     // Return pointer to sprite, or nullptr if no sprite exists.
     const sf::Sprite* sprite() const;
@@ -34,7 +33,7 @@ public:
     // Center sprite origin.
     void centerOrigin();
     // Update sprite position to x and y.
-    void updateSpritePosition(float x, float y);
+    void updateSpritePosition(float xPos, float yPos);
 
 private:
     // Corresponding sprite for PieceSprite. Does not exist if Piece is the empty square.
@@ -44,34 +43,38 @@ private:
 class Highlight {
 public:
     // Construct a Highlight.
-    constexpr Highlight(sf::Color light, sf::Color dark): lightHighlight{light}, darkHighlight{dark} {};
+    constexpr Highlight(sf::Color light, sf::Color dark): lightHighlight_{light}, darkHighlight_{dark} {};
     // Compare a Highlight to another. Two highlights are equal if both of their colors are the same.
-    bool operator==(Highlight other) const { return lightHighlight == other.lightHighlight && darkHighlight == other.darkHighlight; }
+    bool operator==(Highlight other) const { return lightHighlight_ == other.lightHighlight_ && darkHighlight_ == other.darkHighlight_; };
+    sf::Color lightHighlight() const { return lightHighlight_; };
+    sf::Color darkHighlight() const { return darkHighlight_; };
+
+private:
     // Color for the light squares.
-    sf::Color lightHighlight;
+    sf::Color lightHighlight_;
     // Color for the dark squares.
-    sf::Color darkHighlight;
+    sf::Color darkHighlight_;
 };
 
 class Square {
 public:
     // Construct a square, which always has a PieceSprite, and sometimes a Highlight.
-    Square() {};
+    Square() = default;
 
     // Retrieve PieceSprite.
-    PieceSprite& pieceSprite();
+    PieceSprite& pieceSprite() { return pieceSprite_; }
     // Retrieve highlight. Assumes highlight exists, and throws if it does not.
     Highlight highlight() const;
 
     // If the square is empty. I.e., it has no piece on it.
-    bool isEmpty() const;
+    bool isEmpty() const { return !pieceSprite_.exists(); }
 
     // If the square has a highlight.
-    bool hasHighlight() const;
+    bool hasHighlight() const { return highlight_.has_value(); }
     // Set the square's highlight.
-    void setHighlight(Highlight highlight);
+    void setHighlight(Highlight highlight) { highlight_ = highlight; }
     // Clear the square's highlight.
-    void clearHighlight();
+    void clearHighlight() { highlight_.reset(); }
     // Clear the square's highlight if it matches the input highlight.
     void clearHighlight(Highlight highlight);
     // Toggle the square's highlight if it matches the input highlight.
@@ -92,9 +95,9 @@ public:
     // Height of the board in pixels.
     static constexpr int BOARD_HEIGHT = 800;
     // Width of a square in pixels.
-    static constexpr float SQUARE_WIDTH = BOARD_WIDTH/8.f;
+    static constexpr float SQUARE_WIDTH = BOARD_WIDTH/8.F;
     // Height of a square in pixels.
-    static constexpr float SQUARE_HEIGHT = BOARD_HEIGHT/8.f;
+    static constexpr float SQUARE_HEIGHT = BOARD_HEIGHT/8.F;
 
     // Normal dark square color. Dark brown, rgb(179, 136, 98).
     static constexpr sf::Color DARK_SQUARE_COLOR{179, 136, 98};
@@ -117,9 +120,9 @@ public:
     static constexpr Highlight SELECTED_HIGHLIGHT{LIGHT_SELECTED_SQUARE_COLOR, DARK_SELECTED_SQUARE_COLOR};
 
     // Construct an empty board. I.e., a board with all empty squares.
-    Board() {};
+    Board() = default;
     // Retrieve square at a given board square. Throws if out of range.
-    Square& at(int i);
+    Square& at(int squareIndex);
 
     // Draw board to window.
     void draw(sf::RenderWindow& window) const;
@@ -135,9 +138,9 @@ public:
     void clearAllHighlights(Highlight highlight);
 
     // Get the index of the square given the x, y coordinates.
-    static int getSquareIndexFromCoordinates(int x, int y);
+    static int getSquareIndexFromCoordinates(int xPos, int yPos);
 
 private:
     // Board representation: an array of squares.
-    std::array<Square, 64> board_;
+    std::array<Square, Game::NUM_SQUARES> board_;
 };

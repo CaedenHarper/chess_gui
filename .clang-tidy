@@ -1,0 +1,30 @@
+Checks:
+  # --- Will almost certainly never change ---
+  - '*'                                       # Start by allowing everything
+  - '-llvmlibc-restrict-system-libc-headers'  # Allow system headers
+  - '-llvmlibc-implementation-in-namespace'   # This is not a llvmlibc project
+  - '-llvmlibc-callee-namespace'              # This is not a llvmlibc project
+  - '-llvmlibc-inline-function-decl'          # This is not a llvmlibc project
+
+  # --- Might change one day ---
+  - '-altera-unroll-loops'                                        # Performance boost not really needed, may be worth investigating some day
+  - '-performance-enum-size'                                      # Performance boost not really needed, may be worth investigating some day
+  - '-google-readability-todo'                                    # No need for specific bug tracking in this project
+  - '-fuchsia-default-arguments-calls'                            # This project allows default argument calls
+  - '-misc-use-internal-linkage'                                  # Not really necessary for this project
+  - '-fuchsia-overloaded-operator'                                # Operator overloading is fine and makes sense in this project
+  - '-modernize-use-trailing-return-type'                         # I don't like trailing return types
+  - '-boost-use-ranges'                                           # This project does not use boost
+  - '-misc-non-private-member-variables-in-classes'               # Private member variables is fine for this program; may re-evaluate in the future
+  - '-cppcoreguidelines-non-private-member-variables-in-classes'  # Same as above ^
+
+  # --- Should change one day ---
+  - '-readability-function-cognitive-complexity'  # Ideally functions should be simpler, but this is too much work right now
+  - '-bugprone-easily-swappable-parameters'       # This is true, but too much work right now
+  - '-modernize-use-nodiscard'                    # Good practice, too much work right now
+  - '-readability-magic-numbers'                  # Good practice, too much work right now
+  - '-cppcoreguidelines-avoid-magic-numbers'      # Same as above ^
+  - '-bugprone-narrowing-conversions'             # Most narrowing conversions in this project are x,y coordinates -> squares, which can tolerate some conversion loss
+  - '-cppcoreguidelines-narrowing-conversions'    # Same as above ^
+
+WarningsAsErrors: 'modernize-*'  # VSCode shows this as deprecated; enabling error makes them more visible in the IDE
