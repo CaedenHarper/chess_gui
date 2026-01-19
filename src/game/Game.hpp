@@ -115,6 +115,8 @@ public:
 
     // Retrieve a string representation of the move. E.g., "White Pawn on e2 to Empty Square on e4".
     std::string to_string() const;
+    // Retrieve a long algebraic representation of the move. E.g., "e2e4"
+    std::string toLongAlgebraic() const;
 
 private:
     // A move's source square.

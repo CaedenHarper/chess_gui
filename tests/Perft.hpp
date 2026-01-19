@@ -7,4 +7,5 @@
 class Perft{
 public:
     static int64_t perft(Game& game, int depth);
+    static int64_t perftDivide(Game& game, int depth);
 };

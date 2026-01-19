@@ -181,6 +181,10 @@ std::string Move::to_string() const {
     );
 }
 
+std::string Move::toLongAlgebraic() const {
+    return Game::intToAlgebraicNotation(sourceSquare_) + Game::intToAlgebraicNotation(targetSquare_);
+}
+
 Game::Game()
     : currentTurn_{Color::White},
     canWhiteKingSideCastle_{false},
@@ -769,6 +773,7 @@ std::vector<Move> Game::generatePseudoLegalKingMoves_(const int sourceSquare) {
             canWhiteQueenSideCastle_ &&
             sourceSquare == Game::WHITE_KING_STARTING_SQUARE &&
             !board_.at(WHITE_QUEENSIDE_PASSING_SQUARE).exists() &&
+            !board_.at(WHITE_QUEENSIDE_PASSING_SQUARE - 2).exists() &&  // queenside has two passing squares
             !board_.at(WHITE_QUEENSIDE_TARGET_SQUARE).exists()
         ) {
             out.emplace_back(sourceSquare, Game::WHITE_QUEENSIDE_TARGET_SQUARE, sourcePiece, board_.at(Game::WHITE_QUEENSIDE_TARGET_SQUARE));
@@ -791,6 +796,7 @@ std::vector<Move> Game::generatePseudoLegalKingMoves_(const int sourceSquare) {
             canBlackQueenSideCastle_ &&
             sourceSquare == Game::BLACK_KING_STARTING_SQUARE &&
             !board_.at(BLACK_QUEENSIDE_PASSING_SQUARE).exists() &&
+            !board_.at(BLACK_QUEENSIDE_PASSING_SQUARE - 2).exists() &&  // queenside has two passing squares
             !board_.at(BLACK_QUEENSIDE_TARGET_SQUARE).exists()
         ) {
             out.emplace_back(sourceSquare, Game::BLACK_QUEENSIDE_TARGET_SQUARE, sourcePiece, board_.at(Game::BLACK_QUEENSIDE_TARGET_SQUARE));
