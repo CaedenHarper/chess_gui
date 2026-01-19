@@ -58,6 +58,19 @@ protected:
     Color color_;
 };
 
+// Info used to fully undo a move.
+struct UndoInfo {
+    bool whiteKingSideCastle, whiteQueenSideCastle, blackKingSideCastle, blackQueenSideCastle;
+    std::optional<int> enPassantSquare;
+
+    UndoInfo(bool whiteKingSideCastle_, bool whiteQueenSideCastle_, bool blackKingSideCastle_, bool blackQueenSideCastle_, std::optional<int> enPassantSquare_) :
+    whiteKingSideCastle{whiteKingSideCastle_},
+    whiteQueenSideCastle{whiteQueenSideCastle_},
+    blackKingSideCastle{blackKingSideCastle_},
+    blackQueenSideCastle{blackQueenSideCastle_},
+    enPassantSquare{enPassantSquare_} {}
+} __attribute__((aligned(16)));
+
 // A chess move, with information for squares, pieces, and special flags like promotion and castling.
 class Move {
 public:
@@ -67,10 +80,14 @@ public:
     // If a move is equal to another move. Has to have the same starting and target squares, pieces, and any special flags.
     bool operator==(Move other) const { return sourceSquare_ == other.sourceSquare_ &&
                                                targetSquare_ == other.targetSquare_ &&
-                                               sourcePiece_ == other.sourcePiece_ &&
-                                               targetPiece_ == other.targetPiece_ &&
-                                               isPromotion_ == other.isPromotion_ &&
-                                               promotionPiece_ == other.promotionPiece_; }
+                                            //    it should be fine if these are omitted, but im not actually sure...?
+                                            //    sourcePiece_ == other.sourcePiece_ &&
+                                            //    targetPiece_ == other.targetPiece_ &&
+                                            //    isPawnPromotion_ == other.isPawnPromotion_ &&
+                                               promotionPiece_ == other.promotionPiece_ &&
+                                               isKingSideCastle_ == other.isKingSideCastle_ &&
+                                               isQueenSideCastle_ == other.isQueenSideCastle_ &&
+                                               isEnPassant_ == other.isEnPassant_; }
     // Retrieve source square.
     int sourceSquare() const { return sourceSquare_; }
     // Retrieve target square.
@@ -80,20 +97,21 @@ public:
     // Retrieve target square.
     Piece targetPiece() const { return targetPiece_; }
 
-    // Retrieve if this move is a pawn promotion.
-    bool isPromotion() const { return isPromotion_; }
     // Retrieve piece to promote to.
     Piece promotionPiece() const { return promotionPiece_; }
+    // Set piece to promote to.
+    void setPromotionPiece(Piece piece) { promotionPiece_ = piece; }
 
-    // Retrieve if this move is a king side castle.
-    bool isKingSideCastle() const { return isKingSideCastle_; }
-    // Retrieve if this move is a king side castle.
-    bool isQueenSideCastle() const { return isQueenSideCastle_; }
-
-    // Retrieve if this move is a double pawn move.
-    bool isDoublePawn() const { return isDoublePawn_; }
-    // Retrieve if this move is an en passant pawn capture.
-    bool isEnPassant() const { return isEnPassant_; }
+    // If a move is a pawn promotion.
+    bool isPawnPromotion() const;
+    // If a move is a king side castle.
+    bool isKingSideCastle() const;
+    // If a move is a queen side castle.
+    bool isQueenSideCastle() const;
+    // If a move is a double pawn move.
+    bool isDoublePawn() const;
+    // If a move is a en passant pawn move.
+    bool isEnPassant() const;
 
     // Retrieve a string representation of the move. E.g., "White Pawn on e2 to Empty Square on e4".
     std::string to_string() const;
@@ -108,32 +126,17 @@ private:
     // A move's target square.
     Piece targetPiece_;
 
-    // If a move is a pawn promotion.
-    bool isPromotion_;
     // TODO: add logic for promotion pieces other than queen
     // Piece to promote to. Undefined behavior if move is not a pawn promotion.
     Piece promotionPiece_;
-    
-    // If a move is a king side castle.
-    bool isKingSideCastle_;
-    // If a move is a queen side castle.
-    bool isQueenSideCastle_;
 
-    // If a move is a double pawn move.
+    // all of these flags are evaluated once on move creation and saved for speedup and to allow more constness
+    bool isPawnPromotion_;
+    bool isKingSideCastle_;
+    bool isQueenSideCastle_;
     bool isDoublePawn_;
-    // If a move is an en passant pawn capture.
     bool isEnPassant_;
 
-    // If a move is a potential pawn promotion.
-    static bool isPotentialPawnPromotion_(int targetSquare, Piece sourcePiece);
-    // If a move is a potential king side castle.
-    static bool isPotentialKingSideCastle_(int sourceSquare, int targetSquare, Piece sourcePiece, Piece targetPiece);
-    // If a move is a potential queen side castle.
-    static bool isPotentialQueenSideCastle_(int sourceSquare, int targetSquare, Piece sourcePiece, Piece targetPiece);
-    // If a move is a potential double pawn move.
-    static bool isPotentialDoublePawn_(int sourceSquare, int targetSquare, Piece sourcePiece);
-    // If a move is a potential en passant pawn move.
-    static bool isPotentialEnPassant_(int sourceSquare, int targetSquare, Piece sourcePiece, Piece targetPiece);
 };
 
 // A chess game. Contains information for the game and helpers to generate and validate moves.
@@ -235,6 +238,8 @@ public:
     std::string to_string() const;
     // If the game is finished.
     bool isFinished();
+    // Get flags in the form of UndoInfo.
+    UndoInfo getUndoInfo() const;
 
     void setWhiteKingSideCastle(bool canCastle);
     void setBlackKingSideCastle(bool canCastle);
@@ -242,27 +247,31 @@ public:
     void setBlackQueenSideCastle(bool canCastle);
 
     // Try a move and return if the move was made. The move is only made if it is legal.
-    bool tryMove(Move move);
+    bool tryMove(const Move& move);
     // Make a move, even if it is not legal.
-    void makeMove(Move move);
+    void makeMove(const Move& move);
     // Undo a move. Does not check if the move we are undoing happened before.
-    void undoMove(Move move);
+    void undoMove(const Move& move, const UndoInfo& flags);
     // If a move is legal.
-    bool isMoveLegal(Move move);
+    bool isMoveLegal(const Move& move);
     // Generate all legal moves from a given square.
     std::vector<Move> generateLegalMoves(int sourceSquare);
+    // Generate all legal moves using the given current color.
+    std::vector<Move> generateAllLegalMoves();
     // Attempt to parse arbitrary notation (e.g., "g1 f3" or "Nf3") to a move.
     std::optional<Move> parseMove(const std::string& move) const;
 
     // If the given color is in check.
-    bool isInCheck(Color colorToFind) const;
+    bool isInCheck(const Color& colorToFind) const;
     // If a given square is attacked by the attacking color.
-    bool isSquareAttacked(int targetSquare, Color attackingColor) const;
+    bool isSquareAttacked(int targetSquare, const Color& attackingColor) const;
     // Retrieve king square for a given color. Does not exist if king is not on board.
-    std::optional<int> findKingSquare(Color colorToFind) const;
+    std::optional<int> findKingSquare(const Color& colorToFind) const;
     
-    // Retrieve algebraic notation from a given square. E.g., "e4".
+    // Retrieve algebraic notation from a given square. E.g., 0 -> "a8".
     static std::string intToAlgebraicNotation(int square);
+    // Retrieve square int from a given algebraic notation. E.g., "a8" -> 0.
+    static int algebraicNotationToInt(const std::string& square);
 
     // If the square is on the board, in bounds.
     static bool onBoard(int square);
@@ -290,11 +299,14 @@ private:
     bool canWhiteQueenSideCastle_;
     bool canBlackQueenSideCastle_;
     // Current en passant square. Does not exist if no en passant is possible on the board.
-    std::optional<int> currentEnPassantSquare;
+    std::optional<int> currentEnPassantSquare_;
     // Attempt to parse long notation (e.g., "g1 f3") to a move.
     std::optional<Move> parseLongNotation_(const std::string& sourceMove, const std::string& targetMove) const;
     // Attempt to parse algebraic notation (e.g., "Nf3") to a move.
     std::optional<Move> parseAlgebraicNotation_(const std::string& move) const;
+
+    // Add move and all pawn promotion variants to moves. If move is not a pawn promotion, just add move by itself.
+    static void addAllPawnPromotionsToMoves_(std::vector<Move>& moves, const Move& move);
 
     // Generate all pseudo legal moves from a given square. Pseudo legal moves only take piece movement into account, no king check status.
     std::vector<Move> generatePseudoLegalMoves_(int sourceSquare);

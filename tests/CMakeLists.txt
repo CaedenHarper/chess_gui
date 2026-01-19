@@ -1,5 +1,6 @@
 add_executable(chess_tests
-    num_positions.cpp
+    Perft.cpp
+    perftTestSuite.cpp
 )
 
 target_link_libraries(chess_tests PRIVATE chess_lib)
