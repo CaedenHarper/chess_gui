@@ -1,6 +1,9 @@
 # vscode
 .vscode
 
+# stockfish for debugging
+stockfish/
+
 # Prerequisites
 *.d
 
