@@ -258,6 +258,8 @@ public:
     bool isMoveLegal(const Move& move);
     // Generate all legal moves from a given square.
     std::vector<Move> generateLegalMoves(int sourceSquare);
+    // Generate all pseudo legal moves using the given current color.
+    std::vector<Move> generateAllPseudoLegalMoves();
     // Generate all legal moves using the given current color.
     std::vector<Move> generateAllLegalMoves();
     // Attempt to parse arbitrary notation (e.g., "g1 f3" or "Nf3") to a move.

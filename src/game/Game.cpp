@@ -866,6 +866,25 @@ std::vector<Move> Game::generateLegalMoves(const int sourceSquare) {
     return legalMoves;
 }
 
+std::vector<Move> Game::generateAllPseudoLegalMoves() {
+    std::vector<Move> out;
+    out.reserve(64);
+
+    for(int squareIndex = 0; squareIndex < Game::NUM_SQUARES; squareIndex++) {
+        if(board_[squareIndex].color() != currentTurn()) { // NOLINT allow [] in hot loop
+            continue;
+        }
+
+        auto moves = generatePseudoLegalMoves_(squareIndex);
+        // extend out by moves
+        out.insert(out.end(),
+           std::make_move_iterator(moves.begin()),
+           std::make_move_iterator(moves.end()));
+    }
+
+    return out;
+}
+
 std::vector<Move> Game::generateAllLegalMoves() {
     std::vector<Move> out;
     out.reserve(64);
@@ -945,13 +964,13 @@ void Game::makeMove(const Move& move) {
         move.sourceSquare() == BLACK_KING_STARTING_SQUARE || move.sourceSquare() == BLACK_KINGSIDE_ROOK_STARTING_SQUARE || // moving black kingside pieces
         move.targetSquare() == BLACK_KINGSIDE_ROOK_STARTING_SQUARE // black kingside rook captured
     ) {
-        setBlackKingSideCastle(false);
+        canBlackKingSideCastle_ = false;
     }
     if(
         move.sourceSquare() == BLACK_KING_STARTING_SQUARE || move.sourceSquare() == BLACK_QUEENSIDE_ROOK_STARTING_SQUARE || // moving black queenside pieces
         move.targetSquare() == BLACK_QUEENSIDE_ROOK_STARTING_SQUARE // black queenside rook captured
     ) {
-        setBlackQueenSideCastle(false);
+        canBlackQueenSideCastle_ = false;
     }
 
     // update en passant flag
@@ -1099,7 +1118,7 @@ bool Game::isSquareAttacked(const int targetSquare, const Color& attackingColor)
     }
 
     // Sliding attack helper function
-    auto rayHits = [&](int dRow, int dCol, PieceType attackingPiece1, PieceType attackingPiece2) -> bool {
+    const auto rayHits = [&](int dRow, int dCol, PieceType attackingPiece1, PieceType attackingPiece2) -> bool {
         int curRow = targetRow + dRow;
         int curCol = targetColumn + dCol;
         while (onBoard(curCol, curRow)) {
