@@ -171,13 +171,10 @@ constexpr PieceType Move::promotionToPieceType(Promotion promotion) noexcept {
 
 Game::Game()
     : currentTurn_{Color::White},
-    canWhiteKingSideCastle_{false},
-    canBlackKingSideCastle_{false},
-    canWhiteQueenSideCastle_{false},
-    canBlackQueenSideCastle_{false},
+    castlingRights_{0},
     whiteKingSquare_{0},
     blackKingSquare_{0},
-    currentEnPassantSquare_{std::nullopt} {
+    currentEnPassantSquare_{UndoInfo::noEnPassant} {
 }
 
 Color Game::currentTurn() const {
@@ -311,13 +308,13 @@ void Game::loadFEN(const std::string& FEN) {
         if(field == 2) {
             switch (c) {
                 // White may castle kingside
-                case 'K': canWhiteKingSideCastle_ = true; break;
+                case 'K': castlingRights_.setWhiteKingside(); break;
                 // White may castle queenside
-                case 'Q': canWhiteQueenSideCastle_ = true; break;
+                case 'Q': castlingRights_.setWhiteQueenside(); break;
                 // Black may castle kingside
-                case 'k': canBlackKingSideCastle_ = true; break;
+                case 'k': castlingRights_.setBlackKingside(); break;
                 // Black may castle queenside
-                case 'q': canBlackQueenSideCastle_ = true; break;
+                case 'q': castlingRights_.setBlackQueenside(); break;
                 // No one can castle
                 case '-': break;
                 default: throw std::runtime_error("Unable to parse FEN: " + FEN + "\nInvalid castling char: " + "'" + c + "'");
@@ -370,15 +367,9 @@ bool Game::isFinished() {
 
 UndoInfo Game::getUndoInfo(const Piece capturedPiece) const {
     // pack bools into castling rights uint8_t for speedy lookup
-    const uint8_t castleRights = UndoInfo::packCastlingRights(canWhiteKingSideCastle_,
-        canWhiteQueenSideCastle_,
-        canBlackKingSideCastle_,
-        canBlackQueenSideCastle_);
-    // encode optional<int> into uint8_t with special UndoInfo sentinal
-    const uint8_t enPassantSquare = currentEnPassantSquare_.value_or(UndoInfo::noEnPassant);
     return UndoInfo{
-        castleRights,
-        enPassantSquare,
+        castlingRights_,
+        static_cast<uint8_t>(currentEnPassantSquare_),
         capturedPiece,
         static_cast<uint8_t>(whiteKingSquare_),
         static_cast<uint8_t>(blackKingSquare_),
@@ -518,7 +509,7 @@ void Game::generatePseudoLegalPawnMoves_(const int sourceSquare, MoveList& out) 
         }
 
         // en passant
-        if (currentEnPassantSquare_.has_value() && capLeft == currentEnPassantSquare_.value()) {
+        if (capLeft == currentEnPassantSquare_) {
             out.push_back(Move{sourceSquare, capLeft, MoveFlag::EnPassant, Promotion::None});
         }
     }
@@ -531,7 +522,7 @@ void Game::generatePseudoLegalPawnMoves_(const int sourceSquare, MoveList& out) 
         }
 
         // en passant
-        if (currentEnPassantSquare_.has_value() && capRight == currentEnPassantSquare_.value()) {
+        if (capRight == currentEnPassantSquare_) {
             // en passant cant be a promotion
             out.push_back(Move{sourceSquare, capRight, MoveFlag::EnPassant, Promotion::None});
         }
@@ -708,12 +699,13 @@ void Game::generatePseudoLegalKingMoves_(const int sourceSquare, MoveList& out) 
         }
     }
 
+    // TODO: this logic can be cleaned up, remove if(SourceColor)... check
     // --- CASTLING ---
 
     if(sourceColor == Color::White) {
         // King side castling
         if(
-            canWhiteKingSideCastle_ &&
+            castlingRights_.canWhiteKingside() &&
             sourceSquare == WHITE_KING_STARTING_SQUARE &&
             !board_[WHITE_KINGSIDE_PASSING_SQUARE].exists() &&
             !board_[WHITE_KINGSIDE_TARGET_SQUARE].exists()
@@ -723,7 +715,7 @@ void Game::generatePseudoLegalKingMoves_(const int sourceSquare, MoveList& out) 
 
         // Queen side castling
         if(
-            canWhiteQueenSideCastle_ &&
+            castlingRights_.canWhiteQueenside() &&
             sourceSquare == WHITE_KING_STARTING_SQUARE &&
             !board_[WHITE_QUEENSIDE_PASSING_SQUARE].exists() &&
             !board_[WHITE_QUEENSIDE_PASSING_SQUARE - 2].exists() &&  // queenside has two passing squares
@@ -736,7 +728,7 @@ void Game::generatePseudoLegalKingMoves_(const int sourceSquare, MoveList& out) 
     if(sourceColor == Color::Black) {
         // King side castling
         if(
-            canBlackKingSideCastle_ &&
+            castlingRights_.canBlackKingside() &&
             sourceSquare == BLACK_KING_STARTING_SQUARE &&
             !board_[BLACK_KINGSIDE_PASSING_SQUARE].exists() &&
             !board_[BLACK_KINGSIDE_TARGET_SQUARE].exists()
@@ -746,7 +738,7 @@ void Game::generatePseudoLegalKingMoves_(const int sourceSquare, MoveList& out) 
 
         // Queen side castling
         if(
-            canBlackQueenSideCastle_ &&
+            castlingRights_.canBlackQueenside() &&
             sourceSquare == BLACK_KING_STARTING_SQUARE &&
             !board_[BLACK_QUEENSIDE_PASSING_SQUARE].exists() &&
             !board_[BLACK_QUEENSIDE_PASSING_SQUARE - 2].exists() &&  // queenside has two passing squares
@@ -887,32 +879,32 @@ void Game::makeMove(const Move& move) {
     // flip current turn
     currentTurn_ = oppositeColor(currentTurn_);
     // remove en passant (we may set it again later in this function)
-    currentEnPassantSquare_.reset(); 
+    currentEnPassantSquare_ = UndoInfo::noEnPassant;
 
     // update castling flags
     if(
         move.sourceSquare() == WHITE_KING_STARTING_SQUARE || move.sourceSquare() == WHITE_KINGSIDE_ROOK_STARTING_SQUARE || // moving white kingside pieces
         move.targetSquare() == WHITE_KINGSIDE_ROOK_STARTING_SQUARE // white kingside rook captured
     ) {
-        canWhiteKingSideCastle_ = false;
+        castlingRights_.clearWhiteKingside();
     }
     if(
         move.sourceSquare() == WHITE_KING_STARTING_SQUARE || move.sourceSquare() == WHITE_QUEENSIDE_ROOK_STARTING_SQUARE || // moving white queenside pieces
         move.targetSquare() == WHITE_QUEENSIDE_ROOK_STARTING_SQUARE // white queenside rook captured
     ) {
-        canWhiteQueenSideCastle_ = false;
+        castlingRights_.clearWhiteQueenside();
     }
     if(
         move.sourceSquare() == BLACK_KING_STARTING_SQUARE || move.sourceSquare() == BLACK_KINGSIDE_ROOK_STARTING_SQUARE || // moving black kingside pieces
         move.targetSquare() == BLACK_KINGSIDE_ROOK_STARTING_SQUARE // black kingside rook captured
     ) {
-        canBlackKingSideCastle_ = false;
+        castlingRights_.clearBlackKingside();
     }
     if(
         move.sourceSquare() == BLACK_KING_STARTING_SQUARE || move.sourceSquare() == BLACK_QUEENSIDE_ROOK_STARTING_SQUARE || // moving black queenside pieces
         move.targetSquare() == BLACK_QUEENSIDE_ROOK_STARTING_SQUARE // black queenside rook captured
     ) {
-        canBlackQueenSideCastle_ = false;
+        castlingRights_.clearBlackQueenside();
     }
 
     // update en passant flag
@@ -1014,15 +1006,8 @@ void Game::undoMove(const Move& move, const UndoInfo& undoInfo) {
     board_[move.targetSquare()] = undoInfo.capturedPiece;
 
     // restore all flags
-    canWhiteKingSideCastle_ = undoInfo.canWhiteKingside();
-    canWhiteQueenSideCastle_ = undoInfo.canWhiteQueenside();
-    canBlackKingSideCastle_ = undoInfo.canBlackKingside();
-    canBlackQueenSideCastle_ = undoInfo.canBlackQueenside();
-    if(undoInfo.prevEnPassantSquare == UndoInfo::noEnPassant) {
-        currentEnPassantSquare_ = std::nullopt;
-    } else {
-        currentEnPassantSquare_ = undoInfo.prevEnPassantSquare;
-    }
+    castlingRights_ = undoInfo.prevCastlingRights;
+    currentEnPassantSquare_ = undoInfo.prevEnPassantSquare;
     whiteKingSquare_ = undoInfo.prevWhiteKingSquare;
     blackKingSquare_ = undoInfo.prevBlackKingSquare;
 }
