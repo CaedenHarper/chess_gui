@@ -311,7 +311,7 @@ public:
     // If the given color is in check.
     bool isInCheck(const Color& colorToFind) const;
     // If a given square is attacked by the attacking color.
-    bool isSquareAttacked(int targetSquare, const Color& attackingColor) const;
+    bool isSquareAttacked(int targetSquare, Color attackingColor) const;
     // Retrieve king square for a given color. Does not exist if king is not on board.
     std::optional<int> findKingSquare(const Color& colorToFind) const;
     
@@ -321,19 +321,34 @@ public:
     static int algebraicNotationToInt(const std::string& square);
 
     // If the square is on the board, in bounds.
-    static bool onBoard(int square);
+    static constexpr bool onBoard(int square) noexcept {
+        return 0 <= square && square <= 63;
+    }
     // If a column and row is on the board, in bounds.
-    static bool onBoard(int col, int row);
+    static constexpr bool onBoard(int col, int row) noexcept {
+        return 0 <= col && col <= 7 && 0 <= row && row <= 7;
+    }
 
     // Get column of square.
-    static int getCol(int square);
+    static constexpr int getCol(int square) noexcept {
+        // equivalent to square % 8
+        return square & 7;
+    }
     // Get row of square.
-    static int getRow(int square);
+    static constexpr int getRow(int square) noexcept {
+        // equivalent to square / 8
+        return square >> 3;
+    }
     // Get square index from column and row.
-    static int getSquareIndex(int col, int row);
+    static constexpr int getSquareIndex(int col, int row) noexcept {
+        // equivalent to (8 * row) + col
+        return (row << 3) | col;
+    }
 
     // Get the opposite color of a given color.
-    static Color oppositeColor(Color color);
+    static constexpr Color oppositeColor(Color color) noexcept {
+        return (color == Color::White) ? Color::Black : Color::White;
+    }
 
 private:
     // The game's board of pieces.

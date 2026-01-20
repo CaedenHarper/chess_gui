@@ -1027,10 +1027,9 @@ void Game::undoMove(const Move& move, const UndoInfo& undoInfo) {
     blackKingSquare_ = undoInfo.prevBlackKingSquare;
 }
 
-bool Game::isSquareAttacked(const int targetSquare, const Color& attackingColor) const {
-    // TODO: consider extracting common deltas (e.g., knightDeltas) into Game class
+bool Game::isSquareAttacked(const int targetSquare, const Color attackingColor) const {
     const int targetRow = getRow(targetSquare);
-    const int targetColumn = getCol(targetSquare);
+    const int targetCol = getCol(targetSquare);
 
     // 1. Pawn attacks (only diagonals)
     // White attacks row - 1, Black attacks row + 1
@@ -1038,7 +1037,7 @@ bool Game::isSquareAttacked(const int targetSquare, const Color& attackingColor)
     const int attackingPawnRow = targetRow - pawnDir; // square where an attacking pawn would sit
     if (attackingPawnRow >= 0 && attackingPawnRow <= 7) {
         for (const int deltaColumn : {-1, +1}) {
-            const int curCol = targetColumn + deltaColumn;
+            const int curCol = targetCol + deltaColumn;
             // out of range
             if (!onBoard(curCol, attackingPawnRow)) {
                 continue;
@@ -1054,7 +1053,7 @@ bool Game::isSquareAttacked(const int targetSquare, const Color& attackingColor)
 
     // 2. Knight attacks
     for (int i = 0; i < 8; i++) {
-        const int curCol = targetColumn + knightDeltas[i][0];
+        const int curCol = targetCol + knightDeltas[i][0];
         const int curRow = targetRow + knightDeltas[i][1];
         // out of bounds
         if (!onBoard(curCol, curRow)) {
@@ -1070,7 +1069,7 @@ bool Game::isSquareAttacked(const int targetSquare, const Color& attackingColor)
 
     // 3. King attacks
     for (int i = 0; i < 8; i++) {
-        const int curCol = targetColumn + kingDeltas[i][0];
+        const int curCol = targetCol + kingDeltas[i][0];
         const int curRow = targetRow + kingDeltas[i][1];
         // out of bounds
         if (!onBoard(curCol, curRow)) {
@@ -1084,51 +1083,97 @@ bool Game::isSquareAttacked(const int targetSquare, const Color& attackingColor)
         }
     }
 
-    // Sliding attack helper function
-    const auto rayHits = [&](int dRow, int dCol, PieceType attackingPiece1, PieceType attackingPiece2) -> bool {
-        int curRow = targetRow + dRow;
-        int curCol = targetColumn + dCol;
-        while (onBoard(curCol, curRow)) {
-            const int curSquare = getSquareIndex(curCol, curRow);
-            const Piece attackingPiece = board_[curSquare];
-            if (attackingPiece.exists()) {
-                // if not right piece, we are blocked and can return
-                return attackingPiece.color() == attackingColor && (attackingPiece.type() == attackingPiece1 || attackingPiece.type() == attackingPiece2);
+    // The following loops are unrolled for speed
+    // 4. Orthogonal (rook/queen)
+    // North
+    for (int curRow = targetRow + 1; curRow < 8; curRow++) {
+        const Piece curPiece = board_[getSquareIndex(targetCol, curRow)];
+        if (curPiece.exists()) {
+            if (curPiece.color() == attackingColor &&
+                (curPiece.type() == PieceType::Rook || curPiece.type() == PieceType::Queen)) {
+                return true;
             }
-            // this direction is not blocked, continue
-            curRow += dRow;
-            curCol += dCol;
+            break; // blocked by some piece
         }
-        // didn't find anything
-        return false;
-    };
+    }
+    // South
+    for (int curRow = targetRow - 1; curRow >= 0; curRow--) {
+        const Piece curPiece = board_[getSquareIndex(targetCol, curRow)];
+        if (curPiece.exists()) {
+            if (curPiece.color() == attackingColor &&
+                (curPiece.type() == PieceType::Rook || curPiece.type() == PieceType::Queen)) {
+                return true;
+            }
+            break; // blocked by some piece
+        }
+    }
+    // East
+    for (int curCol = targetCol + 1; curCol < 8; curCol++) {
+        const Piece curPiece = board_[getSquareIndex(curCol, targetRow)];
+        if (curPiece.exists()) {
+            if (curPiece.color() == attackingColor &&
+                (curPiece.type() == PieceType::Rook || curPiece.type() == PieceType::Queen)) {
+                return true;
+            }
+            break; // blocked by some piece
+        }
+    }
+    // West
+    for (int curCol = targetCol - 1; curCol >= 0; curCol--) {
+        const Piece curPiece = board_[getSquareIndex(curCol, targetRow)];
+        if (curPiece.exists()) {
+            if (curPiece.color() == attackingColor &&
+                (curPiece.type() == PieceType::Rook || curPiece.type() == PieceType::Queen)) {
+                return true;
+            }
+            break; // blocked by some piece
+        }
+    }
 
-    // 4. orthogonal rays: rook or queen
-    if (rayHits(+1, 0, PieceType::Rook, PieceType::Queen)) {
-        return true;
+    // 5. Diagonals (bishop/queen)
+    // NE
+    for (int curCol = targetCol + 1, curRow = targetRow + 1; curCol < 8 && curRow < 8; curCol++, curRow++) {
+        const Piece curPiece = board_[getSquareIndex(curCol, curRow)];
+        if (curPiece.exists()) {
+            if (curPiece.color() == attackingColor &&
+                (curPiece.type() == PieceType::Bishop || curPiece.type() == PieceType::Queen)) {
+                return true;
+            }
+            break; // blocked by some piece
+        }
     }
-    if (rayHits(-1, 0, PieceType::Rook, PieceType::Queen)) {
-        return true;
+    // NW
+    for (int curCol = targetCol - 1, curRow = targetRow + 1; curCol >= 0 && curRow < 8; curCol--, curRow++) {
+        const Piece curPiece = board_[getSquareIndex(curCol, curRow)];
+        if (curPiece.exists()) {
+            if (curPiece.color() == attackingColor &&
+                (curPiece.type() == PieceType::Bishop || curPiece.type() == PieceType::Queen)) {
+                return true;
+            }
+            break; // blocked by some piece
+        }
     }
-    if (rayHits(0, +1, PieceType::Rook, PieceType::Queen)) {
-        return true;
+    // SE
+    for (int curCol = targetCol + 1, curRow = targetRow - 1; curCol < 8 && curRow >= 0; curCol++, curRow--) {
+        const Piece curPiece = board_[getSquareIndex(curCol, curRow)];
+        if (curPiece.exists()) {
+            if (curPiece.color() == attackingColor &&
+                (curPiece.type() == PieceType::Bishop || curPiece.type() == PieceType::Queen)) {
+                return true;
+            }
+            break; // blocked by some piece
+        }
     }
-    if (rayHits(0, -1, PieceType::Rook, PieceType::Queen)) {
-        return true;
-    }
-
-    // 5. diagonal rays: bishop or queen
-    if (rayHits(+1, +1, PieceType::Bishop, PieceType::Queen)) {
-        return true;
-    }
-    if (rayHits(+1, -1, PieceType::Bishop, PieceType::Queen)) {
-        return true;
-    }
-    if (rayHits(-1, +1, PieceType::Bishop, PieceType::Queen)) {
-        return true;
-    }
-    if (rayHits(-1, -1, PieceType::Bishop, PieceType::Queen)) {
-        return true;
+    // SW
+    for (int curCol = targetCol - 1, curRow = targetRow - 1; curCol >= 0 && curRow >= 0; curCol--, curRow--) {
+        const Piece curPiece = board_[getSquareIndex(curCol, curRow)];
+        if (curPiece.exists()) {
+            if (curPiece.color() == attackingColor &&
+                (curPiece.type() == PieceType::Bishop || curPiece.type() == PieceType::Queen)) {
+                return true;
+            }
+            break; // blocked by some piece
+        }
     }
 
     // didn't find anything
@@ -1166,28 +1211,4 @@ int Game::algebraicNotationToInt(const std::string& square) {
     const int row = 7 - (rowC - '1');
 
     return getSquareIndex(col, row);
-}
-
-bool Game::onBoard(const int square) {
-    return 0 <= square && square <= 63;
-}
-
-bool Game::onBoard(const int col, int row) {
-    return 0 <= col && col <= 7 && 0 <= row && row <= 7;
-}
-
-int Game::getCol(int square) {
-    return square % 8;
-}
-
-int Game::getRow(int square) {
-    return square / 8;
-}
-
-int Game::getSquareIndex(int col, int row) {
-    return (8 * row) + col;
-}
-
-Color Game::oppositeColor(const Color color) {
-    return (color == Color::White) ? Color::Black : Color::White;
 }
