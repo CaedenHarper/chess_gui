@@ -1,11 +1,12 @@
 Checks:
   # --- Will almost certainly never change ---
-  - '*'                                       # Start by allowing everything
-  - '-llvmlibc-restrict-system-libc-headers'  # Allow system headers
-  - '-llvmlibc-implementation-in-namespace'   # This is not a llvmlibc project
-  - '-llvmlibc-callee-namespace'              # This is not a llvmlibc project
-  - '-llvmlibc-inline-function-decl'          # This is not a llvmlibc project
-  - '-altera-id-dependent-backward-branch'    # This is not necessary for this project
+  - '*'                                                   # Start by allowing everything
+  - '-llvmlibc-restrict-system-libc-headers'              # Allow system headers
+  - '-llvmlibc-implementation-in-namespace'               # This is not a llvmlibc project
+  - '-llvmlibc-callee-namespace'                          # This is not a llvmlibc project
+  - '-llvmlibc-inline-function-decl'                      # This is not a llvmlibc project
+  - '-altera-id-dependent-backward-branch'                # This is not necessary for this project
+  - '-cppcoreguidelines-pro-bounds-constant-array-index'  # [] in favor of .at() is required for speedup throughout this project
 
   # --- Might change one day ---
   - '-altera-unroll-loops'                                        # Performance boost not really needed, may be worth investigating some day
@@ -27,5 +28,6 @@ Checks:
   - '-cppcoreguidelines-avoid-magic-numbers'      # Same as above ^
   - '-bugprone-narrowing-conversions'             # Most narrowing conversions in this project are x,y coordinates -> squares, which can tolerate some conversion loss
   - '-cppcoreguidelines-narrowing-conversions'    # Same as above ^
+  - '-hicpp-signed-bitwise'                       # This is a fine rule but my environment won't respect IgnorePositiveIntegerLiterals: true
 
 WarningsAsErrors: 'modernize-*'  # VSCode shows this as deprecated; enabling error makes them more visible in the IDE

@@ -27,7 +27,7 @@ void runCLIGame() {
             continue;
         }
         const Move move = possibleMove.value();
-        std::cout << "Parsed move: " << move.to_string() << "\n";
+        std::cout << "Parsed move: " << move.to_string(game) << "\n";
 
         if(!game.tryMove(move)) {
             std::cout << "Move is not legal. Try again.\n";
@@ -44,7 +44,7 @@ void runGUIGame() {
 
     // init game
     Game game;
-    game.loadFEN("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - ");
+    game.loadFEN("7k/P7/1K6/8/8/8/8/8 w - - 0 1");
 
     // init board
     Board board;
@@ -107,8 +107,10 @@ void runGUIGame() {
                         board.at(targetSquare).setHighlight(Board::SELECTED_HIGHLIGHT);
 
                         // highlight legal moves
-                        const std::vector<Move> legalMoves = game.generateLegalMoves(targetSquare);
-                        for(const Move move : legalMoves) {
+                        MoveList legalMoves;
+                        game.generateLegalMoves(targetSquare, legalMoves);
+                        for(int i = 0; i < legalMoves.size; i++) {
+                            const Move move = legalMoves.data[i];
                             board.at(move.targetSquare()).setHighlight(Board::LEGAL_HIGHLIGHT);
                         }
 
@@ -127,7 +129,7 @@ void runGUIGame() {
                     }
                     
                     // Try to make click-click move; if successful, update visual board
-                    const Move potentialMove{sourceSquare, targetSquare, game.board().at(sourceSquare), game.board().at(targetSquare)};
+                    const Move potentialMove = Move::fromPieces(sourceSquare, targetSquare, game.board().at(sourceSquare), game.board().at(targetSquare));
                     if(game.tryMove(potentialMove)) {
                         board.updateBoardFromGame(game);
                         PIECE_MOVEMENT_SOUND.play();
@@ -182,7 +184,7 @@ void runGUIGame() {
                     }
 
                     // move is on board and different square
-                    const Move potentialMove{sourceSquare, targetSquare, game.board().at(sourceSquare), game.board().at(targetSquare)};
+                    const Move potentialMove = Move::fromPieces(sourceSquare, targetSquare, game.board().at(sourceSquare), game.board().at(targetSquare));
                     // if move is legal, try it
                     if (game.tryMove(potentialMove)) {
                         board.updateBoardFromGame(game);

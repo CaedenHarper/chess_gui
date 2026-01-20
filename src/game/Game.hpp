@@ -3,43 +3,41 @@
 #include <array>
 #include <optional>
 #include <string>
-#include <vector>
 
 // Colors a piece can have. None represents an empty square.
-enum class Color {
+enum class Color : uint8_t  {
     None,
     White,
-    Black
+    Black // 11
 };
 
 // Types a piece can have. None represents an empty square.
-enum class PieceType {
+enum class PieceType: uint8_t  {
     None,
     Pawn,
     Knight,
     Bishop,
     Rook,
     Queen,
-    King
+    King // 110
 };
 
-// A chess piece, with a piece type and color.
+// A chess piece, with a piece type and color. Stored in uint8_t as (PieceType | Color).
 class Piece {
 public:
     // Construct an empty piece, which represents an empty square.
-    Piece();
+    constexpr Piece() noexcept : packed_{0} {}
     // Construct a piece given a type and color.
-    Piece(PieceType type, Color color);
+    constexpr Piece(PieceType type, Color color) noexcept : packed_{pack_(type, color)} {}
 
     // If a piece is equal to another piece. A piece is equal if the type and color matches.
-    bool operator==(Piece other) const { return type_ == other.type_ && color_ == other.color_; }
+    constexpr bool operator==(Piece other) const noexcept { return packed_ == other.packed_; }
 
-    // Retrieve the piece type.
-    PieceType type() const;
-    // Retrieve the piece color.
-    Color color() const;
-    // Retrieve if the piece exists. I.e., if the piece is not an empty square.
-    bool exists() const;
+    // Setters use bitwise ops to quickly extract info from packed_.
+    constexpr PieceType type() const noexcept { return static_cast<PieceType>(packed_ & TYPE_MASK); }
+    constexpr Color color() const noexcept { return static_cast<Color>((packed_ >> 3) & COLOR_MASK); }
+    // Retrieve if the piece exists. i.e., if the piece is not an empty square.
+    constexpr bool exists() const noexcept { return (packed_ & 0x7) != 0; } // 0 -> PieceType::None
 
     // Retrieve a string of length one which represents the piece. Uppercase for white, lowercase for black. E.g., white pawn -> "P"
     std::string to_string_short() const;
@@ -52,94 +50,130 @@ public:
     static Piece charToPiece(char piece);
 
 protected:
-    // A piece's type.
-    PieceType type_;
-    // A piece's color.
-    Color color_;
+    // packed representation of PieceType | Color. 
+    uint8_t packed_;
+
+    // 3 bits for type, 2 for color, and corresponding bitmasks
+    static constexpr uint8_t TYPE_BITS = 3;
+    static constexpr uint8_t COLOR_BITS = 2;
+    static constexpr uint8_t TYPE_MASK = (1 << TYPE_BITS) - 1;
+    static constexpr uint8_t COLOR_MASK = (1 << COLOR_BITS) - 1;
+
+    // Pack PieceType and Color into uint8_t
+    static constexpr uint8_t pack_(PieceType type, Color color) noexcept {
+        return (static_cast<uint8_t>(type) & TYPE_MASK) | ((static_cast<uint8_t>(color) & COLOR_MASK) << 3);
+    }
 };
 
 // Info used to fully undo a move.
 struct UndoInfo {
     bool whiteKingSideCastle, whiteQueenSideCastle, blackKingSideCastle, blackQueenSideCastle;
-    std::optional<int> enPassantSquare;
+    std::optional<int> enPassantSquare, whiteKingSquare, blackKingSquare;
+    Piece capturedPiece;
 
-    UndoInfo(bool whiteKingSideCastle_, bool whiteQueenSideCastle_, bool blackKingSideCastle_, bool blackQueenSideCastle_, std::optional<int> enPassantSquare_) :
+    UndoInfo(bool whiteKingSideCastle_,
+        bool whiteQueenSideCastle_,
+        bool blackKingSideCastle_,
+        bool blackQueenSideCastle_,
+        std::optional<int> enPassantSquare_,
+        std::optional<int> whiteKingSquare_,
+        std::optional<int> blackKingSquare_,
+        Piece capturedPiece_) :
     whiteKingSideCastle{whiteKingSideCastle_},
     whiteQueenSideCastle{whiteQueenSideCastle_},
     blackKingSideCastle{blackKingSideCastle_},
     blackQueenSideCastle{blackQueenSideCastle_},
-    enPassantSquare{enPassantSquare_} {}
-} __attribute__((aligned(16)));
+    enPassantSquare{enPassantSquare_},
+    whiteKingSquare{whiteKingSquare_},
+    blackKingSquare{blackKingSquare_},
+    capturedPiece{capturedPiece_} {}
+} __attribute__((aligned(32))); // align to 32 bytes
 
+enum class MoveFlag : uint8_t {
+    Normal,  // no special flags
+    Capture,
+    DoublePawnPush,
+    KingCastle,
+    QueenCastle,
+    EnPassant,
+    Promotion,  // non-capture promotion
+    PromotionCapture
+};
+
+enum class Promotion : uint8_t { 
+    None,
+    Knight,
+    Bishop,
+    Rook,
+    Queen
+};
+
+class Game; // forward declare for Move
+
+// TODO: rewrite without magic numbers here
 // A chess move, with information for squares, pieces, and special flags like promotion and castling.
 class Move {
 public:
-    // Create a move given a source square, target square, source piece, and target piece. Determines if move is special, e.g., promotion or castling.
-    Move(int sourceSquare, int targetSquare, Piece sourcePiece, Piece targetPiece);
+    // Create a default move that should not be used; only needed for MoveList to quickly initialize many default Moves
+    constexpr Move() noexcept : packed_{0} {}
+    // Create a move given a source square, target square, flag, and promotion.
+    constexpr Move(uint8_t sourceSquare, uint8_t targetSquare, MoveFlag flag, Promotion promotion) noexcept
+                : packed_{pack_(sourceSquare, targetSquare, flag, promotion)} {}
+    constexpr Move(int sourceSquare, int targetSquare, MoveFlag flag, Promotion promotion) noexcept
+                : packed_{pack_(static_cast<uint8_t>(sourceSquare), static_cast<uint8_t>(targetSquare), flag, promotion)} {}
 
-    // If a move is equal to another move. Has to have the same starting and target squares, pieces, and any special flags.
-    bool operator==(Move other) const { return sourceSquare_ == other.sourceSquare_ &&
-                                               targetSquare_ == other.targetSquare_ &&
-                                            //    it should be fine if these are omitted, but im not actually sure...?
-                                            //    sourcePiece_ == other.sourcePiece_ &&
-                                            //    targetPiece_ == other.targetPiece_ &&
-                                            //    isPawnPromotion_ == other.isPawnPromotion_ &&
-                                               promotionPiece_ == other.promotionPiece_ &&
-                                               isKingSideCastle_ == other.isKingSideCastle_ &&
-                                               isQueenSideCastle_ == other.isQueenSideCastle_ &&
-                                               isEnPassant_ == other.isEnPassant_; }
-    // Retrieve source square.
-    int sourceSquare() const { return sourceSquare_; }
-    // Retrieve target square.
-    int targetSquare() const { return targetSquare_; }
-    // Retrieve source piece.
-    Piece sourcePiece() const { return sourcePiece_; }
-    // Retrieve target square.
-    Piece targetPiece() const { return targetPiece_; }
+    // Create a move using Pieces for context for flag + promotion. This is slower, only use if necessary / not in hot loop.
+    static Move fromPieces(int sourceSquare, int targetSquare, Piece sourcePiece, Piece targetPiece);
 
-    // Retrieve piece to promote to.
-    Piece promotionPiece() const { return promotionPiece_; }
-    // Set piece to promote to.
-    void setPromotionPiece(Piece piece) { promotionPiece_ = piece; }
+    // Has to have the same starting and target squares, pieces, and any special flags.
+    constexpr bool operator==(Move other) const noexcept { return packed_ == other.packed_; }
 
-    // If a move is a pawn promotion.
-    bool isPawnPromotion() const;
-    // If a move is a king side castle.
-    bool isKingSideCastle() const;
-    // If a move is a queen side castle.
-    bool isQueenSideCastle() const;
-    // If a move is a double pawn move.
-    bool isDoublePawn() const;
-    // If a move is a en passant pawn move.
-    bool isEnPassant() const;
+    // Setters use bitwise ops to quickly extract info from packed_.
+    constexpr uint8_t sourceSquare() const noexcept { return (packed_ >> 0) & 0x3F; }
+    constexpr uint8_t targetSquare() const noexcept { return (packed_ >> 6) & 0x3F; }
+    constexpr MoveFlag flag() const noexcept { return static_cast<MoveFlag>((packed_ >> 12) & 0xF); }
+    constexpr Promotion promotion() const noexcept { return static_cast<Promotion>((packed_ >> 16) & 0x7); }
+    constexpr bool isPromotion() const noexcept { return flag() == MoveFlag::Promotion || flag() == MoveFlag::PromotionCapture; }
+    constexpr bool isEnPassant() const noexcept { return flag() == MoveFlag::EnPassant; }
+    constexpr bool isDoublePawn() const noexcept { return flag() == MoveFlag::DoublePawnPush; }
+    constexpr bool isKingSideCastle() const noexcept { return flag() == MoveFlag::KingCastle; }
+    constexpr bool isQueenSideCastle() const noexcept { return flag() == MoveFlag::QueenCastle; }
+    constexpr bool isCapture() const noexcept { return flag() == MoveFlag::Capture || flag() == MoveFlag::PromotionCapture || flag() == MoveFlag::EnPassant; }
 
     // Retrieve a string representation of the move. E.g., "White Pawn on e2 to Empty Square on e4".
-    std::string to_string() const;
+    std::string to_string(const Game& game) const;
     // Retrieve a long algebraic representation of the move. E.g., "e2e4"
     std::string toLongAlgebraic() const;
 
+    // Get piece type from promotion class.
+    static constexpr PieceType promotionToPieceType(Promotion promotion) noexcept;
+
 private:
-    // A move's source square.
-    int sourceSquare_;
-    // A move's target square.
-    int targetSquare_;
-    // A move's source piece.
-    Piece sourcePiece_;
-    // A move's target square.
-    Piece targetPiece_;
+    uint32_t packed_;
 
-    // TODO: add logic for promotion pieces other than queen
-    // Piece to promote to. Undefined behavior if move is not a pawn promotion.
-    Piece promotionPiece_;
-
-    // all of these flags are evaluated once on move creation and saved for speedup and to allow more constness
-    bool isPawnPromotion_;
-    bool isKingSideCastle_;
-    bool isQueenSideCastle_;
-    bool isDoublePawn_;
-    bool isEnPassant_;
-
+    static constexpr uint32_t pack_(uint8_t sourceSquare, uint8_t targetSquare, MoveFlag flag, Promotion promotion) noexcept {
+        return (static_cast<uint32_t>(sourceSquare) & 0x3F)
+             | ((static_cast<uint32_t>(targetSquare) & 0x3F) << 6)
+             | ((static_cast<uint32_t>(flag) & 0xF) << 12)
+             | ((static_cast<uint32_t>(promotion) & 0x7) << 16);
+    }
 };
+
+// A list of moves. Wrapper for std::array<> for quick lookups. 
+struct MoveList {
+    // Max amount of moves; somewhat arbitrary, but should be enough for any pseudo-legal move count
+    static constexpr int kMaxMoves = 256;
+    std::array<Move, kMaxMoves> data;
+    // Only moves between [0, MoveList.size) are valid; the rest are placeholder Moves which have undefined behavior
+    int size = 0;
+
+    void clear() { size = 0; }
+
+    void push_back(const Move& move) {
+        data[size++] = move;
+    }
+} __attribute__((aligned(128)));
+
 
 // A chess game. Contains information for the game and helpers to generate and validate moves.
 class Game {
@@ -241,7 +275,7 @@ public:
     // If the game is finished.
     bool isFinished();
     // Get flags in the form of UndoInfo.
-    UndoInfo getUndoInfo() const;
+    UndoInfo getUndoInfo(Piece capturedPiece) const;
 
     void setWhiteKingSideCastle(bool canCastle);
     void setBlackKingSideCastle(bool canCastle);
@@ -253,15 +287,15 @@ public:
     // Make a move, even if it is not legal.
     void makeMove(const Move& move);
     // Undo a move. Does not check if the move we are undoing happened before.
-    void undoMove(const Move& move, const UndoInfo& flags);
+    void undoMove(const Move& move, const UndoInfo& undoInfo);
     // If a move is legal.
     bool isMoveLegal(const Move& move);
     // Generate all legal moves from a given square.
-    std::vector<Move> generateLegalMoves(int sourceSquare);
+    void generateLegalMoves(int sourceSquare, MoveList& out);
     // Generate all pseudo legal moves using the given current color.
-    std::vector<Move> generateAllPseudoLegalMoves();
+    void generateAllPseudoLegalMoves(MoveList& out);
     // Generate all legal moves using the given current color.
-    std::vector<Move> generateAllLegalMoves();
+    void generateAllLegalMoves(MoveList& out);
     // Attempt to parse arbitrary notation (e.g., "g1 f3" or "Nf3") to a move.
     std::optional<Move> parseMove(const std::string& move) const;
 
@@ -302,6 +336,11 @@ private:
     bool canBlackKingSideCastle_;
     bool canWhiteQueenSideCastle_;
     bool canBlackQueenSideCastle_;
+
+    // Keep track of current king positions. Neither exist if the kings aren't on the board.
+    std::optional<int> whiteKingSquare_;
+    std::optional<int> blackKingSquare_;
+    
     // Current en passant square. Does not exist if no en passant is possible on the board.
     std::optional<int> currentEnPassantSquare_;
     // Attempt to parse long notation (e.g., "g1 f3") to a move.
@@ -310,20 +349,20 @@ private:
     std::optional<Move> parseAlgebraicNotation_(const std::string& move) const;
 
     // Add move and all pawn promotion variants to moves. If move is not a pawn promotion, just add move by itself.
-    static void addAllPawnPromotionsToMoves_(std::vector<Move>& moves, const Move& move);
+    static void addAllPawnPromotionsToMoves_(MoveList& moves, int sourceSquare, int targetSquare, Piece sourcePiece, bool isCapture);
 
     // Generate all pseudo legal moves from a given square. Pseudo legal moves only take piece movement into account, no king check status.
-    std::vector<Move> generatePseudoLegalMoves_(int sourceSquare);
+    void generatePseudoLegalMoves_(int sourceSquare, MoveList& out);
     // Generate all pseudo legal pawn moves from a given square.
-    std::vector<Move> generatePseudoLegalPawnMoves_(int sourceSquare);
+    void generatePseudoLegalPawnMoves_(int sourceSquare, MoveList& out);
     // Generate all pseudo legal knight moves from a given square.
-    std::vector<Move> generatePseudoLegalKnightMoves_(int sourceSquare);
+    void generatePseudoLegalKnightMoves_(int sourceSquare, MoveList& out);
     // Generate all pseudo legal bishop moves from a given square.
-    std::vector<Move> generatePseudoLegalBishopMoves_(int sourceSquare);
+    void generatePseudoLegalBishopMoves_(int sourceSquare, MoveList& out);
     // Generate all pseudo legal rook moves from a given square.
-    std::vector<Move> generatePseudoLegalRookMoves_(int sourceSquare);
+    void generatePseudoLegalRookMoves_(int sourceSquare, MoveList& out);
     // Generate all pseudo legal queen moves from a given square.
-    std::vector<Move> generatePseudoLegalQueenMoves_(int sourceSquare);
+    void generatePseudoLegalQueenMoves_(int sourceSquare, MoveList& out);
     // Generate all pseudo legal king moves from a given square.
-    std::vector<Move> generatePseudoLegalKingMoves_(int sourceSquare);
+    void generatePseudoLegalKingMoves_(int sourceSquare, MoveList& out);
 };

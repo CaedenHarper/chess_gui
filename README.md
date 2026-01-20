@@ -10,28 +10,39 @@ A C++ chess project with a working GUI, CLI, and engine.
 ## Requirements
 - C++17 compiled with clang.
 - CMake >= 4.2.1.
-- Written in windows, should compile with Unix (may have to change some commands below).
+- Written in windows, should also compile with Unix (may have to change some commands below).
 
 ## Build
 1. Create the build directory:
     ```
-    cmake -S . -B build-release -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang -DCMAKE_BUILD_TYPE=Release
+    cmake -S . -B build-release -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang -DCMAKE_BUILD_TYPE=Release  # Release build, -O3
+    cmake -S . -B build-prof -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_FLAGS_RELWITHDEBINFO="-O3 -g -fno-omit-frame-pointer" -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-O3 -g -fno-omit-frame-pointer"  # Profiling build, -O3 without omitting frame pointer for profiling
+    cmake -S . -B build-debug -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang -DCMAKE_BUILD_TYPE=Debug  # Debug build, -O0
     ```
 2. Build:
     ```
-    cmake --build build-release
+    cmake --build build-release  # or build-prof / build-debug
     ```
 3. Executable is placed in `build-release\`.
 
 ## Run
 From project root:
 ```
-.\build-release\chess.exe   # Windows
+.\build-release\chess.exe  # release
+.\build-prof\chess.exe     # profiling
+.\build-debug\chess.exe    # debug
 ```
 
 ## Tests
 - Tests are in tests\
 - Run with:
 ```
-ctest --test-dir build-release --verbose
+ctest --test-dir build-release --verbose  # release
+ctest --test-dir build-prof --verbose     # profling
+ctest --test-dir build-debug --verbose    # debug
 ```
+
+## TODOs
+- Look further into bitboards to speed up isSquareAttacked / attack maps
+- Look into rewriting all const Piece to const Piece&
+- Look into any more functions we can constexpr

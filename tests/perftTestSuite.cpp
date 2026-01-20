@@ -1,5 +1,6 @@
 #include <cstdlib>
 #include <iostream>
+#include <vector>
 
 #include "Perft.hpp"
 
@@ -31,7 +32,7 @@ int main() {
     const std::vector<int64_t> position3Perfts {0, 14, 191, 2'812, 43'238, 674'624, 11'030'083, 178'633'661, 3'009'794'393};
     const std::vector<int64_t> position4Perfts {0, 6, 264, 9'467, 422'333, 15'833'292, 706'045'033};
 
-    // if(!checkPosition(positionStartPerfts, "Start Position", std::string{Game::STARTING_FEN}, 6)) {
+    // if(!checkPosition(positionStartPerfts, "Start Position", std::string{Game::STARTING_FEN}, 5)) {
     //     return EXIT_FAILURE;
     // }
 

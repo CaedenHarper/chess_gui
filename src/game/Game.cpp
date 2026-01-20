@@ -1,28 +1,8 @@
-#include <algorithm>
 #include <iostream>
 #include <optional>
 #include <string>
-#include <vector>
 
 #include "Game.hpp"
-
-Piece::Piece() : type_{PieceType::None}, color_{Color::None} {
-}
-
-Piece::Piece(PieceType type, Color color) : type_{type}, color_{color} {
-}
-
-PieceType Piece::type() const {
-    return type_;
-}
-
-Color Piece::color() const {
-    return color_;
-}
-
-bool Piece::exists() const {
-    return type_ != PieceType::None;
-}
 
 PieceType Piece::charToPieceType(const char piece) {
     if(piece == 'P' || piece == 'p') {
@@ -72,9 +52,9 @@ Piece Piece::charToPiece(const char piece) {
 }
 
 std::string Piece::to_string_short() const {
-    const bool isWhite = color_ == Color::White;
+    const bool isWhite = color() == Color::White;
 
-    switch (type_) {
+    switch (type()) {
         case PieceType::None: return "?";
         case PieceType::Pawn: return isWhite ? "P": "p";
         case PieceType::Knight: return isWhite ? "N": "n";
@@ -86,103 +66,107 @@ std::string Piece::to_string_short() const {
 }
 
 std::string Piece::to_string_long() const {
-    const std::string color = color_ == Color::White ? "White " : "Black ";
+    const std::string out = color() == Color::White ? "White " : "Black ";
 
-    switch (type_) {
+    switch (type()) {
         case PieceType::None: return "Empty Square";
-        case PieceType::Pawn: return color + "Pawn";
-        case PieceType::Knight: return color + "Knight";
-        case PieceType::Bishop: return color + "Bishop";
-        case PieceType::Rook: return color + "Rook";
-        case PieceType::Queen: return color + "Queen";
-        case PieceType::King: return color + "King";
+        case PieceType::Pawn: return out + "Pawn";
+        case PieceType::Knight: return out + "Knight";
+        case PieceType::Bishop: return out + "Bishop";
+        case PieceType::Rook: return out + "Rook";
+        case PieceType::Queen: return out + "Queen";
+        case PieceType::King: return out + "King";
     }
 }
 
-Move::Move(int sourceSquare, int targetSquare, Piece sourcePiece, Piece targetPiece) :
- sourceSquare_{sourceSquare},
- targetSquare_{targetSquare},
- sourcePiece_{sourcePiece},
- targetPiece_{targetPiece},
- promotionPiece_{PieceType::Queen, sourcePiece.color()}, // default to Queen for promotion piece; TODO: should probably change this to std::optional<>
- isPawnPromotion_{isPawnPromotion()},
- isKingSideCastle_{isKingSideCastle()},
- isQueenSideCastle_{isQueenSideCastle()},
- isDoublePawn_{isDoublePawn()},
- isEnPassant_{isEnPassant()} {
-}
-
-bool Move::isPawnPromotion() const {
-    const int targetRow = Game::getRow(targetSquare_);
-    const int finalRow = (sourcePiece_.color() == Color::White) ? 0 : 7; // rank 7 for white, rank 0 for black
-    return targetRow == finalRow && sourcePiece_.type() == PieceType::Pawn;
-}
-
-bool Move::isKingSideCastle() const {
-    if (sourcePiece_.color() == Color::White) {
-        return (
-            sourceSquare_ == Game::WHITE_KING_STARTING_SQUARE &&
-            targetSquare_ == Game::WHITE_KINGSIDE_TARGET_SQUARE &&
-            sourcePiece_.type() == PieceType::King &&
-            !targetPiece_.exists()
-        );
+Move Move::fromPieces(int sourceSquare, int targetSquare, Piece sourcePiece, Piece targetPiece) {
+    const int sourceCol = Game::getCol(sourceSquare);
+    const int sourceRow = Game::getRow(sourceSquare);
+    const int targetCol = Game::getCol(targetSquare);
+    const int targetRow = Game::getRow(targetSquare);
+    const bool isCapture = targetPiece.exists();
+    const bool isSourcePiecePawn = sourcePiece.type() == PieceType::Pawn;
+    const bool isSourcePieceWhite = sourcePiece.color() == Color::White;
+    const int promotionRow = isSourcePieceWhite ? 0 : 7; // rank 7 for white, rank 0 for black
+    
+    // --- Special pawn moves ---
+    // Pawn promotion iff a pawn is ending on the promotion row
+    if(isSourcePiecePawn && targetRow == promotionRow) {
+        const MoveFlag flag = isCapture ? MoveFlag::PromotionCapture : MoveFlag::Promotion;
+        // TODO: queen is assumed in fromPieces (e.g., when user makes a move); add a way to specify
+        return Move{sourceSquare, targetSquare, flag, Promotion::Queen};
     }
 
-    if (sourcePiece_.color() == Color::Black) {
-        return (
-            sourceSquare_ == Game::BLACK_KING_STARTING_SQUARE &&
-            targetSquare_ == Game::BLACK_KINGSIDE_TARGET_SQUARE &&
-            sourcePiece_.type() == PieceType::King &&
-            !targetPiece_.exists()
-        );
+    // Double pawn move iff a pawn moves a distance of two rows
+    if(isSourcePiecePawn && abs(targetRow - sourceRow) == 2) {
+        return Move{sourceSquare, targetSquare, MoveFlag::DoublePawnPush, Promotion::None};
     }
 
-    // fallback; should only hit for empty sourcePiece
-    return false;
-}
-
-bool Move::isQueenSideCastle() const {
-    if (sourcePiece_.color() == Color::White) {
-        return (
-            sourceSquare_ == Game::WHITE_KING_STARTING_SQUARE &&
-            targetSquare_ == Game::WHITE_QUEENSIDE_TARGET_SQUARE &&
-            sourcePiece_.type() == PieceType::King &&
-            !targetPiece_.exists()
-        );
+    // En passant iff a pawn lands on an empty square, but its not a normal pawn push (e.g., ends on a different column)
+    if(isSourcePiecePawn && !targetPiece.exists() && sourceCol != targetCol) {
+        return Move{sourceSquare, targetSquare, MoveFlag::EnPassant, Promotion::None};
     }
 
-    if (sourcePiece_.color() == Color::Black) {
-        return (
-            sourceSquare_ == Game::BLACK_KING_STARTING_SQUARE &&
-            targetSquare_ == Game::BLACK_QUEENSIDE_TARGET_SQUARE &&
-            sourcePiece_.type() == PieceType::King &&
-            !targetPiece_.exists()
-        );
+    // Update castling related constants based on source piece color
+    const bool isSourcePieceKing = sourcePiece.type() == PieceType::King;
+    const int kingStartingSquare = isSourcePieceWhite ? Game::WHITE_KING_STARTING_SQUARE : Game::BLACK_KING_STARTING_SQUARE;
+    const int kingsideTargetSquare = isSourcePieceWhite ? Game::WHITE_KINGSIDE_TARGET_SQUARE : Game::BLACK_KINGSIDE_TARGET_SQUARE;
+    const int queensideTargetSquare = isSourcePieceWhite ? Game::WHITE_QUEENSIDE_TARGET_SQUARE : Game::BLACK_QUEENSIDE_TARGET_SQUARE;
+
+    // --- Special castling moves ---
+    // (note we are just generating a move here, we don't validate it. so its okay if we are castling through a piece for example)
+
+    // TODO: do we have to check if the targetpiece doesn't exist here?
+    // Kingside castle iff a king moves from its starting square to the castling target square, and the piece does not exist.
+    if(isSourcePieceKing && sourceSquare == kingStartingSquare && targetSquare == kingsideTargetSquare && !targetPiece.exists()) {
+        return Move{sourceSquare, targetSquare, MoveFlag::KingCastle, Promotion::None};
     }
 
-    // fallback; should only hit for empty sourcePiece
-    return false;
+    // Queenside castle iff a king moves from its starting square to the castling target square, and the piece does not exist.
+    if(isSourcePieceKing && sourceSquare == kingStartingSquare && targetSquare == queensideTargetSquare && !targetPiece.exists()) {
+        return Move{sourceSquare, targetSquare, MoveFlag::QueenCastle, Promotion::None};
+    }
+
+    // No special move, return normal move
+    const MoveFlag flag = isCapture ? MoveFlag::Capture : MoveFlag::Normal;
+    return Move{sourceSquare, targetSquare, flag, Promotion::None};
 }
 
-bool Move::isDoublePawn() const {
-    // Only double pawn if pawn moves a distance of two rows
-    return sourcePiece_.type() == PieceType::Pawn && abs(Game::getRow(targetSquare_) - Game::getRow(sourceSquare_)) == 2;
-}
-
-bool Move::isEnPassant() const {
-    // Only en passant if pawn lands on empty square with a capture (i.e., not on same column)
-    return sourcePiece_.type() == PieceType::Pawn && !targetPiece_.exists() && Game::getCol(sourceSquare_) != Game::getCol(targetSquare_);
-}
-
-std::string Move::to_string() const {
+std::string Move::to_string(const Game& game) const {
     return ( 
-        sourcePiece_.to_string_long() + " on " + Game::intToAlgebraicNotation(sourceSquare_) + " to " +
-        targetPiece_.to_string_long() + " on " + Game::intToAlgebraicNotation(targetSquare_)
+        game.board()[sourceSquare()].to_string_long() + " on " + Game::intToAlgebraicNotation(sourceSquare()) + " to " +
+        game.board()[targetSquare()].to_string_long() + " on " + Game::intToAlgebraicNotation(targetSquare())
     );
 }
 
 std::string Move::toLongAlgebraic() const {
-    return Game::intToAlgebraicNotation(sourceSquare_) + Game::intToAlgebraicNotation(targetSquare_);
+    if(isPromotion()) {
+        // promotion requires an additional character representing which piece we promoted to
+        char promotionRepresentation = '?';
+
+        switch(promotion()) {
+            case Promotion::None: break; // should never happen
+            case Promotion::Knight: promotionRepresentation = 'n'; break;
+            case Promotion::Bishop: promotionRepresentation = 'b'; break;
+            case Promotion::Rook: promotionRepresentation = 'r'; break;
+            case Promotion::Queen: promotionRepresentation = 'q'; break;
+        }
+
+        return Game::intToAlgebraicNotation(sourceSquare()) + Game::intToAlgebraicNotation(targetSquare()) + promotionRepresentation;
+    }
+
+    // normal move
+    return Game::intToAlgebraicNotation(sourceSquare()) + Game::intToAlgebraicNotation(targetSquare());
+}
+
+constexpr PieceType Move::promotionToPieceType(Promotion promotion) noexcept {
+    switch (promotion) {
+        case Promotion::Knight: return PieceType::Knight;
+        case Promotion::Bishop: return PieceType::Bishop;
+        case Promotion::Rook: return PieceType::Rook;
+        case Promotion::Queen: return PieceType::Queen;
+        default: return PieceType::None;
+    }
 }
 
 Game::Game()
@@ -198,7 +182,7 @@ Color Game::currentTurn() const {
     return currentTurn_;
 }
 
-std::array<Piece, 64> Game::board() const {
+std::array<Piece, Game::NUM_SQUARES> Game::board() const {
     return board_;
 }
 
@@ -295,6 +279,15 @@ void Game::loadFEN(const std::string& FEN) {
 
             // we have a valid piece, add it and update index
             board_.at(piecePlacementIndex) = newPiece;
+            // if its a king, we update our knowledge of the king's location
+            if(newPiece.type() == PieceType::King) {
+                if(newPiece.color() == Color::White) {
+                    whiteKingSquare_ = piecePlacementIndex;
+                } else {
+                    blackKingSquare_ = piecePlacementIndex;
+                }
+            }
+
             piecePlacementIndex++;
             continue;
         }
@@ -368,11 +361,22 @@ bool Game::isFinished() {
         return true;
     }
     // if no legal moves for current turn then the game is over
-    return generateLegalMoves(currentTurnKingSquare.value()).empty();
+    MoveList legalMoves;
+    generateLegalMoves(currentTurnKingSquare.value(), legalMoves);
+    return legalMoves.size == 0;
 }
 
-UndoInfo Game::getUndoInfo() const {
-    return UndoInfo{canWhiteKingSideCastle_, canWhiteQueenSideCastle_, canBlackKingSideCastle_, canBlackQueenSideCastle_, currentEnPassantSquare_};
+UndoInfo Game::getUndoInfo(const Piece capturedPiece) const {
+    return UndoInfo{
+        canWhiteKingSideCastle_,
+        canWhiteQueenSideCastle_,
+        canBlackKingSideCastle_,
+        canBlackQueenSideCastle_,
+        currentEnPassantSquare_,
+        whiteKingSquare_,
+        blackKingSquare_,
+        capturedPiece
+    };
 }
 
 void Game::setWhiteKingSideCastle(bool canCastle) {
@@ -425,19 +429,14 @@ std::optional<Move> Game::parseLongNotation_(const std::string& sourceMove, cons
     const int sourceSquare = getSquareIndex(sourceCol, 8 - sourceRow);
     const int targetSquare = getSquareIndex(targetCol, 8 - targetRow); 
 
-    return Move{sourceSquare, targetSquare, board_.at(sourceSquare), board_.at(targetSquare)};
+    return Move::fromPieces(sourceSquare, targetSquare, board_.at(sourceSquare), board_.at(targetSquare));
 }
 
-std::optional<Move> Game::parseAlgebraicNotation_(const std::string& move) const { // NOLINT(readability-convert-member-functions-to-static) undo when
+std::optional<Move> Game::parseAlgebraicNotation_(const std::string& move) const { // NOLINT(readability-convert-member-functions-to-static) undo when finished
     std::cerr << "parseAlgebraicNotation: Not yet implemented! " << move;
     return std::nullopt;
 }
 
-/*
-    We parse two types of input types: "sourceSquare targetSquare" (long notation) and algebraic notation.
-
-    E.g., "e2 e4" vs. "e4" (from starting position).
-*/
 std::optional<Move> Game::parseMove(const std::string& move) const {
     int currentPart = 0;
     std::string firstPart;
@@ -468,29 +467,24 @@ std::optional<Move> Game::parseMove(const std::string& move) const {
     return parseLongNotation_(firstPart, secondPart);
 }
 
-void Game::addAllPawnPromotionsToMoves_(std::vector<Move>& moves, const Move& move) {
-    // TODO: consider some other way of adding to moves here
-    // move by default has Queen promotion piece, no need to add it an extra time here
-    moves.emplace_back(move);
-
-    if(move.isPawnPromotion()) {
-        const Color pawnColor = move.sourcePiece().color();
-
-        Move KnightMove = move;
-        KnightMove.setPromotionPiece(Piece{PieceType::Knight, pawnColor});
-        moves.emplace_back(KnightMove);
-
-        Move BishopMove = move;
-        BishopMove.setPromotionPiece(Piece{PieceType::Bishop, pawnColor});
-        moves.emplace_back(BishopMove);
-
-        Move RookMove = move;
-        RookMove.setPromotionPiece(Piece{PieceType::Rook, pawnColor});
-        moves.emplace_back(RookMove);
+void Game::addAllPawnPromotionsToMoves_(MoveList& moves, const int sourceSquare, const int targetSquare, const Piece sourcePiece, const bool isCapture) {
+    const Color pawnColor = sourcePiece.color();
+    const int promotionRow = pawnColor == Color::White ? 0 : 7; 
+    if(getRow(targetSquare) == promotionRow) {
+        const MoveFlag flag = isCapture ? MoveFlag::PromotionCapture : MoveFlag::Promotion;
+        // add promotions
+        moves.push_back(Move{sourceSquare, targetSquare, flag, Promotion::Knight});
+        moves.push_back(Move{sourceSquare, targetSquare, flag, Promotion::Bishop});
+        moves.push_back(Move{sourceSquare, targetSquare, flag, Promotion::Rook});
+        moves.push_back(Move{sourceSquare, targetSquare, flag, Promotion::Queen});
+    } else {
+        const MoveFlag flag = isCapture ? MoveFlag::Capture : MoveFlag::Normal;
+        // just add normal move
+        moves.push_back(Move{sourceSquare, targetSquare, flag, Promotion::None});
     }
 }
 
-std::vector<Move> Game::generatePseudoLegalPawnMoves_(const int sourceSquare) {
+void Game::generatePseudoLegalPawnMoves_(const int sourceSquare, MoveList& out) {
     /* 
         Four pawn capture types:
         1. One move forward
@@ -498,10 +492,7 @@ std::vector<Move> Game::generatePseudoLegalPawnMoves_(const int sourceSquare) {
         3. Capture left, has to be opposite color piece (or en passant)
         4. Capture right, has to be opposite color piece (or en passant)
     */
-    std::vector<Move> out;
-    out.reserve(64);
-
-    const Piece sourcePiece = board_.at(sourceSquare);
+    const Piece sourcePiece = board_[sourceSquare];
     const Color sourceColor = sourcePiece.color();
 
     const int row = getRow(sourceSquare);
@@ -512,15 +503,13 @@ std::vector<Move> Game::generatePseudoLegalPawnMoves_(const int sourceSquare) {
 
     // Case 1 and 2
     const int one = sourceSquare + (dir * 8);
-    if (onBoard(one) && !board_.at(one).exists()) {
-        const Move potentialMove{sourceSquare, one, sourcePiece, board_.at(one)};
-        addAllPawnPromotionsToMoves_(out, potentialMove);
+    if (onBoard(one) && !board_[one].exists()) {
+        addAllPawnPromotionsToMoves_(out, sourceSquare, one, sourcePiece, false);
 
         // Case 2
         const int two = sourceSquare + (dir * 16);
-        if (row == startRow && onBoard(two) && !board_.at(two).exists()) {
-            const Move potentialDoubleMove{sourceSquare, two, sourcePiece, board_.at(two)};
-            addAllPawnPromotionsToMoves_(out, potentialDoubleMove);
+        if (row == startRow && onBoard(two) && !board_[two].exists()) {
+            out.push_back(Move{sourceSquare, two, MoveFlag::DoublePawnPush, Promotion::None});
         }
     }
 
@@ -533,97 +522,85 @@ std::vector<Move> Game::generatePseudoLegalPawnMoves_(const int sourceSquare) {
 
     // Case 3
     if (col > 0 && onBoard(capLeft)) {
-        const Piece capPiece = board_.at(capLeft);
+        const Piece capPiece = board_[capLeft];
         if (capPiece.exists() && capPiece.color() != sourceColor) {
-            const Move potentialMove{sourceSquare, capLeft, sourcePiece, capPiece};
-            addAllPawnPromotionsToMoves_(out, potentialMove);
+            addAllPawnPromotionsToMoves_(out, sourceSquare, capLeft, sourcePiece, true);
         }
 
         // en passant
         if (currentEnPassantSquare_.has_value() && capLeft == currentEnPassantSquare_.value()) {
-            // en passant cant be a promotion
-            out.emplace_back(sourceSquare, capLeft, sourcePiece, capPiece);
+            out.push_back(Move{sourceSquare, capLeft, MoveFlag::EnPassant, Promotion::None});
         }
     }
 
     // Case 4
     if (col < 7 && onBoard(capRight)) {
-        const Piece capPiece = board_.at(capRight);
+        const Piece capPiece = board_[capRight];
         if (capPiece.exists() && capPiece.color() != sourceColor) { 
-            const Move potentialMove{sourceSquare, capRight, sourcePiece, capPiece};
-            addAllPawnPromotionsToMoves_(out, potentialMove);
+            addAllPawnPromotionsToMoves_(out, sourceSquare, capRight, sourcePiece, true);
         }
 
         // en passant
         if (currentEnPassantSquare_.has_value() && capRight == currentEnPassantSquare_.value()) {
             // en passant cant be a promotion
-            out.emplace_back(sourceSquare, capRight, sourcePiece, capPiece);
+            out.push_back(Move{sourceSquare, capRight, MoveFlag::EnPassant, Promotion::None});
         }
     }
-
-    return out;
 }
 
 
-std::vector<Move> Game::generatePseudoLegalKnightMoves_(const int sourceSquare) {
-    std::vector<Move> out;
-    out.reserve(64);
-
-    const Piece sourcePiece = board_.at(sourceSquare);
+void Game::generatePseudoLegalKnightMoves_(const int sourceSquare, MoveList& out) {
+    const Piece sourcePiece = board_[sourceSquare];
     const Color sourceColor = sourcePiece.color();
 
     const int row = getRow(sourceSquare);
     const int col = getCol(sourceSquare);
 
     for(int i = 0; i < 8; i++) {
-        const int col2 = col + knightDeltas.at(i).at(0);
-        const int row2 = row + knightDeltas.at(i).at(1);
+        const int col2 = col + knightDeltas[i][0];
+        const int row2 = row + knightDeltas[i][1];
         if(!onBoard(col2, row2)) {
             continue;
         }
         
         const int square2 = getSquareIndex(col2, row2);
-        const Piece piece2 = board_.at(square2);
+        const Piece piece2 = board_[square2];
 
         // Can move if target square is empty or has enemy
         if (!piece2.exists() || piece2.color() != sourceColor) {
-            out.emplace_back(sourceSquare, square2, sourcePiece, piece2);
+            const MoveFlag flag = piece2.exists() ? MoveFlag::Capture : MoveFlag::Normal;
+            out.push_back(Move{sourceSquare, square2, flag, Promotion::None});
         }
     }
-
-    return out;
 }
 
-std::vector<Move> Game::generatePseudoLegalBishopMoves_(const int sourceSquare) {
-    std::vector<Move> out;
-    out.reserve(64);
-
-    const Piece sourcePiece = board_.at(sourceSquare);
+void Game::generatePseudoLegalBishopMoves_(const int sourceSquare, MoveList& out) {
+    const Piece sourcePiece = board_[sourceSquare];
     const Color sourceColor = sourcePiece.color();
 
     const int row = getRow(sourceSquare);
     const int col = getCol(sourceSquare);
 
     for(int i = 0; i < 4; i++) {
-        const int dcol = bishopDeltas.at(i).at(0);
-        const int drow = bishopDeltas.at(i).at(1);
+        const int dcol = bishopDeltas[i][0];
+        const int drow = bishopDeltas[i][1];
 
         // start with one delta and continue until off board, or until a piece is hit
         int curCol = col + dcol;
         int curRow = row + drow;
         while(onBoard(curCol, curRow)) {
             const int curSquare = getSquareIndex(curCol, curRow);
-            const Piece curPiece = board_.at(curSquare);
+            const Piece curPiece = board_[curSquare];
 
             if(!curPiece.exists()) {
                 // empty square; we can continue
-                out.emplace_back(sourceSquare, curSquare, sourcePiece, curPiece);
+                out.push_back(Move{sourceSquare, curSquare, MoveFlag::Normal, Promotion::None});
             } else {
                 // theres a piece here
                 
                 if(curPiece.color() != sourceColor) {
                     // enemy piece, we can capture
-                    out.emplace_back(sourceSquare, curSquare, sourcePiece, curPiece);
+                    out.push_back(Move{sourceSquare, curSquare, MoveFlag::Capture, Promotion::None});
                 }
 
                 // since square is occupied we stop
@@ -635,40 +612,35 @@ std::vector<Move> Game::generatePseudoLegalBishopMoves_(const int sourceSquare) 
             curRow += drow;
         }
     }
-
-    return out;
 }
 
-std::vector<Move> Game::generatePseudoLegalRookMoves_(const int sourceSquare) {
-    std::vector<Move> out;
-    out.reserve(64);
-
-    const Piece sourcePiece = board_.at(sourceSquare);
+void Game::generatePseudoLegalRookMoves_(const int sourceSquare, MoveList& out) {
+    const Piece sourcePiece = board_[sourceSquare];
     const Color sourceColor = sourcePiece.color();
 
     const int row = getRow(sourceSquare);
     const int col = getCol(sourceSquare);
 
     for(int i = 0; i < 4; i++) {
-        const int dcol = rookDeltas.at(i).at(0);
-        const int drow = rookDeltas.at(i).at(1);
+        const int dcol = rookDeltas[i][0];
+        const int drow = rookDeltas[i][1];
 
         // start with one delta and continue until off board, or until a piece is hit
         int curCol = col + dcol;
         int curRow = row + drow;
         while(onBoard(curCol, curRow)) {
             const int curSquare = getSquareIndex(curCol, curRow);
-            const Piece curPiece = board_.at(curSquare);
+            const Piece curPiece = board_[curSquare];
 
             if(!curPiece.exists()) {
                 // empty square; we can continue
-                out.emplace_back(sourceSquare, curSquare, sourcePiece, curPiece);
+                out.push_back(Move{sourceSquare, curSquare, MoveFlag::Normal, Promotion::None});
             } else {
                 // theres a piece here
                 
                 if(curPiece.color() != sourceColor) {
                     // enemy piece, we can capture
-                    out.emplace_back(sourceSquare, curSquare, sourcePiece, curPiece);
+                    out.push_back(Move{sourceSquare, curSquare, MoveFlag::Capture, Promotion::None});
                 }
 
                 // since square is occupied we stop
@@ -680,40 +652,35 @@ std::vector<Move> Game::generatePseudoLegalRookMoves_(const int sourceSquare) {
             curRow += drow;
         }
     }
-
-    return out;
 }
 
-std::vector<Move> Game::generatePseudoLegalQueenMoves_(const int sourceSquare) {
-    std::vector<Move> out;
-    out.reserve(64);
-
-    const Piece sourcePiece = board_.at(sourceSquare);
+void Game::generatePseudoLegalQueenMoves_(const int sourceSquare, MoveList& out) {
+    const Piece sourcePiece = board_[sourceSquare];
     const Color sourceColor = sourcePiece.color();
 
     const int row = getRow(sourceSquare);
     const int col = getCol(sourceSquare);
 
     for(int i = 0; i < 8; i++) {
-        const int dCol = queenDeltas.at(i).at(0);
-        const int dRow = queenDeltas.at(i).at(1);
+        const int dCol = queenDeltas[i][0];
+        const int dRow = queenDeltas[i][1];
 
         // start with one delta and continue until off board, or until a piece is hit
         int curCol = col + dCol;
         int curRow = row + dRow;
         while(onBoard(curCol, curRow)) {
             const int curSquare = getSquareIndex(curCol, curRow);
-            const Piece curPiece = board_.at(curSquare);
+            const Piece curPiece = board_[curSquare];
 
             if(!curPiece.exists()) {
                 // empty square; we can continue
-                out.emplace_back(sourceSquare, curSquare, sourcePiece, curPiece);
+                out.push_back(Move{sourceSquare, curSquare, MoveFlag::Normal, Promotion::None});
             } else {
                 // theres a piece here
                 
                 if(curPiece.color() != sourceColor) {
                     // enemy piece, we can capture
-                    out.emplace_back(sourceSquare, curSquare, sourcePiece, curPiece);
+                    out.push_back(Move{sourceSquare, curSquare, MoveFlag::Capture, Promotion::None});
                 }
 
                 // since square is occupied we stop
@@ -725,33 +692,29 @@ std::vector<Move> Game::generatePseudoLegalQueenMoves_(const int sourceSquare) {
             curRow += dRow;
         }
     }
-
-    return out;
 }
 
-std::vector<Move> Game::generatePseudoLegalKingMoves_(const int sourceSquare) {
-    std::vector<Move> out;
-    out.reserve(64);
-
-    const Piece sourcePiece = board_.at(sourceSquare);
+void Game::generatePseudoLegalKingMoves_(const int sourceSquare, MoveList& out) {
+    const Piece sourcePiece = board_[sourceSquare];
     const Color sourceColor = sourcePiece.color();
 
     const int row = getRow(sourceSquare);
     const int col = getCol(sourceSquare);
 
     for(int i = 0; i < 8; i++) {
-        const int col2 = col + kingDeltas.at(i).at(0);
-        const int row2 = row + kingDeltas.at(i).at(1);
+        const int col2 = col + kingDeltas[i][0];
+        const int row2 = row + kingDeltas[i][1];
         if(!onBoard(col2, row2)) {
             continue;
         }
         
         const int square2 = getSquareIndex(col2, row2);
-        const Piece piece2 = board_.at(square2);
+        const Piece piece2 = board_[square2];
 
         // Can move if target square is empty or has enemy
         if (!piece2.exists() || piece2.color() != sourceColor) {
-            out.emplace_back(sourceSquare, square2, sourcePiece, piece2);
+            const MoveFlag flag = piece2.exists() ? MoveFlag::Capture : MoveFlag::Normal;
+            out.push_back(Move{sourceSquare, square2, flag, Promotion::None});
         }
     }
 
@@ -761,22 +724,22 @@ std::vector<Move> Game::generatePseudoLegalKingMoves_(const int sourceSquare) {
         // King side castling
         if(
             canWhiteKingSideCastle_ &&
-            sourceSquare == Game::WHITE_KING_STARTING_SQUARE &&
-            !board_.at(WHITE_KINGSIDE_PASSING_SQUARE).exists() &&
-            !board_.at(WHITE_KINGSIDE_TARGET_SQUARE).exists()
+            sourceSquare == WHITE_KING_STARTING_SQUARE &&
+            !board_[WHITE_KINGSIDE_PASSING_SQUARE].exists() &&
+            !board_[WHITE_KINGSIDE_TARGET_SQUARE].exists()
         ) {
-            out.emplace_back(sourceSquare, Game::WHITE_KINGSIDE_TARGET_SQUARE, sourcePiece, board_.at(Game::WHITE_KINGSIDE_TARGET_SQUARE));
+            out.push_back(Move{sourceSquare, WHITE_KINGSIDE_TARGET_SQUARE, MoveFlag::KingCastle, Promotion::None});
         }
 
         // Queen side castling
         if(
             canWhiteQueenSideCastle_ &&
-            sourceSquare == Game::WHITE_KING_STARTING_SQUARE &&
-            !board_.at(WHITE_QUEENSIDE_PASSING_SQUARE).exists() &&
-            !board_.at(WHITE_QUEENSIDE_PASSING_SQUARE - 2).exists() &&  // queenside has two passing squares
-            !board_.at(WHITE_QUEENSIDE_TARGET_SQUARE).exists()
+            sourceSquare == WHITE_KING_STARTING_SQUARE &&
+            !board_[WHITE_QUEENSIDE_PASSING_SQUARE].exists() &&
+            !board_[WHITE_QUEENSIDE_PASSING_SQUARE - 2].exists() &&  // queenside has two passing squares
+            !board_[WHITE_QUEENSIDE_TARGET_SQUARE].exists()
         ) {
-            out.emplace_back(sourceSquare, Game::WHITE_QUEENSIDE_TARGET_SQUARE, sourcePiece, board_.at(Game::WHITE_QUEENSIDE_TARGET_SQUARE));
+            out.push_back(Move{sourceSquare, WHITE_QUEENSIDE_TARGET_SQUARE, MoveFlag::QueenCastle, Promotion::None});
         }
     }
 
@@ -784,154 +747,142 @@ std::vector<Move> Game::generatePseudoLegalKingMoves_(const int sourceSquare) {
         // King side castling
         if(
             canBlackKingSideCastle_ &&
-            sourceSquare == Game::BLACK_KING_STARTING_SQUARE &&
-            !board_.at(BLACK_KINGSIDE_PASSING_SQUARE).exists() &&
-            !board_.at(BLACK_KINGSIDE_TARGET_SQUARE).exists()
+            sourceSquare == BLACK_KING_STARTING_SQUARE &&
+            !board_[BLACK_KINGSIDE_PASSING_SQUARE].exists() &&
+            !board_[BLACK_KINGSIDE_TARGET_SQUARE].exists()
         ) {
-            out.emplace_back(sourceSquare, Game::BLACK_KINGSIDE_TARGET_SQUARE, sourcePiece, board_.at(Game::BLACK_KINGSIDE_TARGET_SQUARE));
+            out.push_back(Move{sourceSquare, BLACK_KINGSIDE_TARGET_SQUARE, MoveFlag::KingCastle, Promotion::None});
         }
 
         // Queen side castling
         if(
             canBlackQueenSideCastle_ &&
-            sourceSquare == Game::BLACK_KING_STARTING_SQUARE &&
-            !board_.at(BLACK_QUEENSIDE_PASSING_SQUARE).exists() &&
-            !board_.at(BLACK_QUEENSIDE_PASSING_SQUARE - 2).exists() &&  // queenside has two passing squares
-            !board_.at(BLACK_QUEENSIDE_TARGET_SQUARE).exists()
+            sourceSquare == BLACK_KING_STARTING_SQUARE &&
+            !board_[BLACK_QUEENSIDE_PASSING_SQUARE].exists() &&
+            !board_[BLACK_QUEENSIDE_PASSING_SQUARE - 2].exists() &&  // queenside has two passing squares
+            !board_[BLACK_QUEENSIDE_TARGET_SQUARE].exists()
         ) {
-            out.emplace_back(sourceSquare, Game::BLACK_QUEENSIDE_TARGET_SQUARE, sourcePiece, board_.at(Game::BLACK_QUEENSIDE_TARGET_SQUARE));
+            out.push_back(Move{sourceSquare, BLACK_QUEENSIDE_TARGET_SQUARE, MoveFlag::QueenCastle, Promotion::None});
         }
     }
-
-    return out;
 }
 
-std::vector<Move> Game::generateLegalMoves(const int sourceSquare) {
+void Game::generateLegalMoves(const int sourceSquare, MoveList& out) {
     // TODO: eventually make generateLegalMoves const by finding a workaround other than simply undoing moves
-    const std::vector<Move> pseudoMoves = generatePseudoLegalMoves_(sourceSquare);
-    std::vector<Move> legalMoves;
-    legalMoves.reserve(64);
+    MoveList pseudoMoves;
+    generatePseudoLegalMoves_(sourceSquare, pseudoMoves);
 
     // only allow moves that do not leave king in check
-    for(const Move move : pseudoMoves) {
-        const Color moveColor = move.sourcePiece().color();
+    for(int i = 0; i < pseudoMoves.size; i++) {
+        const Move move = pseudoMoves.data[i];
+        const Piece& sourcePiece = board_[move.sourceSquare()];
+        const Color moveColor = sourcePiece.color();
         const Color enemyColor = oppositeColor(moveColor);
 
-        // save flags to pass to undo move
-        const UndoInfo flags = getUndoInfo();
+        // save info to pass to undo move
+        const UndoInfo undoInfo = getUndoInfo(board_[move.targetSquare()]);
 
         makeMove(move);
 
         // can't cause king to be in check
         if(isInCheck(moveColor)) {
-            undoMove(move, flags);
+            undoMove(move, undoInfo);
             continue;
         }
         
         // castling legality rules
-        const int KING_STARTING_SQUARE = (moveColor == Color::White) ? Game::WHITE_KING_STARTING_SQUARE : Game::BLACK_KING_STARTING_SQUARE;
+        const int kingStartingSquare = (moveColor == Color::White) ? Game::WHITE_KING_STARTING_SQUARE : Game::BLACK_KING_STARTING_SQUARE;
 
         if(move.isKingSideCastle()) {
-            const int KINGSIDE_PASSING_SQUARE = (moveColor == Color::White) ? Game::WHITE_KINGSIDE_PASSING_SQUARE : Game::BLACK_KINGSIDE_PASSING_SQUARE;
-            const int KINGSIDE_TARGET_SQUARE = (moveColor == Color::White) ? Game::WHITE_KINGSIDE_TARGET_SQUARE : Game::BLACK_KINGSIDE_TARGET_SQUARE;
+            const int kingsidePassingSquare = (moveColor == Color::White) ? Game::WHITE_KINGSIDE_PASSING_SQUARE : Game::BLACK_KINGSIDE_PASSING_SQUARE;
+            const int kingsideTargetSquare = (moveColor == Color::White) ? Game::WHITE_KINGSIDE_TARGET_SQUARE : Game::BLACK_KINGSIDE_TARGET_SQUARE;
     
             if(
-                isSquareAttacked(KING_STARTING_SQUARE, enemyColor) ||   // king cant start in check
-                isSquareAttacked(KINGSIDE_PASSING_SQUARE, enemyColor) ||   // king cant pass through check 
-                isSquareAttacked(KINGSIDE_TARGET_SQUARE, enemyColor)      // king cant end in check
+                isSquareAttacked(kingStartingSquare, enemyColor) ||   // king cant start in check
+                isSquareAttacked(kingsidePassingSquare, enemyColor) ||   // king cant pass through check 
+                isSquareAttacked(kingsideTargetSquare, enemyColor)      // king cant end in check
             ) {
-                undoMove(move, flags);
+                undoMove(move, undoInfo);
                 continue;
             }
         }
 
         if(move.isQueenSideCastle()) {
-            const int QUEENSIDE_PASSING_SQUARE = (moveColor == Color::White) ? Game::WHITE_QUEENSIDE_PASSING_SQUARE : Game::BLACK_QUEENSIDE_PASSING_SQUARE;
-            const int QUEENSIDE_TARGET_SQUARE = (moveColor == Color::White) ? Game::WHITE_QUEENSIDE_TARGET_SQUARE : Game::BLACK_QUEENSIDE_TARGET_SQUARE;
+            const int queensidePassingSquare = (moveColor == Color::White) ? Game::WHITE_QUEENSIDE_PASSING_SQUARE : Game::BLACK_QUEENSIDE_PASSING_SQUARE;
+            const int queensideTargetSquare = (moveColor == Color::White) ? Game::WHITE_QUEENSIDE_TARGET_SQUARE : Game::BLACK_QUEENSIDE_TARGET_SQUARE;
             if(
-                isSquareAttacked(KING_STARTING_SQUARE, enemyColor) ||   // king cant start in check
-                isSquareAttacked(QUEENSIDE_PASSING_SQUARE, enemyColor) ||   // king cant pass through check 
-                isSquareAttacked(QUEENSIDE_TARGET_SQUARE, enemyColor)      // king cant end in check
+                isSquareAttacked(kingStartingSquare, enemyColor) ||   // king cant start in check
+                isSquareAttacked(queensidePassingSquare, enemyColor) ||   // king cant pass through check 
+                isSquareAttacked(queensideTargetSquare, enemyColor)      // king cant end in check
             ) {
-                undoMove(move, flags);
+                undoMove(move, undoInfo);
                 continue;
             }
         }
 
         // move is legal, allow it
-        legalMoves.emplace_back(move);
-        undoMove(move, flags);
+        out.push_back(move);
+        undoMove(move, undoInfo);
     }
-
-    return legalMoves;
 }
 
-std::vector<Move> Game::generateAllPseudoLegalMoves() {
-    std::vector<Move> out;
-    out.reserve(64);
+void Game::generateAllPseudoLegalMoves(MoveList& out) {
+    out.clear();
 
     for(int squareIndex = 0; squareIndex < Game::NUM_SQUARES; squareIndex++) {
         if(board_[squareIndex].color() != currentTurn()) { // NOLINT allow [] in hot loop
             continue;
         }
 
-        auto moves = generatePseudoLegalMoves_(squareIndex);
-        // extend out by moves
-        out.insert(out.end(),
-           std::make_move_iterator(moves.begin()),
-           std::make_move_iterator(moves.end()));
+        generatePseudoLegalMoves_(squareIndex, out);
     }
-
-    return out;
 }
 
-std::vector<Move> Game::generateAllLegalMoves() {
-    std::vector<Move> out;
-    out.reserve(64);
-
+void Game::generateAllLegalMoves(MoveList& out) {
     for(int squareIndex = 0; squareIndex < Game::NUM_SQUARES; squareIndex++) {
         if(board_[squareIndex].color() != currentTurn()) { // NOLINT allow [] in hot loop
             continue;
         }
 
-        auto moves = generateLegalMoves(squareIndex);
-        // extend out by moves
-        out.insert(out.end(),
-           std::make_move_iterator(moves.begin()),
-           std::make_move_iterator(moves.end()));
+        generateLegalMoves(squareIndex, out);
     }
-
-    return out;
 }
 
-std::vector<Move> Game::generatePseudoLegalMoves_(const int sourceSquare) {
-    switch(board_.at(sourceSquare).type()) {
-        case PieceType::None: return std::vector<Move>{};
-        case PieceType::Pawn: return generatePseudoLegalPawnMoves_(sourceSquare);
-        case PieceType::Knight: return generatePseudoLegalKnightMoves_(sourceSquare);
-        case PieceType::Bishop: return generatePseudoLegalBishopMoves_(sourceSquare);
-        case PieceType::Rook: return generatePseudoLegalRookMoves_(sourceSquare);
-        case PieceType::Queen: return generatePseudoLegalQueenMoves_(sourceSquare);
-        case PieceType::King: return generatePseudoLegalKingMoves_(sourceSquare);
+void Game::generatePseudoLegalMoves_(const int sourceSquare, MoveList& out) {
+    switch(board_[sourceSquare].type()) {
+        case PieceType::None: return;
+        case PieceType::Pawn: generatePseudoLegalPawnMoves_(sourceSquare, out); return;
+        case PieceType::Knight: generatePseudoLegalKnightMoves_(sourceSquare, out); return;
+        case PieceType::Bishop: generatePseudoLegalBishopMoves_(sourceSquare, out); return;
+        case PieceType::Rook: generatePseudoLegalRookMoves_(sourceSquare, out); return;
+        case PieceType::Queen: generatePseudoLegalQueenMoves_(sourceSquare, out); return;
+        case PieceType::King: generatePseudoLegalKingMoves_(sourceSquare, out); return;
     }
 }
 
 bool Game::isMoveLegal(const Move& move) {
-    // TODO: eventually make isMoveLegal const, see above^
-    std::vector<Move> legalMoves = generateLegalMoves(move.sourceSquare());
+    MoveList legalMoves;
+    generateLegalMoves(move.sourceSquare(), legalMoves);
 
-    return std::any_of(legalMoves.begin(), legalMoves.end(), [move](Move legalMove) { return legalMove == move; });
+    for (int i = 0; i < legalMoves.size; i++) {
+        if (legalMoves.data[i] == move) {
+            return true;
+        }
+    }
+    return false;
 }
 
+
 bool Game::tryMove(const Move& move) {
+    const Piece sourcePiece = board_[move.sourceSquare()];
     // only allow current turn's player to make moves
-    if(move.sourcePiece().color() != currentTurn_) {
-        std::cerr << "[DEBUG] Attempted move: " + move.to_string() + " is not legal because it is not the correct player's turn\n";
+    if(sourcePiece.color() != currentTurn_) {
+        std::cerr << "[DEBUG] Attempted move: " + move.to_string(*this) + " is not legal because it is not the correct player's turn\n";
         return false;
     }
 
     if(!isMoveLegal(move)) {
-        std::cerr << "[DEBUG] Attempted move: " + move.to_string() + " is not legal per isMoveLegal\n";
+        std::cerr << "[DEBUG] Attempted move: " + move.to_string(*this) + " is not legal per isMoveLegal\n";
         return false;
     }
 
@@ -941,7 +892,8 @@ bool Game::tryMove(const Move& move) {
 }
 
 void Game::makeMove(const Move& move) {
-    const bool isSourcePieceWhite = move.sourcePiece().color() == Color::White;
+    const Piece sourcePiece = board_[move.sourceSquare()];
+    const bool isSourcePieceWhite = sourcePiece.color() == Color::White;
     // flip current turn
     currentTurn_ = oppositeColor(currentTurn_);
     // remove en passant (we may set it again later in this function)
@@ -985,14 +937,13 @@ void Game::makeMove(const Move& move) {
     if (move.isEnPassant()) {
         const int towardsCenter = isSourcePieceWhite ? -1 : +1;
         const int capturedIndex = move.targetSquare() - (towardsCenter * 8);
-        board_.at(capturedIndex) = Piece{};
+        board_[capturedIndex] = Piece{};
     }
 
-    // TODO: fully implement promotion; for now Queen is assumed in all cases
     // handle pawn promotion
-    if(move.isPawnPromotion()) {
-        board_.at(move.targetSquare()) = move.promotionPiece();
-        board_.at(move.sourceSquare()) = Piece{};
+    if(move.isPromotion()) {
+        board_[move.targetSquare()] = Piece{Move::promotionToPieceType(move.promotion()), sourcePiece.color()};
+        board_[move.sourceSquare()] = Piece{};
         return;
     }
 
@@ -1001,8 +952,8 @@ void Game::makeMove(const Move& move) {
         const int KINGSIDE_PASSING_SQUARE = isSourcePieceWhite ? WHITE_KINGSIDE_PASSING_SQUARE : BLACK_KINGSIDE_PASSING_SQUARE;
         const int KINGSIDE_ROOK_SQUARE = isSourcePieceWhite ? WHITE_KINGSIDE_ROOK_STARTING_SQUARE : BLACK_KINGSIDE_ROOK_STARTING_SQUARE;
         // also move rook
-        board_.at(KINGSIDE_PASSING_SQUARE) = Piece{PieceType::Rook, move.sourcePiece().color()};
-        board_.at(KINGSIDE_ROOK_SQUARE) = Piece{};
+        board_[KINGSIDE_PASSING_SQUARE] = Piece{PieceType::Rook, sourcePiece.color()};
+        board_[KINGSIDE_ROOK_SQUARE] = Piece{};
     }
 
     // If queen side castle, also move the queen
@@ -1010,35 +961,46 @@ void Game::makeMove(const Move& move) {
         const int QUEENSIDE_PASSING_SQUARE = isSourcePieceWhite ? WHITE_QUEENSIDE_PASSING_SQUARE : BLACK_QUEENSIDE_PASSING_SQUARE;
         const int QUEENSIDE_ROOK_SQUARE = isSourcePieceWhite ? WHITE_QUEENSIDE_ROOK_STARTING_SQUARE : BLACK_QUEENSIDE_ROOK_STARTING_SQUARE;
         // also move rook
-        board_.at(QUEENSIDE_PASSING_SQUARE) = Piece{PieceType::Rook, move.sourcePiece().color()};
-        board_.at(QUEENSIDE_ROOK_SQUARE) = Piece{};
+        board_[QUEENSIDE_PASSING_SQUARE] = Piece{PieceType::Rook, sourcePiece.color()};
+        board_[QUEENSIDE_ROOK_SQUARE] = Piece{};
     }
 
-    board_.at(move.targetSquare()) = move.sourcePiece();
-    board_.at(move.sourceSquare()) = Piece{};
+    board_[move.targetSquare()] = sourcePiece;
+    board_[move.sourceSquare()] = Piece{};
+
+    // update king square cache(s)
+    if(sourcePiece.type() == PieceType::King) {
+        if(isSourcePieceWhite) {
+            whiteKingSquare_ = move.targetSquare();
+        } else {
+            blackKingSquare_ = move.targetSquare();
+        }
+    }
 }
 
-void Game::undoMove(const Move& move, const UndoInfo& flags) {
-    const bool isSourcePieceWhite = move.sourcePiece().color() == Color::White;
+void Game::undoMove(const Move& move, const UndoInfo& undoInfo) {
+    // sourcePiece is now sitting at targetSquare
+    const Piece sourcePiece = board_[move.targetSquare()];
+    const bool isSourcePieceWhite = sourcePiece.color() == Color::White;
     // flip current turn
     currentTurn_ = oppositeColor(currentTurn_);
 
     // handle king side castle
     if(move.isKingSideCastle()) {
-        const int KINGSIDE_PASSING_SQUARE = isSourcePieceWhite ? WHITE_KINGSIDE_PASSING_SQUARE : BLACK_KINGSIDE_PASSING_SQUARE;
-        const int KINGSIDE_ROOK_SQUARE = isSourcePieceWhite ? WHITE_KINGSIDE_ROOK_STARTING_SQUARE : BLACK_KINGSIDE_ROOK_STARTING_SQUARE;
+        const int kingsidePassingSquare = isSourcePieceWhite ? WHITE_KINGSIDE_PASSING_SQUARE : BLACK_KINGSIDE_PASSING_SQUARE;
+        const int kingsideRookSquare = isSourcePieceWhite ? WHITE_KINGSIDE_ROOK_STARTING_SQUARE : BLACK_KINGSIDE_ROOK_STARTING_SQUARE;
         // undo rook move
-        board_.at(KINGSIDE_PASSING_SQUARE) = Piece{};
-        board_.at(KINGSIDE_ROOK_SQUARE) = Piece{PieceType::Rook, move.sourcePiece().color()};
+        board_[kingsidePassingSquare] = Piece{};
+        board_[kingsideRookSquare] = Piece{PieceType::Rook, sourcePiece.color()};
     }
 
     // handle queen side castle
     if(move.isQueenSideCastle()) {
-        const int QUEENSIDE_PASSING_SQUARE = isSourcePieceWhite ? WHITE_QUEENSIDE_PASSING_SQUARE : BLACK_QUEENSIDE_PASSING_SQUARE;
-        const int QUEENSIDE_ROOK_SQUARE = isSourcePieceWhite ? WHITE_QUEENSIDE_ROOK_STARTING_SQUARE : BLACK_QUEENSIDE_ROOK_STARTING_SQUARE;
+        const int queensidePassingSquare = isSourcePieceWhite ? WHITE_QUEENSIDE_PASSING_SQUARE : BLACK_QUEENSIDE_PASSING_SQUARE;
+        const int queensideRookSquare = isSourcePieceWhite ? WHITE_QUEENSIDE_ROOK_STARTING_SQUARE : BLACK_QUEENSIDE_ROOK_STARTING_SQUARE;
         // undo rook move
-        board_.at(QUEENSIDE_PASSING_SQUARE) = Piece{};
-        board_.at(QUEENSIDE_ROOK_SQUARE) = Piece{PieceType::Rook, move.sourcePiece().color()};
+        board_[queensidePassingSquare] = Piece{};
+        board_[queensideRookSquare] = Piece{PieceType::Rook, sourcePiece.color()};
     }
 
     // handle en passant
@@ -1046,18 +1008,29 @@ void Game::undoMove(const Move& move, const UndoInfo& flags) {
         const int towardsCenter = isSourcePieceWhite ? -1 : +1;
         const int capturedIndex = move.targetSquare() - (towardsCenter * 8);
         // replace captured pawn
-        board_.at(capturedIndex) = Piece{PieceType::Pawn, oppositeColor(move.sourcePiece().color())};
+        board_[capturedIndex] = Piece{PieceType::Pawn, oppositeColor(sourcePiece.color())};
     }
 
-    board_.at(move.sourceSquare()) = move.sourcePiece();
-    board_.at(move.targetSquare()) = move.targetPiece();
+    // handle promotion
+    if(move.isPromotion()) {
+        // 'sourcePiece' is now a promoted piece instead of a pawn; we correct that
+        board_[move.sourceSquare()] = Piece{PieceType::Pawn, sourcePiece.color()};
+        board_[move.targetSquare()] = undoInfo.capturedPiece;
+        return;
+    }
+
+    // undo the general move
+    board_[move.sourceSquare()] = sourcePiece;
+    board_[move.targetSquare()] = undoInfo.capturedPiece;
 
     // restore all flags
-    canWhiteKingSideCastle_ = flags.whiteKingSideCastle;
-    canWhiteQueenSideCastle_ = flags.whiteQueenSideCastle;
-    canBlackKingSideCastle_ = flags.blackKingSideCastle;
-    canBlackQueenSideCastle_ = flags.blackQueenSideCastle;
-    currentEnPassantSquare_ = flags.enPassantSquare;
+    canWhiteKingSideCastle_ = undoInfo.whiteKingSideCastle;
+    canWhiteQueenSideCastle_ = undoInfo.whiteQueenSideCastle;
+    canBlackKingSideCastle_ = undoInfo.blackKingSideCastle;
+    canBlackQueenSideCastle_ = undoInfo.blackQueenSideCastle;
+    currentEnPassantSquare_ = undoInfo.enPassantSquare;
+    whiteKingSquare_ = undoInfo.whiteKingSquare;
+    blackKingSquare_ = undoInfo.blackKingSquare;
 }
 
 bool Game::isSquareAttacked(const int targetSquare, const Color& attackingColor) const {
@@ -1078,7 +1051,7 @@ bool Game::isSquareAttacked(const int targetSquare, const Color& attackingColor)
             }
 
             const int attackingPawnSquare = getSquareIndex(curCol, attackingPawnRow);
-            const Piece possibleAttackingPawn = board_.at(attackingPawnSquare);
+            const Piece possibleAttackingPawn = board_[attackingPawnSquare];
             if (possibleAttackingPawn.type() == PieceType::Pawn && possibleAttackingPawn.color() == attackingColor) {
                 return true;
             }
@@ -1087,15 +1060,15 @@ bool Game::isSquareAttacked(const int targetSquare, const Color& attackingColor)
 
     // 2. Knight attacks
     for (int i = 0; i < 8; i++) {
-        const int curCol = targetColumn + knightDeltas.at(i).at(0);
-        const int curRow = targetRow + knightDeltas.at(i).at(1);
+        const int curCol = targetColumn + knightDeltas[i][0];
+        const int curRow = targetRow + knightDeltas[i][1];
         // out of bounds
         if (!onBoard(curCol, curRow)) {
             continue;
         }
 
         const int curSquare = getSquareIndex(curCol, curRow);
-        const Piece possibleKnight = board_.at(curSquare);
+        const Piece possibleKnight = board_[curSquare];
         if (possibleKnight.type() == PieceType::Knight && possibleKnight.color() == attackingColor) {
             return true;
         }
@@ -1103,15 +1076,15 @@ bool Game::isSquareAttacked(const int targetSquare, const Color& attackingColor)
 
     // 3. King attacks
     for (int i = 0; i < 8; i++) {
-        const int curCol = targetColumn + kingDeltas.at(i).at(0);
-        const int curRow = targetRow + kingDeltas.at(i).at(1);
+        const int curCol = targetColumn + kingDeltas[i][0];
+        const int curRow = targetRow + kingDeltas[i][1];
         // out of bounds
         if (!onBoard(curCol, curRow)) {
             continue;
         }
 
         const int curSquare = getSquareIndex(curCol, curRow);
-        const Piece possibleKing = board_.at(curSquare);
+        const Piece possibleKing = board_[curSquare];
         if (possibleKing.type() == PieceType::King && possibleKing.color() == attackingColor) {
             return true;
         }
@@ -1123,7 +1096,7 @@ bool Game::isSquareAttacked(const int targetSquare, const Color& attackingColor)
         int curCol = targetColumn + dCol;
         while (onBoard(curCol, curRow)) {
             const int curSquare = getSquareIndex(curCol, curRow);
-            const Piece attackingPiece = board_.at(curSquare);
+            const Piece attackingPiece = board_[curSquare];
             if (attackingPiece.exists()) {
                 // if not right piece, we are blocked and can return
                 return attackingPiece.color() == attackingColor && (attackingPiece.type() == attackingPiece1 || attackingPiece.type() == attackingPiece2);
@@ -1169,21 +1142,13 @@ bool Game::isSquareAttacked(const int targetSquare, const Color& attackingColor)
 }
 
 bool Game::isInCheck(const Color& colorToFind) const {
-    // TODO: optimize
-    // TODO: this throws if game is inactive
+    // TODO: this throws no king on both sides
     const int kingSquare = findKingSquare(colorToFind).value();
     return isSquareAttacked(kingSquare, oppositeColor(colorToFind));
 }
 
 std::optional<int> Game::findKingSquare(const Color& colorToFind) const {
-    int squareIndex = 0;
-    for(const Piece& piece : board_) {
-        if(piece.type() == PieceType::King && piece.color() == colorToFind) {
-            return squareIndex;
-        }
-        squareIndex++;
-    }
-    return std::nullopt;
+    return colorToFind == Color::White ? whiteKingSquare_ : blackKingSquare_;
 }
 
 std::string Game::intToAlgebraicNotation(const int square) {

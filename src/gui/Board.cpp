@@ -63,7 +63,7 @@ const sf::Sprite* PieceSprite::sprite() const {
 
 void PieceSprite::rebuild() {
     // if we need to destroy sprite
-    if (type_ == PieceType::None) {
+    if (type() == PieceType::None) {
         sprite_.reset();
         return;
     }
@@ -71,9 +71,9 @@ void PieceSprite::rebuild() {
     // we need sprite
     // either reuse existing texture or create new one if it does not exist
     if(sprite_) {
-        sprite_.value().setTexture(TextureCache::get(type_, color_), true);
+        sprite_.value().setTexture(TextureCache::get(type(), color()), true);
     } else {
-        sprite_ = sf::Sprite{TextureCache::get(type_, color_)};
+        sprite_ = sf::Sprite{TextureCache::get(type(), color())};
     }
 }
 

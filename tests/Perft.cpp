@@ -11,9 +11,12 @@ int64_t Perft::perft(Game& game, int depth) { // NOLINT(misc-no-recursion)
     }
     
     int64_t numPositions = 0;
+    MoveList moves;
+    game.generateAllPseudoLegalMoves(moves);
 
-    for (const Move& move : game.generateAllPseudoLegalMoves()) {
-        const UndoInfo flags = game.getUndoInfo();
+    for (int i = 0; i < moves.size; i++) {
+        const Move& move = moves.data[i];
+        const UndoInfo undoInfo = game.getUndoInfo(game.board()[move.targetSquare()]);
         const Color currentTurn = game.currentTurn();
         const Color enemyColor = Game::oppositeColor(currentTurn);
 
@@ -32,7 +35,7 @@ int64_t Perft::perft(Game& game, int depth) { // NOLINT(misc-no-recursion)
                 game.isSquareAttacked(KINGSIDE_PASSING_SQUARE, enemyColor) ||   // king cant pass through check 
                 game.isSquareAttacked(KINGSIDE_TARGET_SQUARE, enemyColor)      // king cant end in check
             ) {
-                game.undoMove(move, flags);
+                game.undoMove(move, undoInfo);
                 continue;
             }
         }
@@ -45,20 +48,20 @@ int64_t Perft::perft(Game& game, int depth) { // NOLINT(misc-no-recursion)
                 game.isSquareAttacked(QUEENSIDE_PASSING_SQUARE, enemyColor) ||   // king cant pass through check 
                 game.isSquareAttacked(QUEENSIDE_TARGET_SQUARE, enemyColor)      // king cant end in check
             ) {
-                game.undoMove(move, flags);
+                game.undoMove(move, undoInfo);
                 continue;
             }
         }
         
         if (game.isInCheck(currentTurn)) {
-            game.undoMove(move, flags);
+            game.undoMove(move, undoInfo);
             continue;
         }
 
         // no checks, we can continue recursing
         numPositions += perft(game, depth - 1);
         
-        game.undoMove(move, flags);
+        game.undoMove(move, undoInfo);
     }
 
     return numPositions;
@@ -72,9 +75,12 @@ int64_t Perft::perftDivide(Game& game, int depth) {
     }
 
     int64_t numPositions = 0;
+    MoveList moves;
+    game.generateAllPseudoLegalMoves(moves);
 
-    for (const Move& move : game.generateAllLegalMoves()) {
-        const UndoInfo flags = game.getUndoInfo();
+    for (int i = 0; i < moves.size; i++) {
+        const Move& move = moves.data[i];
+        const UndoInfo undoInfo = game.getUndoInfo(game.board()[move.targetSquare()]);
         const Color currentTurn = game.currentTurn();
         const Color enemyColor = Game::oppositeColor(currentTurn);
 
@@ -94,7 +100,7 @@ int64_t Perft::perftDivide(Game& game, int depth) {
                 game.isSquareAttacked(KINGSIDE_PASSING_SQUARE, enemyColor) ||   // king cant pass through check 
                 game.isSquareAttacked(KINGSIDE_TARGET_SQUARE, enemyColor)      // king cant end in check
             ) {
-                game.undoMove(move, flags);
+                game.undoMove(move, undoInfo);
                 continue;
             }
         }
@@ -107,20 +113,20 @@ int64_t Perft::perftDivide(Game& game, int depth) {
                 game.isSquareAttacked(QUEENSIDE_PASSING_SQUARE, enemyColor) ||   // king cant pass through check 
                 game.isSquareAttacked(QUEENSIDE_TARGET_SQUARE, enemyColor)      // king cant end in check
             ) {
-                game.undoMove(move, flags);
+                game.undoMove(move, undoInfo);
                 continue;
             }
         }
         
         if (game.isInCheck(currentTurn)) {
-            game.undoMove(move, flags);
+            game.undoMove(move, undoInfo);
             continue;
         }
 
         // no checks, we can continue recursing
         const int64_t moveNodes = perft(game, depth - 1);
 
-        game.undoMove(move, flags);
+        game.undoMove(move, undoInfo);
 
         std::cout << move.toLongAlgebraic() << ": " << moveNodes << "\n";
 
