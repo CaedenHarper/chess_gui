@@ -35,3 +35,6 @@ From project root:
 ```
 ctest --test-dir build-release --verbose
 ```
+
+## TODOs
+- Consider speed tradeoffs between .at() and []

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <vector>
@@ -60,16 +61,26 @@ protected:
 
 // Info used to fully undo a move.
 struct UndoInfo {
-    bool whiteKingSideCastle, whiteQueenSideCastle, blackKingSideCastle, blackQueenSideCastle;
+    bool whiteKingSideCastle, whiteQueenSideCastle, blackKingSideCastle, blackQueenSideCastle; // castle flags
     std::optional<int> enPassantSquare;
+    // attack caches
+    uint64_t whiteAttackCache, blackAttackCache;
 
-    UndoInfo(bool whiteKingSideCastle_, bool whiteQueenSideCastle_, bool blackKingSideCastle_, bool blackQueenSideCastle_, std::optional<int> enPassantSquare_) :
+    UndoInfo(bool whiteKingSideCastle_,
+        bool whiteQueenSideCastle_,
+        bool blackKingSideCastle_,
+        bool blackQueenSideCastle_,
+        std::optional<int> enPassantSquare_,
+        uint64_t whiteAttackCache_,
+        uint64_t blackAttackCache_) :
     whiteKingSideCastle{whiteKingSideCastle_},
     whiteQueenSideCastle{whiteQueenSideCastle_},
     blackKingSideCastle{blackKingSideCastle_},
     blackQueenSideCastle{blackQueenSideCastle_},
-    enPassantSquare{enPassantSquare_} {}
-} __attribute__((aligned(16)));
+    enPassantSquare{enPassantSquare_}, 
+    whiteAttackCache{whiteAttackCache_}, 
+    blackAttackCache{blackAttackCache_} {}
+} __attribute__((aligned(32))); // align to 32 bytes
 
 // A chess move, with information for squares, pieces, and special flags like promotion and castling.
 class Move {
@@ -243,10 +254,8 @@ public:
     // Get flags in the form of UndoInfo.
     UndoInfo getUndoInfo() const;
 
-    void setWhiteKingSideCastle(bool canCastle);
-    void setBlackKingSideCastle(bool canCastle);
-    void setWhiteQueenSideCastle(bool canCastle);
-    void setBlackQueenSideCastle(bool canCastle);
+    uint64_t getWhiteAttackCache() const { return whiteAttackCache; }
+    uint64_t getBlackAttackCache() const { return blackAttackCache; }
 
     // Try a move and return if the move was made. The move is only made if it is legal.
     bool tryMove(const Move& move);
@@ -308,6 +317,28 @@ private:
     std::optional<Move> parseLongNotation_(const std::string& sourceMove, const std::string& targetMove) const;
     // Attempt to parse algebraic notation (e.g., "Nf3") to a move.
     std::optional<Move> parseAlgebraicNotation_(const std::string& move) const;
+
+    // Helpers for working with bitboards.
+    static int getBit(uint64_t bitboard, unsigned int square);
+    // Get the nth bit as a bool.
+    static bool getBitBool(uint64_t bitboard, unsigned int square);
+    // Set the nth bit to 1.
+    static void setBit(uint64_t& bitboard, unsigned int square);
+    // Clear the nth bit (set to 0).
+    static void clearBit(uint64_t& bitboard, unsigned int square);
+    // Clear the bitboard (set it to 0).
+    static void clearBitboard(uint64_t& bitboard);
+
+    // Attack cache bitboard for white.
+    uint64_t whiteAttackCache;
+    // Attack cache bitboard for black.
+    uint64_t blackAttackCache;
+
+    // Rebuild the attack cache bitboards.
+    void rebuildAttackCaches();
+
+    // Populate the attack bitboard from sourceSquare.
+    void populateAttackBitboardsFromSquare(int sourceSquare, const Piece& piece, uint64_t& attackCache) const;
 
     // Add move and all pawn promotion variants to moves. If move is not a pawn promotion, just add move by itself.
     static void addAllPawnPromotionsToMoves_(std::vector<Move>& moves, const Move& move);

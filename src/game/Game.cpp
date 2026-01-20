@@ -191,7 +191,9 @@ Game::Game()
     canBlackKingSideCastle_{false},
     canWhiteQueenSideCastle_{false},
     canBlackQueenSideCastle_{false},
-    currentEnPassantSquare_{std::nullopt} {
+    currentEnPassantSquare_{std::nullopt},
+    whiteAttackCache{0},
+    blackAttackCache{0} {
 }
 
 Color Game::currentTurn() const {
@@ -359,6 +361,9 @@ void Game::loadFEN(const std::string& FEN) {
             continue;
         }
     }
+
+    // Finally, update the attackCaches
+    rebuildAttackCaches();
 }
 
 bool Game::isFinished() {
@@ -372,23 +377,13 @@ bool Game::isFinished() {
 }
 
 UndoInfo Game::getUndoInfo() const {
-    return UndoInfo{canWhiteKingSideCastle_, canWhiteQueenSideCastle_, canBlackKingSideCastle_, canBlackQueenSideCastle_, currentEnPassantSquare_};
-}
-
-void Game::setWhiteKingSideCastle(bool canCastle) {
-    canWhiteKingSideCastle_ = canCastle;
-}
-
-void Game::setBlackKingSideCastle(bool canCastle) {
-    canBlackKingSideCastle_ = canCastle;
-}
-
-void Game::setWhiteQueenSideCastle(bool canCastle) {
-    canWhiteQueenSideCastle_ = canCastle;
-}
-
-void Game::setBlackQueenSideCastle(bool canCastle) {
-    canBlackQueenSideCastle_ = canCastle;
+    return UndoInfo{canWhiteKingSideCastle_,
+        canWhiteQueenSideCastle_,
+        canBlackKingSideCastle_,
+        canBlackQueenSideCastle_,
+        currentEnPassantSquare_,
+        whiteAttackCache,
+        blackAttackCache};
 }
 
 std::optional<Move> Game::parseLongNotation_(const std::string& sourceMove, const std::string& targetMove) const {
@@ -433,11 +428,140 @@ std::optional<Move> Game::parseAlgebraicNotation_(const std::string& move) const
     return std::nullopt;
 }
 
-/*
-    We parse two types of input types: "sourceSquare targetSquare" (long notation) and algebraic notation.
+int Game::getBit(uint64_t bitboard, unsigned int square) {
+    return (bitboard >> square) & 1ULL;
+}
 
-    E.g., "e2 e4" vs. "e4" (from starting position).
-*/
+bool Game::getBitBool(uint64_t bitboard, unsigned int square) {
+    return static_cast<bool>((bitboard >> square) & 1ULL);
+}
+
+void Game::setBit(uint64_t& bitboard, unsigned int square) {
+    bitboard |= (1ULL << square);
+}
+
+void Game::clearBit(uint64_t& bitboard, unsigned int square) {
+    bitboard &= ~(1ULL << square);
+}
+
+void Game::clearBitboard(uint64_t& bitboard) {
+    bitboard = 0ULL;
+}
+
+void Game::rebuildAttackCaches() {
+    // Clear bitboards
+    clearBitboard(whiteAttackCache);
+    clearBitboard(blackAttackCache);
+
+    // Find any pieces on the board
+    for(int squareIndex = 0; squareIndex < NUM_SQUARES; squareIndex++) {
+        const Piece piece = board_.at(squareIndex);
+        
+        // we also do this in populateAttackBitboardsFromSquare(), this may be unneeded
+        if(!piece.exists()) {
+            continue;
+        }
+
+        uint64_t& attackCache = (piece.color() == Color::White) ? whiteAttackCache : blackAttackCache;
+        populateAttackBitboardsFromSquare(squareIndex, piece, attackCache);
+    }
+}
+
+void Game::populateAttackBitboardsFromSquare(const int sourceSquare, const Piece& attackingPiece, uint64_t& attackCache) const {
+    // empty square, we're done
+    if (!attackingPiece.exists()) {
+        return;
+    }
+
+    const int sourceRow = getRow(sourceSquare);
+    const int sourceCol = getCol(sourceSquare);
+
+    const auto generateRays = [&](const int dCol, const int dRow) {
+        int curCol = sourceCol + dCol;
+        int curRow = sourceRow + dRow;
+        while (onBoard(curCol, curRow)) {
+            // we're on the board, this square is attacked
+            const unsigned int square = getSquareIndex(curCol, curRow);
+            attackCache |= (1ULL << square);
+            // we've hit a piece, stop
+            if (board_.at(square).exists()) {
+                break;
+            }
+            // move onto the next square
+            curCol += dCol;
+            curRow += dRow;
+        }
+    };
+
+    switch (attackingPiece.type()) {
+        case PieceType::Pawn: {
+            const int dir = (attackingPiece.color() == Color::White) ? -1 : +1;
+
+            // only allow moves if they are in bounds
+            if(onBoard(sourceCol - 1, sourceRow + dir)) {
+                const int leftCap = getSquareIndex(sourceCol - 1, sourceRow + dir);
+                setBit(attackCache, leftCap);
+            }
+            
+            if(onBoard(sourceCol + 1, sourceRow + dir)) {
+                const int rightCap = getSquareIndex(sourceCol + 1, sourceRow + dir);
+                setBit(attackCache, rightCap);
+            }
+
+            break;
+        }
+
+        case PieceType::Knight: {
+            for (int i = 0; i < 8; i++) {
+                // only allow move if its in bounds
+                const int curCol = sourceCol + knightDeltas.at(i)[0];
+                const int curRow = sourceRow + knightDeltas.at(i)[1];
+                if(!onBoard(curCol, curRow)) {
+                    continue;
+                }
+
+                setBit(attackCache, getSquareIndex(curCol, curRow));
+            }
+            break;
+        }
+
+        case PieceType::King: {
+            for (int i = 0; i < 8; i++) {
+                // only allow move if its in bounds
+                const int curCol = sourceCol + kingDeltas.at(i)[0];
+                const int curRow = sourceRow + kingDeltas.at(i)[1];
+                if(!onBoard(curCol, curRow)) {
+                    continue;
+                }
+
+                setBit(attackCache, getSquareIndex(curCol, curRow));
+            }
+            break;
+        }
+
+        case PieceType::Bishop: {
+            generateRays(+1, +1); generateRays(+1, -1); generateRays(-1, +1); generateRays(-1, -1);
+            break;
+        }
+
+        case PieceType::Rook: {
+            generateRays(+1, 0); generateRays(-1, 0); generateRays(0, +1); generateRays(0, -1);
+            break;
+        }
+
+        case PieceType::Queen: {
+            generateRays(+1, 0); generateRays(-1, 0); generateRays(0, +1); generateRays(0, -1);
+            generateRays(+1, +1); generateRays(+1, -1); generateRays(-1, +1); generateRays(-1, -1);
+            break;
+        }
+
+        // shouldn't happen, here just in case
+        default:
+            break;
+    }
+}
+
+
 std::optional<Move> Game::parseMove(const std::string& move) const {
     int currentPart = 0;
     std::string firstPart;
@@ -576,8 +700,8 @@ std::vector<Move> Game::generatePseudoLegalKnightMoves_(const int sourceSquare) 
     const int col = getCol(sourceSquare);
 
     for(int i = 0; i < 8; i++) {
-        const int col2 = col + knightDeltas.at(i).at(0);
-        const int row2 = row + knightDeltas.at(i).at(1);
+        const int col2 = col + knightDeltas.at(i)[0];
+        const int row2 = row + knightDeltas.at(i)[1];
         if(!onBoard(col2, row2)) {
             continue;
         }
@@ -605,8 +729,8 @@ std::vector<Move> Game::generatePseudoLegalBishopMoves_(const int sourceSquare) 
     const int col = getCol(sourceSquare);
 
     for(int i = 0; i < 4; i++) {
-        const int dcol = bishopDeltas.at(i).at(0);
-        const int drow = bishopDeltas.at(i).at(1);
+        const int dcol = bishopDeltas.at(i)[0];
+        const int drow = bishopDeltas.at(i)[1];
 
         // start with one delta and continue until off board, or until a piece is hit
         int curCol = col + dcol;
@@ -650,8 +774,8 @@ std::vector<Move> Game::generatePseudoLegalRookMoves_(const int sourceSquare) {
     const int col = getCol(sourceSquare);
 
     for(int i = 0; i < 4; i++) {
-        const int dcol = rookDeltas.at(i).at(0);
-        const int drow = rookDeltas.at(i).at(1);
+        const int dcol = rookDeltas.at(i)[0];
+        const int drow = rookDeltas.at(i)[1];
 
         // start with one delta and continue until off board, or until a piece is hit
         int curCol = col + dcol;
@@ -695,8 +819,8 @@ std::vector<Move> Game::generatePseudoLegalQueenMoves_(const int sourceSquare) {
     const int col = getCol(sourceSquare);
 
     for(int i = 0; i < 8; i++) {
-        const int dCol = queenDeltas.at(i).at(0);
-        const int dRow = queenDeltas.at(i).at(1);
+        const int dCol = queenDeltas.at(i)[0];
+        const int dRow = queenDeltas.at(i)[1];
 
         // start with one delta and continue until off board, or until a piece is hit
         int curCol = col + dCol;
@@ -740,8 +864,8 @@ std::vector<Move> Game::generatePseudoLegalKingMoves_(const int sourceSquare) {
     const int col = getCol(sourceSquare);
 
     for(int i = 0; i < 8; i++) {
-        const int col2 = col + kingDeltas.at(i).at(0);
-        const int row2 = row + kingDeltas.at(i).at(1);
+        const int col2 = col + kingDeltas.at(i)[0];
+        const int row2 = row + kingDeltas.at(i)[1];
         if(!onBoard(col2, row2)) {
             continue;
         }
@@ -993,6 +1117,8 @@ void Game::makeMove(const Move& move) {
     if(move.isPawnPromotion()) {
         board_.at(move.targetSquare()) = move.promotionPiece();
         board_.at(move.sourceSquare()) = Piece{};
+
+        rebuildAttackCaches();
         return;
     }
 
@@ -1016,6 +1142,8 @@ void Game::makeMove(const Move& move) {
 
     board_.at(move.targetSquare()) = move.sourcePiece();
     board_.at(move.sourceSquare()) = Piece{};
+
+    rebuildAttackCaches();
 }
 
 void Game::undoMove(const Move& move, const UndoInfo& flags) {
@@ -1058,114 +1186,13 @@ void Game::undoMove(const Move& move, const UndoInfo& flags) {
     canBlackKingSideCastle_ = flags.blackKingSideCastle;
     canBlackQueenSideCastle_ = flags.blackQueenSideCastle;
     currentEnPassantSquare_ = flags.enPassantSquare;
+    whiteAttackCache = flags.whiteAttackCache;
+    blackAttackCache = flags.blackAttackCache;
 }
 
 bool Game::isSquareAttacked(const int targetSquare, const Color& attackingColor) const {
-    // TODO: consider extracting common deltas (e.g., knightDeltas) into Game class
-    const int targetRow = getRow(targetSquare);
-    const int targetColumn = getCol(targetSquare);
-
-    // 1. Pawn attacks (only diagonals)
-    // White attacks row - 1, Black attacks row + 1
-    const int pawnDir = (attackingColor == Color::White) ? -1 : +1;
-    const int attackingPawnRow = targetRow - pawnDir; // square where an attacking pawn would sit
-    if (attackingPawnRow >= 0 && attackingPawnRow <= 7) {
-        for (const int deltaColumn : {-1, +1}) {
-            const int curCol = targetColumn + deltaColumn;
-            // out of range
-            if (!onBoard(curCol, attackingPawnRow)) {
-                continue;
-            }
-
-            const int attackingPawnSquare = getSquareIndex(curCol, attackingPawnRow);
-            const Piece possibleAttackingPawn = board_.at(attackingPawnSquare);
-            if (possibleAttackingPawn.type() == PieceType::Pawn && possibleAttackingPawn.color() == attackingColor) {
-                return true;
-            }
-        }
-    }
-
-    // 2. Knight attacks
-    for (int i = 0; i < 8; i++) {
-        const int curCol = targetColumn + knightDeltas.at(i).at(0);
-        const int curRow = targetRow + knightDeltas.at(i).at(1);
-        // out of bounds
-        if (!onBoard(curCol, curRow)) {
-            continue;
-        }
-
-        const int curSquare = getSquareIndex(curCol, curRow);
-        const Piece possibleKnight = board_.at(curSquare);
-        if (possibleKnight.type() == PieceType::Knight && possibleKnight.color() == attackingColor) {
-            return true;
-        }
-    }
-
-    // 3. King attacks
-    for (int i = 0; i < 8; i++) {
-        const int curCol = targetColumn + kingDeltas.at(i).at(0);
-        const int curRow = targetRow + kingDeltas.at(i).at(1);
-        // out of bounds
-        if (!onBoard(curCol, curRow)) {
-            continue;
-        }
-
-        const int curSquare = getSquareIndex(curCol, curRow);
-        const Piece possibleKing = board_.at(curSquare);
-        if (possibleKing.type() == PieceType::King && possibleKing.color() == attackingColor) {
-            return true;
-        }
-    }
-
-    // Sliding attack helper function
-    const auto rayHits = [&](int dRow, int dCol, PieceType attackingPiece1, PieceType attackingPiece2) -> bool {
-        int curRow = targetRow + dRow;
-        int curCol = targetColumn + dCol;
-        while (onBoard(curCol, curRow)) {
-            const int curSquare = getSquareIndex(curCol, curRow);
-            const Piece attackingPiece = board_.at(curSquare);
-            if (attackingPiece.exists()) {
-                // if not right piece, we are blocked and can return
-                return attackingPiece.color() == attackingColor && (attackingPiece.type() == attackingPiece1 || attackingPiece.type() == attackingPiece2);
-            }
-            // this direction is not blocked, continue
-            curRow += dRow;
-            curCol += dCol;
-        }
-        // didn't find anything
-        return false;
-    };
-
-    // 4. orthogonal rays: rook or queen
-    if (rayHits(+1, 0, PieceType::Rook, PieceType::Queen)) {
-        return true;
-    }
-    if (rayHits(-1, 0, PieceType::Rook, PieceType::Queen)) {
-        return true;
-    }
-    if (rayHits(0, +1, PieceType::Rook, PieceType::Queen)) {
-        return true;
-    }
-    if (rayHits(0, -1, PieceType::Rook, PieceType::Queen)) {
-        return true;
-    }
-
-    // 5. diagonal rays: bishop or queen
-    if (rayHits(+1, +1, PieceType::Bishop, PieceType::Queen)) {
-        return true;
-    }
-    if (rayHits(+1, -1, PieceType::Bishop, PieceType::Queen)) {
-        return true;
-    }
-    if (rayHits(-1, +1, PieceType::Bishop, PieceType::Queen)) {
-        return true;
-    }
-    if (rayHits(-1, -1, PieceType::Bishop, PieceType::Queen)) {
-        return true;
-    }
-
-    // didn't find anything
-    return false;
+    const uint64_t attackCache = attackingColor == Color::White ? whiteAttackCache : blackAttackCache;
+    return getBitBool(attackCache, targetSquare);
 }
 
 bool Game::isInCheck(const Color& colorToFind) const {

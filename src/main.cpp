@@ -44,7 +44,7 @@ void runGUIGame() {
 
     // init game
     Game game;
-    game.loadFEN("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - ");
+    game.loadFEN(std::string{Game::STARTING_FEN});
 
     // init board
     Board board;
@@ -197,12 +197,13 @@ void runGUIGame() {
                 }
             }
         }
-
         // highlight attacked squares
-        for(int i = 0; i < Game::NUM_SQUARES; i++) {
-            // if(game.isSquareAttacked(i, Color::White)) board.at(i).setHighlight(Board::RIGHT_CLICK_HIGHLIGHT);
-            // if(game.isSquareAttacked(i, Color::Black)) board.at(i).setHighlight(Board::RIGHT_CLICK_HIGHLIGHT);
-        }
+        // for(int i = 0; i < Game::NUM_SQUARES; i++) {
+        //     if(game.isSquareAttacked(i, Color::White)) {
+        //         board.at(i).setHighlight(Board::RIGHT_CLICK_HIGHLIGHT);
+        //     }
+        //     // if(game.isSquareAttacked(i, Color::Black)) board.at(i).setHighlight(Board::RIGHT_CLICK_HIGHLIGHT);
+        // }
         
         // clear the window
         window.clear(sf::Color::Black);
