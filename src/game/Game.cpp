@@ -175,6 +175,8 @@ Game::Game()
     canBlackKingSideCastle_{false},
     canWhiteQueenSideCastle_{false},
     canBlackQueenSideCastle_{false},
+    whiteKingSquare_{0},
+    blackKingSquare_{0},
     currentEnPassantSquare_{std::nullopt} {
 }
 
@@ -367,32 +369,20 @@ bool Game::isFinished() {
 }
 
 UndoInfo Game::getUndoInfo(const Piece capturedPiece) const {
-    return UndoInfo{
-        canWhiteKingSideCastle_,
+    // pack bools into castling rights uint8_t for speedy lookup
+    const uint8_t castleRights = UndoInfo::packCastlingRights(canWhiteKingSideCastle_,
         canWhiteQueenSideCastle_,
         canBlackKingSideCastle_,
-        canBlackQueenSideCastle_,
-        currentEnPassantSquare_,
-        whiteKingSquare_,
-        blackKingSquare_,
-        capturedPiece
+        canBlackQueenSideCastle_);
+    // encode optional<int> into uint8_t with special UndoInfo sentinal
+    const uint8_t enPassantSquare = currentEnPassantSquare_.value_or(UndoInfo::noEnPassant);
+    return UndoInfo{
+        castleRights,
+        enPassantSquare,
+        capturedPiece,
+        static_cast<uint8_t>(whiteKingSquare_),
+        static_cast<uint8_t>(blackKingSquare_),
     };
-}
-
-void Game::setWhiteKingSideCastle(bool canCastle) {
-    canWhiteKingSideCastle_ = canCastle;
-}
-
-void Game::setBlackKingSideCastle(bool canCastle) {
-    canBlackKingSideCastle_ = canCastle;
-}
-
-void Game::setWhiteQueenSideCastle(bool canCastle) {
-    canWhiteQueenSideCastle_ = canCastle;
-}
-
-void Game::setBlackQueenSideCastle(bool canCastle) {
-    canBlackQueenSideCastle_ = canCastle;
 }
 
 std::optional<Move> Game::parseLongNotation_(const std::string& sourceMove, const std::string& targetMove) const {
@@ -1024,13 +1014,17 @@ void Game::undoMove(const Move& move, const UndoInfo& undoInfo) {
     board_[move.targetSquare()] = undoInfo.capturedPiece;
 
     // restore all flags
-    canWhiteKingSideCastle_ = undoInfo.whiteKingSideCastle;
-    canWhiteQueenSideCastle_ = undoInfo.whiteQueenSideCastle;
-    canBlackKingSideCastle_ = undoInfo.blackKingSideCastle;
-    canBlackQueenSideCastle_ = undoInfo.blackQueenSideCastle;
-    currentEnPassantSquare_ = undoInfo.enPassantSquare;
-    whiteKingSquare_ = undoInfo.whiteKingSquare;
-    blackKingSquare_ = undoInfo.blackKingSquare;
+    canWhiteKingSideCastle_ = undoInfo.canWhiteKingside();
+    canWhiteQueenSideCastle_ = undoInfo.canWhiteQueenside();
+    canBlackKingSideCastle_ = undoInfo.canBlackKingside();
+    canBlackQueenSideCastle_ = undoInfo.canBlackQueenside();
+    if(undoInfo.prevEnPassantSquare == UndoInfo::noEnPassant) {
+        currentEnPassantSquare_ = std::nullopt;
+    } else {
+        currentEnPassantSquare_ = undoInfo.prevEnPassantSquare;
+    }
+    whiteKingSquare_ = undoInfo.prevWhiteKingSquare;
+    blackKingSquare_ = undoInfo.prevBlackKingSquare;
 }
 
 bool Game::isSquareAttacked(const int targetSquare, const Color& attackingColor) const {

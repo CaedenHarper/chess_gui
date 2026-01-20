@@ -67,27 +67,41 @@ protected:
 
 // Info used to fully undo a move.
 struct UndoInfo {
-    bool whiteKingSideCastle, whiteQueenSideCastle, blackKingSideCastle, blackQueenSideCastle;
-    std::optional<int> enPassantSquare, whiteKingSquare, blackKingSquare;
+    // Store previous state
+    uint8_t prevCastlingRights;
+    uint8_t prevEnPassantSquare;
     Piece capturedPiece;
+    uint8_t prevWhiteKingSquare;
+    uint8_t prevBlackKingSquare;
 
-    UndoInfo(bool whiteKingSideCastle_,
-        bool whiteQueenSideCastle_,
-        bool blackKingSideCastle_,
-        bool blackQueenSideCastle_,
-        std::optional<int> enPassantSquare_,
-        std::optional<int> whiteKingSquare_,
-        std::optional<int> blackKingSquare_,
-        Piece capturedPiece_) :
-    whiteKingSideCastle{whiteKingSideCastle_},
-    whiteQueenSideCastle{whiteQueenSideCastle_},
-    blackKingSideCastle{blackKingSideCastle_},
-    blackQueenSideCastle{blackQueenSideCastle_},
-    enPassantSquare{enPassantSquare_},
-    whiteKingSquare{whiteKingSquare_},
-    blackKingSquare{blackKingSquare_},
-    capturedPiece{capturedPiece_} {}
-} __attribute__((aligned(32))); // align to 32 bytes
+    static constexpr uint8_t noEnPassant = 255;
+
+    constexpr UndoInfo(uint8_t castlingRights,
+                       uint8_t enPassantSquare,
+                       Piece capturedPiece_,
+                       uint8_t whiteKingSquare,
+                       uint8_t blackKingSquare) noexcept
+        : prevCastlingRights{castlingRights},
+          prevEnPassantSquare{enPassantSquare},
+          capturedPiece{capturedPiece_},
+          prevWhiteKingSquare{whiteKingSquare},
+          prevBlackKingSquare{blackKingSquare} {}
+
+    // Pack the four castling bools into one uint8_t.
+    static constexpr uint8_t packCastlingRights(bool whiteKingside, bool whiteQueenside, bool blackKingside, bool blackQueenside) noexcept {
+        return (static_cast<uint8_t>(whiteKingside) << 0) |
+                (static_cast<uint8_t>(whiteQueenside) << 1) |
+                (static_cast<uint8_t>(blackKingside) << 2) |
+                (static_cast<uint8_t>(blackQueenside) << 3);
+    }
+
+    // Getters extract bits from packed representation.
+    constexpr bool canWhiteKingside() const noexcept { return static_cast<bool>(prevCastlingRights & (1 << 0)); }
+    constexpr bool canWhiteQueenside() const noexcept { return static_cast<bool>(prevCastlingRights & (1 << 1)); }
+    constexpr bool canBlackKingside() const noexcept { return static_cast<bool>(prevCastlingRights & (1 << 2)); }
+    constexpr bool canBlackQueenside() const noexcept { return static_cast<bool>(prevCastlingRights & (1 << 3)); }
+
+} __attribute__((aligned(8)));
 
 enum class MoveFlag : uint8_t {
     Normal,  // no special flags
@@ -277,11 +291,6 @@ public:
     // Get flags in the form of UndoInfo.
     UndoInfo getUndoInfo(Piece capturedPiece) const;
 
-    void setWhiteKingSideCastle(bool canCastle);
-    void setBlackKingSideCastle(bool canCastle);
-    void setWhiteQueenSideCastle(bool canCastle);
-    void setBlackQueenSideCastle(bool canCastle);
-
     // Try a move and return if the move was made. The move is only made if it is legal.
     bool tryMove(const Move& move);
     // Make a move, even if it is not legal.
@@ -337,9 +346,9 @@ private:
     bool canWhiteQueenSideCastle_;
     bool canBlackQueenSideCastle_;
 
-    // Keep track of current king positions. Neither exist if the kings aren't on the board.
-    std::optional<int> whiteKingSquare_;
-    std::optional<int> blackKingSquare_;
+    // Keep track of current king positions. We assume they're on the board at all times (unknown behavior / crash if assumption is broken).
+    int whiteKingSquare_;
+    int blackKingSquare_;
     
     // Current en passant square. Does not exist if no en passant is possible on the board.
     std::optional<int> currentEnPassantSquare_;

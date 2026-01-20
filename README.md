@@ -46,3 +46,5 @@ ctest --test-dir build-debug --verbose    # debug
 - Look further into bitboards to speed up isSquareAttacked / attack maps
 - Look into rewriting all const Piece to const Piece&
 - Look into any more functions we can constexpr
+- Migrate castlingRights to bitmasks + create a castlingRight class in Game
+- Ensure in loadFEN that both kings exist
