@@ -188,9 +188,21 @@ void Board::clearAllHighlights() {
     }
 }
 
-void Board::clearAllHighlights(const Highlight highlight) {
+void Board::clearAllHighlights(const Highlight highlightToClear) {
     for(Square& square : board_) {
-        square.clearHighlight(highlight);
+        square.clearHighlight(highlightToClear);
+    }
+}
+
+void Board::clearAllHighlightsExcept(const Highlight highlightToSkip) {
+    for(Square& square : board_) {
+        if(square.hasHighlight() && square.highlight() == highlightToSkip) {
+            // skip if input matches
+            continue;
+        }
+
+        // else, clear it
+        square.clearHighlight();
     }
 }
 
@@ -204,8 +216,8 @@ void Board::updateBoardFromGame(const Game& game) {
         const float yPos = SQUARE_WIDTH * row;
 
         Square& square = board_.at(squareIndex);
-        // const Piece piece = game.pieceAtSquareForGui(squareIndex);
-        const Piece piece = game.board()[squareIndex];
+        const Piece piece = game.pieceAtSquareForGui(squareIndex);
+        // const Piece piece = game.board()[squareIndex];
         square.pieceSprite() = PieceSprite{piece};
         // fit to center of square
         square.pieceSprite().centerOrigin();

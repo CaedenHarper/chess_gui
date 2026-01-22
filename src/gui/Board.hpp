@@ -118,6 +118,16 @@ public:
     // Selected move light square color. Lighter yellow, rgb(237, 253, 142).
     static constexpr sf::Color LIGHT_SELECTED_SQUARE_COLOR{237, 253, 142};
     static constexpr Highlight SELECTED_HIGHLIGHT{LIGHT_SELECTED_SQUARE_COLOR, DARK_SELECTED_SQUARE_COLOR};
+    // Check move dark square color. Darker orange, rgb(233, 114, 60).
+    static constexpr sf::Color DARK_CHECK_SQUARE_COLOR{233, 114, 60};
+    // Check move light square color. Lighter orange, rgb(224, 139, 100).
+    static constexpr sf::Color LIGHT_CHECK_SQUARE_COLOR{224, 139, 100};
+    static constexpr Highlight CHECK_HIGHLIGHT{LIGHT_CHECK_SQUARE_COLOR, DARK_CHECK_SQUARE_COLOR};
+    // Cyan dark square color. Darker cyan, rgb(33, 180, 206).
+    static constexpr sf::Color DARK_CYAN_SQUARE_COLOR{33, 180, 206};
+    // Cyan light square color. Lighter cyan, rgb(99, 208, 228).
+    static constexpr sf::Color LIGHT_CYAN_SQUARE_COLOR{99, 208, 228};
+    static constexpr Highlight CYAN_HIGHLIGHT{LIGHT_CYAN_SQUARE_COLOR, DARK_CYAN_SQUARE_COLOR};
 
     // Construct an empty board. I.e., a board with all empty squares.
     Board() = default;
@@ -135,7 +145,9 @@ public:
     // Clear all highlights.
     void clearAllHighlights();
     // Clear all highlights that match inputted highlight.
-    void clearAllHighlights(Highlight highlight);
+    void clearAllHighlights(Highlight highlightToClear);
+    // Clear all highlights, except the given one.
+    void clearAllHighlightsExcept(Highlight highlightToSkip);
 
     // Get the index of the square given the x, y coordinates.
     static int getSquareIndexFromCoordinates(int xPos, int yPos);

@@ -41,6 +41,25 @@ void runCLIGame() {
 }
 
 void runGUIBitboardTest() {
+    // helper function for this bitboard test; using the arbitrary bitboard button number, get a piece that matches so we can further extract information from Game
+    const auto bitboardNumberToPiece = [] (int n) -> Piece {
+        switch(n) {
+            case 0: return Piece{PieceType::Pawn, Color::White};
+            case 1: return Piece{PieceType::Knight, Color::White};
+            case 2: return Piece{PieceType::Bishop, Color::White};
+            case 3: return Piece{PieceType::Rook, Color::White};
+            case 4: return Piece{PieceType::Queen, Color::White};
+            case 5: return Piece{PieceType::King, Color::White};
+            case 6: return Piece{PieceType::Pawn, Color::Black};
+            case 7: return Piece{PieceType::Knight, Color::Black};;
+            case 8: return Piece{PieceType::Bishop, Color::Black};;
+            case 9: return Piece{PieceType::Rook, Color::Black};;
+            case 10: return Piece{PieceType::Queen, Color::Black};;
+            case 11: return Piece{PieceType::King, Color::Black};;
+            default: return Piece{}; // shouldn't happen
+        }
+    };
+
     constexpr std::array<std::string_view, 12> bitboardButtonText{
         "White Pawn", "White Knight", "White Bishop", "White Rook", "White Queen", "White King",
         "Black Pawn", "Black Knight", "Black Bishop", "Black Rook", "Black Queen", "Black King"
@@ -177,8 +196,7 @@ void runGUIBitboardTest() {
                     }
 
                     heldSquare.reset();
-                    board.clearAllHighlights(Board::SELECTED_HIGHLIGHT);
-                    board.clearAllHighlights(Board::LEGAL_HIGHLIGHT);
+                    board.clearAllHighlightsExcept(Board::RIGHT_CLICK_HIGHLIGHT);
                 }
                 
                 // RIGHT CLICK
@@ -244,13 +262,11 @@ void runGUIBitboardTest() {
                     if (game.tryMove(potentialMove)) {
                         board.updateBoardFromGame(game);
                         PIECE_MOVEMENT_SOUND.play();
-                        // successfully making a move resets any legal move highlights
-                        board.clearAllHighlights(Board::LEGAL_HIGHLIGHT);
                     }
 
                     heldSquare.reset();
-                    board.clearAllHighlights(Board::SELECTED_HIGHLIGHT);
-                    board.clearAllHighlights(Board::LEGAL_HIGHLIGHT);
+                    // only dont undo right click highlights
+                    board.clearAllHighlightsExcept(Board::RIGHT_CLICK_HIGHLIGHT);
                 }
             }
         }
@@ -258,13 +274,37 @@ void runGUIBitboardTest() {
         // clear the window
         window.clear(sf::Color::Black);
 
+        // TODO: replace check highlight with sprite
+        if(game.isInCheck(game.currentTurn())) {
+            // add check highlight after main loop to override other highlights
+            board.at(game.findKingSquare(game.currentTurn())).setHighlight(Board::CHECK_HIGHLIGHT);
+        }
+
         // highlight squares based on the chosen bitboard
         board.clearAllHighlights(Board::RIGHT_CLICK_HIGHLIGHT);
         if(chosenBitboard.has_value()) {
-            const Bitboard bitboard = game.getBitboard(chosenBitboard.value());
-            for(int i = 0; i < Game::NUM_SQUARES; i++) {
-                if(bitboard.containsSquare(i)) {
-                    board.at(i).setHighlight(Board::RIGHT_CLICK_HIGHLIGHT);
+            const Piece bitboardPiece = bitboardNumberToPiece(chosenBitboard.value());
+            const Bitboard bitboard = game.pieceToBitboard(bitboardPiece);
+            const std::array<Bitboard, 64> attackBitboards = game.pieceToAttackBitboard(bitboardPiece);
+
+            for(int square = 0; square < Game::NUM_SQUARES; square++) {
+                // highlight chosen bitboard
+                if(bitboard.containsSquare(square)) {
+                    board.at(square).setHighlight(Board::RIGHT_CLICK_HIGHLIGHT);
+                }
+
+                // highlight attack bitboards by building all attacks from bitboard
+                Bitboard allAttacks{0};
+                Bitboard temp = bitboard;
+                while(!temp.empty()) {
+                    const int pieceLocation = temp.popLsb();
+                    allAttacks.mergeIn(attackBitboards[pieceLocation]);
+                }
+
+                // then, paint board based on allAttacks
+                while(!allAttacks.empty()) {
+                    const int attackLocation = allAttacks.popLsb();
+                    board.at(attackLocation).setHighlight(Board::CYAN_HIGHLIGHT);
                 }
             }
         }
@@ -421,10 +461,9 @@ void runGUIgame() {
                         board.updateBoardFromGame(game);
                         PIECE_MOVEMENT_SOUND.play();
                     }
-
+                    
                     heldSquare.reset();
-                    board.clearAllHighlights(Board::SELECTED_HIGHLIGHT);
-                    board.clearAllHighlights(Board::LEGAL_HIGHLIGHT);
+                    board.clearAllHighlightsExcept(Board::RIGHT_CLICK_HIGHLIGHT);
                 }
                 
                 // RIGHT CLICK
@@ -490,13 +529,10 @@ void runGUIgame() {
                     if (game.tryMove(potentialMove)) {
                         board.updateBoardFromGame(game);
                         PIECE_MOVEMENT_SOUND.play();
-                        // successfully making a move resets any legal move highlights
-                        board.clearAllHighlights(Board::LEGAL_HIGHLIGHT);
                     }
 
                     heldSquare.reset();
-                    board.clearAllHighlights(Board::SELECTED_HIGHLIGHT);
-                    board.clearAllHighlights(Board::LEGAL_HIGHLIGHT);
+                    board.clearAllHighlightsExcept(Board::RIGHT_CLICK_HIGHLIGHT);
                 }
             }
         }
@@ -506,7 +542,13 @@ void runGUIgame() {
         //     if(game.isSquareAttacked(i, Color::White)) board.at(i).setHighlight(Board::RIGHT_CLICK_HIGHLIGHT);
         //     if(game.isSquareAttacked(i, Color::Black)) board.at(i).setHighlight(Board::RIGHT_CLICK_HIGHLIGHT);
         // }
-        
+
+        // TODO: replace check highlight with sprite
+        if(game.isInCheck(game.currentTurn())) {
+            // add check highlight after main loop to override other highlights
+            board.at(game.findKingSquare(game.currentTurn())).setHighlight(Board::CHECK_HIGHLIGHT);
+        }
+
         // clear the window
         window.clear(sf::Color::Black);
 

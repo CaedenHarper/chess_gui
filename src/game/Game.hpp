@@ -205,8 +205,19 @@ struct MoveList {
     void push_back(const Move& move) {
         data[size++] = move;
     }
-} __attribute__((aligned(128)));
+} __attribute__((aligned(128))); // align to 128 bytes
 
+// Create holder for all AttackBitboards
+struct AttackBitboards {
+    // TODO: can we just rotate whitePawnAttacks?
+    std::array<Bitboard, 64> whitePawnAttacks{};
+    std::array<Bitboard, 64> blackPawnAttacks{};
+    std::array<Bitboard, 64> knightAttacks{};
+    std::array<Bitboard, 64> bishopAttacks{};
+    std::array<Bitboard, 64> rookAttacks{};
+    std::array<Bitboard, 64> queenAttacks{};
+    std::array<Bitboard, 64> kingAttacks{};
+} __attribute__((aligned(128))); // align to 128 bytes
 
 // A chess game. Contains information for the game and helpers to generate and validate moves.
 class Game {
@@ -333,7 +344,7 @@ public:
     // If a given square is attacked by the attacking color.
     bool isSquareAttacked(int targetSquare, Color attackingColor) const;
     // Retrieve king square for a given color. Does not exist if king is not on board.
-    std::optional<int> findKingSquare(const Color& colorToFind) const;
+    int findKingSquare(const Color& colorToFind) const;
     
     // Retrieve algebraic notation from a given square. E.g., 0 -> "a8".
     static std::string intToAlgebraicNotation(int square);
@@ -370,22 +381,49 @@ public:
         return (color == Color::White) ? Color::Black : Color::White;
     }
 
-    // Get the nth bitboard, 0-5 -> white, 6-11 -> black
-    constexpr Bitboard getBitboard(int n) noexcept {
-        switch(n) {
-            case 0: return bbWhitePawns_;
-            case 1: return bbWhiteKnights_;
-            case 2: return bbWhiteBishops_;
-            case 3: return bbWhiteRooks_;
-            case 4: return bbWhiteQueens_;
-            case 5: return bbWhiteKing_;
-            case 6: return bbBlackPawns_;
-            case 7: return bbBlackKnights_;
-            case 8: return bbBlackBishops_;
-            case 9: return bbBlackRooks_;
-            case 10: return bbBlackQueens_;
-            case 11: return bbBlackKing_;
-            default: return Bitboard{0};
+    constexpr AttackBitboards attackBitboards() noexcept {
+        return attackBitboards_;
+    }
+
+    constexpr std::array<Bitboard, 64> pieceToAttackBitboard(Piece piece) const noexcept {
+        const bool isWhite = piece.color() == Color::White;
+        switch(piece.type()) {
+            case PieceType::Pawn: return isWhite ? attackBitboards_.whitePawnAttacks : attackBitboards_.blackPawnAttacks;
+            case PieceType::Knight: return attackBitboards_.knightAttacks;
+            case PieceType::Bishop: return attackBitboards_.bishopAttacks;
+            case PieceType::Rook: return attackBitboards_.rookAttacks;
+            case PieceType::Queen: return attackBitboards_.queenAttacks;
+            case PieceType::King: return attackBitboards_.kingAttacks;
+            case PieceType::None: return std::array<Bitboard, 64>{}; // shouldn't happen
+        }
+    }
+
+    // Get a given piece type's bitboard.
+    constexpr Bitboard& pieceToBitboard(PieceType type, Color color) {
+        const bool isWhite = color == Color::White;
+        switch(type) {
+            case PieceType::Pawn: return isWhite ? bbWhitePawns_ : bbBlackPawns_;
+            case PieceType::Knight: return isWhite ? bbWhiteKnights_ : bbBlackKnights_;
+            case PieceType::Bishop: return isWhite ? bbWhiteBishops_ : bbBlackBishops_;
+            case PieceType::Rook: return isWhite ? bbWhiteRooks_ : bbBlackRooks_;
+            case PieceType::Queen: return isWhite ? bbWhiteQueens_ : bbBlackQueens_;
+            case PieceType::King: return isWhite ? bbWhiteKing_ : bbBlackKing_;
+            case PieceType::None: throw std::runtime_error("Bitboard does not exist.");
+        }
+    }
+
+    // Get a given piece's bitboard.
+    constexpr Bitboard& pieceToBitboard(Piece piece) {
+        const bool isWhite = piece.color() == Color::White;
+        const PieceType pieceType = piece.type();
+        switch(pieceType) {
+            case PieceType::Pawn: return isWhite ? bbWhitePawns_ : bbBlackPawns_;
+            case PieceType::Knight: return isWhite ? bbWhiteKnights_ : bbBlackKnights_;
+            case PieceType::Bishop: return isWhite ? bbWhiteBishops_ : bbBlackBishops_;
+            case PieceType::Rook: return isWhite ? bbWhiteRooks_ : bbBlackRooks_;
+            case PieceType::Queen: return isWhite ? bbWhiteQueens_ : bbBlackQueens_;
+            case PieceType::King: return isWhite ? bbWhiteKing_ : bbBlackKing_;
+            case PieceType::None: throw std::runtime_error("Bitboard does not exist for piece: " + piece.to_string_long());
         }
     }
 
@@ -423,74 +461,18 @@ private:
     Bitboard bbBlackQueens_;
     Bitboard bbBlackKing_;
 
-    // Occupancy
-    Bitboard bbWhitePieces_;
-    Bitboard bbBlackPieces_;
-    Bitboard bbAllPieces_;
+    AttackBitboards attackBitboards_;
 
-    // recompute the occupancy bbWhitePieces, bbBlackPieces, bbAllPieces
-    constexpr void recomputeOccupancy_() noexcept {
-        // Recompute white pieces
-        bbWhitePieces_.clear();
-        bbWhitePieces_.mergeIn(bbWhitePawns_);
-        bbWhitePieces_.mergeIn(bbWhiteKnights_);
-        bbWhitePieces_.mergeIn(bbWhiteBishops_);
-        bbWhitePieces_.mergeIn(bbWhiteRooks_);
-        bbWhitePieces_.mergeIn(bbWhiteQueens_);
-        bbWhitePieces_.mergeIn(bbWhiteKing_);
-
-        // Recompute black pieces
-        bbBlackPieces_.clear();
-        bbBlackPieces_.mergeIn(bbBlackPawns_);
-        bbBlackPieces_.mergeIn(bbBlackKnights_);
-        bbBlackPieces_.mergeIn(bbBlackBishops_);
-        bbBlackPieces_.mergeIn(bbBlackRooks_);
-        bbBlackPieces_.mergeIn(bbBlackQueens_);
-        bbBlackPieces_.mergeIn(bbBlackKing_);
-
-        // Recompute all pieces
-        bbAllPieces_.clear();
-        bbAllPieces_.mergeIn(bbWhitePieces_);
-        bbAllPieces_.mergeIn(bbBlackPieces_);
-    }
-
-    // Get a given piece type's bitboard.
-    constexpr Bitboard& pieceToBitboard(PieceType type, Color color) {
-        const bool isWhite = color == Color::White;
-        switch(type) {
-            case PieceType::Pawn: return isWhite ? bbWhitePawns_ : bbBlackPawns_;
-            case PieceType::Knight: return isWhite ? bbWhiteKnights_ : bbBlackKnights_;
-            case PieceType::Bishop: return isWhite ? bbWhiteBishops_ : bbBlackBishops_;
-            case PieceType::Rook: return isWhite ? bbWhiteRooks_ : bbBlackRooks_;
-            case PieceType::Queen: return isWhite ? bbWhiteQueens_ : bbBlackQueens_;
-            case PieceType::King: return isWhite ? bbWhiteKing_ : bbBlackKing_;
-            case PieceType::None: throw std::runtime_error("Bitboard does not exist.");
-        }
-    }
-
-    // Get a given piece's bitboard.
-    constexpr Bitboard& pieceToBitboard(Piece piece) {
-        const bool isWhite = piece.color() == Color::White;
-        const PieceType pieceType = piece.type();
-        switch(pieceType) {
-            case PieceType::Pawn: return isWhite ? bbWhitePawns_ : bbBlackPawns_;
-            case PieceType::Knight: return isWhite ? bbWhiteKnights_ : bbBlackKnights_;
-            case PieceType::Bishop: return isWhite ? bbWhiteBishops_ : bbBlackBishops_;
-            case PieceType::Rook: return isWhite ? bbWhiteRooks_ : bbBlackRooks_;
-            case PieceType::Queen: return isWhite ? bbWhiteQueens_ : bbBlackQueens_;
-            case PieceType::King: return isWhite ? bbWhiteKing_ : bbBlackKing_;
-            case PieceType::None: throw std::runtime_error("Bitboard does not exist for piece: " + piece.to_string_long());
-        }
-    }
+    void initAttackBitboards_();
 
     // Set bitboard based on given piece.
-    void setBitboardForPiece(int square, Piece piece) {
+    void setBitboardForPiece_(int square, Piece piece) {
         Bitboard& bitboard = pieceToBitboard(piece);
         bitboard.setSquare(square);
     }
 
     // Clear bitboard based on given piece.
-    constexpr void clearBitboardForPiece(int square, Piece piece) {
+    constexpr void clearBitboardForPiece_(int square, Piece piece) {
         Bitboard& bitboard = pieceToBitboard(piece);
         bitboard.clearSquare(square);
     }

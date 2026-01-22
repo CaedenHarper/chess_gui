@@ -175,6 +175,7 @@ Game::Game()
     whiteKingSquare_{0},
     blackKingSquare_{0},
     currentEnPassantSquare_{UndoInfo::noEnPassant} {
+    initAttackBitboards_(); // any new game should init the attack bitboards
 }
 
 Color Game::currentTurn() const {
@@ -277,7 +278,7 @@ void Game::loadFEN(const std::string& FEN) {
 
             // we have a valid piece, add it and update index
             board_.at(piecePlacementIndex) = newPiece;
-            setBitboardForPiece(piecePlacementIndex, newPiece);
+            setBitboardForPiece_(piecePlacementIndex, newPiece);
 
             // if its a king, we update our knowledge of the king's location
             if(newPiece.type() == PieceType::King) {
@@ -422,6 +423,102 @@ Piece Game::pieceAtSquareForGui(int square) const noexcept {
     return {}; // empty
 }
 
+// This is slow, but that's okay because its only ran once per Game instance.
+void Game::initAttackBitboards_() {
+    for (int square = 0; square < Game::NUM_SQUARES; square++) {
+        const int col = Game::getCol(square);
+        const int row = Game::getRow(square);
+
+        // Knight attacks
+        Bitboard knightMoves{0};
+        for (int i = 0; i < 8; ++i) {
+            const int curCol = col + Game::knightDeltas[i][0];
+            const int curRow = row + Game::knightDeltas[i][1];
+            if (Game::onBoard(curCol, curRow)) {
+                knightMoves.setSquare(Game::getSquareIndex(curCol, curRow));
+            }
+        }
+        attackBitboards_.knightAttacks[square] = knightMoves;
+
+        // King attacks
+        Bitboard kingMoves{0};
+        for (int i = 0; i < 8; ++i) {
+            const int curCol = col + Game::kingDeltas[i][0];
+            const int curRow = row + Game::kingDeltas[i][1];
+            if (Game::onBoard(curCol, curRow)) {
+                kingMoves.setSquare(Game::getSquareIndex(curCol, curRow));
+            }
+        }
+        attackBitboards_.kingAttacks[square] = kingMoves;
+
+        // Pawn FROM
+        Bitboard whitePawnMoves{0};
+        if (Game::onBoard(col - 1, row - 1)) {
+            whitePawnMoves.setBit(Bitboard::bit(Game::getSquareIndex(col - 1, row - 1)));
+        }
+        if (Game::onBoard(col + 1, row - 1)) {
+            whitePawnMoves.setBit(Bitboard::bit(Game::getSquareIndex(col + 1, row - 1)));
+        }
+        attackBitboards_.whitePawnAttacks[square] = whitePawnMoves;
+
+        Bitboard blackPawnMoves{0};
+        if (Game::onBoard(col - 1, row + 1)) {
+            blackPawnMoves.setBit(Bitboard::bit(Game::getSquareIndex(col - 1, row + 1)));
+        }
+        if (Game::onBoard(col + 1, row + 1)) {
+            blackPawnMoves.setBit(Bitboard::bit(Game::getSquareIndex(col + 1, row + 1)));
+        }
+        attackBitboards_.blackPawnAttacks[square] = blackPawnMoves;
+
+    // Sliding attack helper function; this is slower, but it's only called once per game so it's okay
+    // Note also this does not take blocking pieces into account
+    const auto rayHits = [&](int dRow, int dCol) -> Bitboard {
+        Bitboard attacks{0};
+
+        int curRow = row + dRow;
+        int curCol = col + dCol;
+        while (onBoard(curCol, curRow)) {
+            const int curSquare = getSquareIndex(curCol, curRow);
+
+            attacks.setSquare(curSquare);
+            
+            // this direction is not blocked, continue
+            curRow += dRow;
+            curCol += dCol;
+        }
+
+        return attacks;
+    };
+
+    // 4. orthogonal rays: rook and queen
+    const Bitboard south = rayHits(+1, 0);
+    attackBitboards_.rookAttacks[square].mergeIn(south);
+    attackBitboards_.queenAttacks[square].mergeIn(south);
+    const Bitboard north = rayHits(-1, 0);
+    attackBitboards_.rookAttacks[square].mergeIn(north);
+    attackBitboards_.queenAttacks[square].mergeIn(north);
+    const Bitboard east = rayHits(0, +1);
+    attackBitboards_.rookAttacks[square].mergeIn(east);
+    attackBitboards_.queenAttacks[square].mergeIn(east);
+    const Bitboard west = rayHits(0, -1);
+    attackBitboards_.rookAttacks[square].mergeIn(west);
+    attackBitboards_.queenAttacks[square].mergeIn(west);
+
+    // 5. diagonal rays: bishop and queen
+    const Bitboard southEast = rayHits(+1, +1);
+    attackBitboards_.bishopAttacks[square].mergeIn(southEast);
+    attackBitboards_.queenAttacks[square].mergeIn(southEast);
+    const Bitboard southWest = rayHits(+1, -1);
+    attackBitboards_.bishopAttacks[square].mergeIn(southWest);
+    attackBitboards_.queenAttacks[square].mergeIn(southWest);
+    const Bitboard northEast = rayHits(-1, +1);
+    attackBitboards_.bishopAttacks[square].mergeIn(northEast);
+    attackBitboards_.queenAttacks[square].mergeIn(northEast);
+    const Bitboard northWest = rayHits(-1, -1);
+    attackBitboards_.bishopAttacks[square].mergeIn(northWest);
+    attackBitboards_.queenAttacks[square].mergeIn(northWest);
+    }
+}
 
 std::optional<Move> Game::parseLongNotation_(const std::string& sourceMove, const std::string& targetMove) const {
     // TODO: implement pawn promotion eventually
@@ -1299,11 +1396,11 @@ bool Game::isSquareAttacked(const int targetSquare, const Color attackingColor) 
 
 bool Game::isInCheck(const Color& colorToFind) const {
     // TODO: this throws no king on both sides
-    const int kingSquare = findKingSquare(colorToFind).value();
+    const int kingSquare = findKingSquare(colorToFind);
     return isSquareAttacked(kingSquare, oppositeColor(colorToFind));
 }
 
-std::optional<int> Game::findKingSquare(const Color& colorToFind) const {
+int Game::findKingSquare(const Color& colorToFind) const {
     return colorToFind == Color::White ? whiteKingSquare_ : blackKingSquare_;
 }
 
