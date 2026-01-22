@@ -258,8 +258,7 @@ void Game::loadFEN(const std::string& FEN) {
                 // Numbers indicate n empty squares
                 const int numberEmptySquares = c-'0';
                 for(int i = 0; i < numberEmptySquares; i++) {
-                    const Piece emptySquare = Piece{};
-                    board_.at(piecePlacementIndex) = emptySquare;
+                    board_.at(piecePlacementIndex) = Piece{};
                     piecePlacementIndex++;
                 }
                 continue;
@@ -278,6 +277,8 @@ void Game::loadFEN(const std::string& FEN) {
 
             // we have a valid piece, add it and update index
             board_.at(piecePlacementIndex) = newPiece;
+            setBitboardForPiece(piecePlacementIndex, newPiece);
+
             // if its a king, we update our knowledge of the king's location
             if(newPiece.type() == PieceType::King) {
                 if(newPiece.color() == Color::White) {
@@ -375,6 +376,52 @@ UndoInfo Game::getUndoInfo(const Piece capturedPiece) const {
         static_cast<uint8_t>(blackKingSquare_),
     };
 }
+
+Piece Game::pieceAtSquareForGui(int square) const noexcept {
+    const uint64_t squareBit = Bitboard::bit(square);
+
+    // Uses syntax which omits Piece{},
+    if (bbWhitePawns_.hasBit(squareBit))   {
+        return {PieceType::Pawn, Color::White};
+    }
+    if (bbWhiteKnights_.hasBit(squareBit)) {
+        return {PieceType::Knight, Color::White};
+    }
+    if (bbWhiteBishops_.hasBit(squareBit)) {
+        return {PieceType::Bishop, Color::White};
+    }
+    if (bbWhiteRooks_.hasBit(squareBit))   {
+        return {PieceType::Rook, Color::White};
+    }
+    if (bbWhiteQueens_.hasBit(squareBit))  {
+        return {PieceType::Queen, Color::White};
+    }
+    if (bbWhiteKing_.hasBit(squareBit))    {
+        return {PieceType::King, Color::White};
+    }
+
+    if (bbBlackPawns_.hasBit(squareBit))   {
+        return {PieceType::Pawn, Color::Black};
+    }
+    if (bbBlackKnights_.hasBit(squareBit)) {
+        return {PieceType::Knight, Color::Black};
+    }
+    if (bbBlackBishops_.hasBit(squareBit)) {
+        return {PieceType::Bishop, Color::Black};
+    }
+    if (bbBlackRooks_.hasBit(squareBit))   {
+        return {PieceType::Rook, Color::Black};
+    }
+    if (bbBlackQueens_.hasBit(squareBit))  {
+        return {PieceType::Queen, Color::Black};
+    }
+    if (bbBlackKing_.hasBit(squareBit))    {
+        return {PieceType::King, Color::Black};
+    }
+
+    return {}; // empty
+}
+
 
 std::optional<Move> Game::parseLongNotation_(const std::string& sourceMove, const std::string& targetMove) const {
     // TODO: implement pawn promotion eventually
@@ -881,6 +928,9 @@ void Game::makeMove(const Move& move) {
     // remove en passant (we may set it again later in this function)
     currentEnPassantSquare_ = UndoInfo::noEnPassant;
 
+    // source piece's bitboard
+    Bitboard& sourceBitboard = pieceToBitboard(sourcePiece);
+
     // update castling flags
     if(
         move.sourceSquare() == WHITE_KING_STARTING_SQUARE || move.sourceSquare() == WHITE_KINGSIDE_ROOK_STARTING_SQUARE || // moving white kingside pieces
@@ -911,7 +961,7 @@ void Game::makeMove(const Move& move) {
     if(move.isDoublePawn()) {
         const int sourceRow = getRow(move.sourceSquare());
         const int towardsCenter = isSourcePieceWhite ? -1 : +1;
-        const int passedRow = sourceRow + towardsCenter; // row that was passed in the double move
+        const int passedRow = sourceRow + towardsCenter; // row that was passed in the double move  
         currentEnPassantSquare_ = getSquareIndex(getCol(move.sourceSquare()), passedRow); 
     }
 
@@ -919,32 +969,74 @@ void Game::makeMove(const Move& move) {
     if (move.isEnPassant()) {
         const int towardsCenter = isSourcePieceWhite ? -1 : +1;
         const int capturedIndex = move.targetSquare() - (towardsCenter * 8);
-        board_[capturedIndex] = Piece{};
-    }
 
-    // handle pawn promotion
-    if(move.isPromotion()) {
-        board_[move.targetSquare()] = Piece{Move::promotionToPieceType(move.promotion()), sourcePiece.color()};
-        board_[move.sourceSquare()] = Piece{};
-        return;
+        // clear captured pawn's bitboard placement
+        Bitboard& bbTargetPawns = pieceToBitboard(PieceType::Pawn, oppositeColor(sourcePiece.color()));
+        bbTargetPawns.clearSquare(capturedIndex);
+
+        // clear captured pawn from board
+        board_[capturedIndex] = Piece{};
     }
 
     // If king side castle, also move the rook
     if(move.isKingSideCastle()) {
-        const int KINGSIDE_PASSING_SQUARE = isSourcePieceWhite ? WHITE_KINGSIDE_PASSING_SQUARE : BLACK_KINGSIDE_PASSING_SQUARE;
-        const int KINGSIDE_ROOK_SQUARE = isSourcePieceWhite ? WHITE_KINGSIDE_ROOK_STARTING_SQUARE : BLACK_KINGSIDE_ROOK_STARTING_SQUARE;
+        const int kingsidePassingSquare = isSourcePieceWhite ? WHITE_KINGSIDE_PASSING_SQUARE : BLACK_KINGSIDE_PASSING_SQUARE;
+        const int kingsideRookSquare = isSourcePieceWhite ? WHITE_KINGSIDE_ROOK_STARTING_SQUARE : BLACK_KINGSIDE_ROOK_STARTING_SQUARE;
+
+        // set kingside rook's new position in bitboard and clear old position
+        Bitboard& bbSourceRooks = pieceToBitboard(PieceType::Rook, sourcePiece.color());
+        bbSourceRooks.setSquare(kingsidePassingSquare);
+        bbSourceRooks.clearSquare(kingsideRookSquare);
+
         // also move rook
-        board_[KINGSIDE_PASSING_SQUARE] = Piece{PieceType::Rook, sourcePiece.color()};
-        board_[KINGSIDE_ROOK_SQUARE] = Piece{};
+        board_[kingsidePassingSquare] = Piece{PieceType::Rook, sourcePiece.color()};
+        board_[kingsideRookSquare] = Piece{};
     }
 
     // If queen side castle, also move the queen
     if(move.isQueenSideCastle()) {
-        const int QUEENSIDE_PASSING_SQUARE = isSourcePieceWhite ? WHITE_QUEENSIDE_PASSING_SQUARE : BLACK_QUEENSIDE_PASSING_SQUARE;
-        const int QUEENSIDE_ROOK_SQUARE = isSourcePieceWhite ? WHITE_QUEENSIDE_ROOK_STARTING_SQUARE : BLACK_QUEENSIDE_ROOK_STARTING_SQUARE;
+        const int queensidePassingSquare = isSourcePieceWhite ? WHITE_QUEENSIDE_PASSING_SQUARE : BLACK_QUEENSIDE_PASSING_SQUARE;
+        const int queensideRookSquare = isSourcePieceWhite ? WHITE_QUEENSIDE_ROOK_STARTING_SQUARE : BLACK_QUEENSIDE_ROOK_STARTING_SQUARE;
+
+        // set kingside rook's new position in bitboard and clear old position
+        Bitboard& bbSourceRooks = pieceToBitboard(PieceType::Rook, sourcePiece.color());
+        bbSourceRooks.setSquare(queensidePassingSquare);
+        bbSourceRooks.clearSquare(queensideRookSquare);
+
         // also move rook
-        board_[QUEENSIDE_PASSING_SQUARE] = Piece{PieceType::Rook, sourcePiece.color()};
-        board_[QUEENSIDE_ROOK_SQUARE] = Piece{};
+        board_[queensidePassingSquare] = Piece{PieceType::Rook, sourcePiece.color()};
+        board_[queensideRookSquare] = Piece{};;
+    }
+
+    // handle pawn promotion; different enough we need to return early
+    if(move.isPromotion()) {
+        const PieceType promotionType = Move::promotionToPieceType(move.promotion());
+
+        // update promotion bitboard
+        // remove pawn from pawn bitboard
+        sourceBitboard.clearSquare(move.sourceSquare());
+        // add promoted piece to promoted piece bitboard
+        pieceToBitboard(promotionType, sourcePiece.color()).setSquare(move.targetSquare());
+
+        if(move.isCapture()) {
+            // remove captured piece from board
+            Bitboard& targetBitboard = pieceToBitboard(board_[move.targetSquare()]);
+            targetBitboard.clearSquare(move.targetSquare());
+        }
+
+        board_[move.targetSquare()] = Piece{promotionType, sourcePiece.color()};
+        board_[move.sourceSquare()] = Piece{};
+        return;
+    }
+
+    // update bitboard
+    sourceBitboard.clearSquare(move.sourceSquare());
+    sourceBitboard.setSquare(move.targetSquare());
+
+    // handle capture
+    if(move.isCapture() && !move.isEnPassant()) {
+        Bitboard& targetBitboard = pieceToBitboard(board_[move.targetSquare()]);
+        targetBitboard.clearSquare(move.targetSquare());
     }
 
     board_[move.targetSquare()] = sourcePiece;
@@ -967,10 +1059,18 @@ void Game::undoMove(const Move& move, const UndoInfo& undoInfo) {
     // flip current turn
     currentTurn_ = oppositeColor(currentTurn_);
 
+    // source piece's bitboard
+    Bitboard& sourceBitboard = pieceToBitboard(sourcePiece);
+
     // handle king side castle
     if(move.isKingSideCastle()) {
         const int kingsidePassingSquare = isSourcePieceWhite ? WHITE_KINGSIDE_PASSING_SQUARE : BLACK_KINGSIDE_PASSING_SQUARE;
         const int kingsideRookSquare = isSourcePieceWhite ? WHITE_KINGSIDE_ROOK_STARTING_SQUARE : BLACK_KINGSIDE_ROOK_STARTING_SQUARE;
+
+        Bitboard& bbSourceRooks = pieceToBitboard(PieceType::Rook, sourcePiece.color());
+        bbSourceRooks.clearSquare(kingsidePassingSquare);
+        bbSourceRooks.setSquare(kingsideRookSquare);
+
         // undo rook move
         board_[kingsidePassingSquare] = Piece{};
         board_[kingsideRookSquare] = Piece{PieceType::Rook, sourcePiece.color()};
@@ -980,6 +1080,11 @@ void Game::undoMove(const Move& move, const UndoInfo& undoInfo) {
     if(move.isQueenSideCastle()) {
         const int queensidePassingSquare = isSourcePieceWhite ? WHITE_QUEENSIDE_PASSING_SQUARE : BLACK_QUEENSIDE_PASSING_SQUARE;
         const int queensideRookSquare = isSourcePieceWhite ? WHITE_QUEENSIDE_ROOK_STARTING_SQUARE : BLACK_QUEENSIDE_ROOK_STARTING_SQUARE;
+
+        Bitboard& bbSourceRooks = pieceToBitboard(PieceType::Rook, sourcePiece.color());
+        bbSourceRooks.clearSquare(queensidePassingSquare);
+        bbSourceRooks.setSquare(queensideRookSquare);
+
         // undo rook move
         board_[queensidePassingSquare] = Piece{};
         board_[queensideRookSquare] = Piece{PieceType::Rook, sourcePiece.color()};
@@ -989,16 +1094,43 @@ void Game::undoMove(const Move& move, const UndoInfo& undoInfo) {
     if(move.isEnPassant()) {
         const int towardsCenter = isSourcePieceWhite ? -1 : +1;
         const int capturedIndex = move.targetSquare() - (towardsCenter * 8);
+
+        // reset captured pawn's bitboard placement
+        Bitboard& bbEnemyPawns = pieceToBitboard(PieceType::Pawn, oppositeColor(sourcePiece.color()));
+        bbEnemyPawns.setSquare(capturedIndex);
+
         // replace captured pawn
         board_[capturedIndex] = Piece{PieceType::Pawn, oppositeColor(sourcePiece.color())};
     }
 
-    // handle promotion
+    // handle promotion; different enough that we need to return early
     if(move.isPromotion()) {
+        // update promotion bitboard
+        // re-add pawn to pawn bitboard
+        pieceToBitboard(PieceType::Pawn, sourcePiece.color()).clearSquare(move.sourceSquare());
+        // remove promoted piece from promoted piece bitboard
+        sourceBitboard.clearSquare(move.targetSquare());
+
+        if(move.isCapture()) {
+            // re add captured piece to board
+            Bitboard& capturedBitboard = pieceToBitboard(undoInfo.capturedPiece);
+            capturedBitboard.setSquare(move.targetSquare());
+        }
+
         // 'sourcePiece' is now a promoted piece instead of a pawn; we correct that
         board_[move.sourceSquare()] = Piece{PieceType::Pawn, sourcePiece.color()};
         board_[move.targetSquare()] = undoInfo.capturedPiece;
         return;
+    }
+
+    // update bitboard
+    sourceBitboard.setSquare(move.sourceSquare());
+    sourceBitboard.clearSquare(move.targetSquare());
+
+    // handle capture
+    if(move.isCapture() && !move.isEnPassant()) {
+        Bitboard& capturedBitboard = pieceToBitboard(undoInfo.capturedPiece);
+        capturedBitboard.setSquare(move.targetSquare());
     }
 
     // undo the general move

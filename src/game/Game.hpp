@@ -1,14 +1,18 @@
 #pragma once
 
 #include <array>
+#include <cassert>
 #include <optional>
+#include <stdexcept>
 #include <string>
+
+#include "Bitboard.hpp"
 
 // Colors a piece can have. None represents an empty square.
 enum class Color : uint8_t  {
     None,
     White,
-    Black // 11
+    Black
 };
 
 // Types a piece can have. None represents an empty square.
@@ -19,7 +23,7 @@ enum class PieceType: uint8_t  {
     Bishop,
     Rook,
     Queen,
-    King // 110
+    King
 };
 
 // A chess piece, with a piece type and color. Stored in uint8_t as (PieceType | Color).
@@ -305,7 +309,8 @@ public:
     bool isFinished();
     // Get flags in the form of UndoInfo.
     UndoInfo getUndoInfo(Piece capturedPiece) const;
-
+    // Get piece at a square for the GUI. Note this method is relatively slow and should not be used in hot loops.
+    Piece pieceAtSquareForGui(int square) const noexcept;
     // Try a move and return if the move was made. The move is only made if it is legal.
     bool tryMove(const Move& move);
     // Make a move, even if it is not legal.
@@ -365,6 +370,25 @@ public:
         return (color == Color::White) ? Color::Black : Color::White;
     }
 
+    // Get the nth bitboard, 0-5 -> white, 6-11 -> black
+    constexpr Bitboard getBitboard(int n) noexcept {
+        switch(n) {
+            case 0: return bbWhitePawns_;
+            case 1: return bbWhiteKnights_;
+            case 2: return bbWhiteBishops_;
+            case 3: return bbWhiteRooks_;
+            case 4: return bbWhiteQueens_;
+            case 5: return bbWhiteKing_;
+            case 6: return bbBlackPawns_;
+            case 7: return bbBlackKnights_;
+            case 8: return bbBlackBishops_;
+            case 9: return bbBlackRooks_;
+            case 10: return bbBlackQueens_;
+            case 11: return bbBlackKing_;
+            default: return Bitboard{0};
+        }
+    }
+
 private:
     // The game's board of pieces.
     std::array<Piece, NUM_SQUARES> board_;
@@ -381,6 +405,96 @@ private:
     // TODO: extract en passant to its own class
     // Current en passant square. Is UndoInfo sentinal if no en passant.
     int currentEnPassantSquare_;
+
+    // Bitboards to keep state
+    // White
+    Bitboard bbWhitePawns_;
+    Bitboard bbWhiteKnights_;
+    Bitboard bbWhiteBishops_;
+    Bitboard bbWhiteRooks_;
+    Bitboard bbWhiteQueens_;
+    Bitboard bbWhiteKing_;
+
+    // Black
+    Bitboard bbBlackPawns_;
+    Bitboard bbBlackKnights_;
+    Bitboard bbBlackBishops_;
+    Bitboard bbBlackRooks_;
+    Bitboard bbBlackQueens_;
+    Bitboard bbBlackKing_;
+
+    // Occupancy
+    Bitboard bbWhitePieces_;
+    Bitboard bbBlackPieces_;
+    Bitboard bbAllPieces_;
+
+    // recompute the occupancy bbWhitePieces, bbBlackPieces, bbAllPieces
+    constexpr void recomputeOccupancy_() noexcept {
+        // Recompute white pieces
+        bbWhitePieces_.clear();
+        bbWhitePieces_.mergeIn(bbWhitePawns_);
+        bbWhitePieces_.mergeIn(bbWhiteKnights_);
+        bbWhitePieces_.mergeIn(bbWhiteBishops_);
+        bbWhitePieces_.mergeIn(bbWhiteRooks_);
+        bbWhitePieces_.mergeIn(bbWhiteQueens_);
+        bbWhitePieces_.mergeIn(bbWhiteKing_);
+
+        // Recompute black pieces
+        bbBlackPieces_.clear();
+        bbBlackPieces_.mergeIn(bbBlackPawns_);
+        bbBlackPieces_.mergeIn(bbBlackKnights_);
+        bbBlackPieces_.mergeIn(bbBlackBishops_);
+        bbBlackPieces_.mergeIn(bbBlackRooks_);
+        bbBlackPieces_.mergeIn(bbBlackQueens_);
+        bbBlackPieces_.mergeIn(bbBlackKing_);
+
+        // Recompute all pieces
+        bbAllPieces_.clear();
+        bbAllPieces_.mergeIn(bbWhitePieces_);
+        bbAllPieces_.mergeIn(bbBlackPieces_);
+    }
+
+    // Get a given piece type's bitboard.
+    constexpr Bitboard& pieceToBitboard(PieceType type, Color color) {
+        const bool isWhite = color == Color::White;
+        switch(type) {
+            case PieceType::Pawn: return isWhite ? bbWhitePawns_ : bbBlackPawns_;
+            case PieceType::Knight: return isWhite ? bbWhiteKnights_ : bbBlackKnights_;
+            case PieceType::Bishop: return isWhite ? bbWhiteBishops_ : bbBlackBishops_;
+            case PieceType::Rook: return isWhite ? bbWhiteRooks_ : bbBlackRooks_;
+            case PieceType::Queen: return isWhite ? bbWhiteQueens_ : bbBlackQueens_;
+            case PieceType::King: return isWhite ? bbWhiteKing_ : bbBlackKing_;
+            case PieceType::None: throw std::runtime_error("Bitboard does not exist.");
+        }
+    }
+
+    // Get a given piece's bitboard.
+    constexpr Bitboard& pieceToBitboard(Piece piece) {
+        const bool isWhite = piece.color() == Color::White;
+        const PieceType pieceType = piece.type();
+        switch(pieceType) {
+            case PieceType::Pawn: return isWhite ? bbWhitePawns_ : bbBlackPawns_;
+            case PieceType::Knight: return isWhite ? bbWhiteKnights_ : bbBlackKnights_;
+            case PieceType::Bishop: return isWhite ? bbWhiteBishops_ : bbBlackBishops_;
+            case PieceType::Rook: return isWhite ? bbWhiteRooks_ : bbBlackRooks_;
+            case PieceType::Queen: return isWhite ? bbWhiteQueens_ : bbBlackQueens_;
+            case PieceType::King: return isWhite ? bbWhiteKing_ : bbBlackKing_;
+            case PieceType::None: throw std::runtime_error("Bitboard does not exist for piece: " + piece.to_string_long());
+        }
+    }
+
+    // Set bitboard based on given piece.
+    void setBitboardForPiece(int square, Piece piece) {
+        Bitboard& bitboard = pieceToBitboard(piece);
+        bitboard.setSquare(square);
+    }
+
+    // Clear bitboard based on given piece.
+    constexpr void clearBitboardForPiece(int square, Piece piece) {
+        Bitboard& bitboard = pieceToBitboard(piece);
+        bitboard.clearSquare(square);
+    }
+
     // Attempt to parse long notation (e.g., "g1 f3") to a move.
     std::optional<Move> parseLongNotation_(const std::string& sourceMove, const std::string& targetMove) const;
     // Attempt to parse algebraic notation (e.g., "Nf3") to a move.

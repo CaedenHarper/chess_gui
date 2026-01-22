@@ -196,8 +196,7 @@ void Board::clearAllHighlights(const Highlight highlight) {
 
 void Board::updateBoardFromGame(const Game& game) {
     // TODO: consider making more performant by checking equality before updating for each piece
-    int squareIndex = 0;
-    for(const Piece& piece : game.board()) {
+    for(int squareIndex = 0; squareIndex < Game::NUM_SQUARES; squareIndex++) {
         const int row = Game::getRow(squareIndex);
         const int col = Game::getCol(squareIndex);
 
@@ -205,12 +204,12 @@ void Board::updateBoardFromGame(const Game& game) {
         const float yPos = SQUARE_WIDTH * row;
 
         Square& square = board_.at(squareIndex);
+        // const Piece piece = game.pieceAtSquareForGui(squareIndex);
+        const Piece piece = game.board()[squareIndex];
         square.pieceSprite() = PieceSprite{piece};
         // fit to center of square
         square.pieceSprite().centerOrigin();
         square.pieceSprite().fitToSquare(SQUARE_WIDTH * 0.97F);
         square.pieceSprite().updateSpritePosition(xPos + (SQUARE_WIDTH / 2.F), yPos + (SQUARE_HEIGHT / 2.F));
-
-        squareIndex++;
     }
 }

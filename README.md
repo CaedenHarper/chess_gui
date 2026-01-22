@@ -48,3 +48,6 @@ ctest --test-dir build-debug --verbose    # debug
 - Look into any more functions we can constexpr
 - Ensure in loadFEN that both kings exist
 - Create 'en passant square' class
+- Move different classes from Game into different files
+- Look into migrating as many int types to their smallest representation as possible (e.g., uint8_t), and reducing static_cast<>'s
+- Look into noexcept, it may not help performance, but probably doesn't hurt to re-implement after testing bitboards
