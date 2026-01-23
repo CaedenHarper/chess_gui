@@ -2,7 +2,6 @@
 
 #include <array>
 #include <cassert>
-#include <optional>
 #include <stdexcept>
 #include <string>
 
@@ -105,22 +104,16 @@ struct UndoInfo {
     CastlingRights prevCastlingRights;
     uint8_t prevEnPassantSquare;
     Piece capturedPiece;
-    uint8_t prevWhiteKingSquare;
-    uint8_t prevBlackKingSquare;
 
     static constexpr uint8_t noEnPassant = 255;
 
     constexpr UndoInfo(CastlingRights castlingRights,
                        uint8_t enPassantSquare,
-                       Piece capturedPiece_,
-                       uint8_t whiteKingSquare,
-                       uint8_t blackKingSquare) noexcept
+                       Piece capturedPiece_) noexcept
         : prevCastlingRights{castlingRights},
           prevEnPassantSquare{enPassantSquare},
-          capturedPiece{capturedPiece_},
-          prevWhiteKingSquare{whiteKingSquare},
-          prevBlackKingSquare{blackKingSquare} {}
-} __attribute__((aligned(8)));
+          capturedPiece{capturedPiece_} {}
+} __attribute__((aligned(4))); // align to 4 bytes
 
 enum class MoveFlag : uint8_t {
     Normal,  // no special flags
@@ -336,8 +329,6 @@ public:
     void generateAllPseudoLegalMoves(MoveList& out);
     // Generate all legal moves using the given current color.
     void generateAllLegalMoves(MoveList& out);
-    // Attempt to parse arbitrary notation (e.g., "g1 f3" or "Nf3") to a move.
-    std::optional<Move> parseMove(const std::string& move) const;
 
     // If the given color is in check.
     bool isInCheck(const Color& colorToFind) const;
@@ -385,6 +376,14 @@ public:
         return attackBitboards_;
     }
 
+    constexpr Bitboard& colorToOccupancyBitboard(Color color) noexcept {
+        switch(color) {
+            case Color::White: return bbWhitePieces_;
+            case Color::Black: return bbBlackPieces_;
+            case Color::None: return bbAllPieces_; // this overload may not be appropriate here
+        }
+    }
+    
     constexpr std::array<Bitboard, 64> pieceToAttackBitboard(Piece piece) const noexcept {
         const bool isWhite = piece.color() == Color::White;
         switch(piece.type()) {
@@ -428,17 +427,11 @@ public:
     }
 
 private:
-    // The game's board of pieces.
-    std::array<Piece, NUM_SQUARES> board_;
     // The game's current turn.
     Color currentTurn_;
 
     // Castling flags.
     CastlingRights castlingRights_;
-
-    // Keep track of current king positions. We assume they're on the board at all times (unknown behavior / crash if assumption is broken).
-    int whiteKingSquare_;
-    int blackKingSquare_;
     
     // TODO: extract en passant to its own class
     // Current en passant square. Is UndoInfo sentinal if no en passant.
@@ -461,26 +454,14 @@ private:
     Bitboard bbBlackQueens_;
     Bitboard bbBlackKing_;
 
+    // Occupancy
+    Bitboard bbWhitePieces_;
+    Bitboard bbBlackPieces_;
+    Bitboard bbAllPieces_;
+
     AttackBitboards attackBitboards_;
 
     void initAttackBitboards_();
-
-    // Set bitboard based on given piece.
-    void setBitboardForPiece_(int square, Piece piece) {
-        Bitboard& bitboard = pieceToBitboard(piece);
-        bitboard.setSquare(square);
-    }
-
-    // Clear bitboard based on given piece.
-    constexpr void clearBitboardForPiece_(int square, Piece piece) {
-        Bitboard& bitboard = pieceToBitboard(piece);
-        bitboard.clearSquare(square);
-    }
-
-    // Attempt to parse long notation (e.g., "g1 f3") to a move.
-    std::optional<Move> parseLongNotation_(const std::string& sourceMove, const std::string& targetMove) const;
-    // Attempt to parse algebraic notation (e.g., "Nf3") to a move.
-    std::optional<Move> parseAlgebraicNotation_(const std::string& move) const;
 
     // Add move and all pawn promotion variants to moves. If move is not a pawn promotion, just add move by itself.
     static void addAllPawnPromotionsToMoves_(MoveList& moves, int sourceSquare, int targetSquare, Piece sourcePiece, bool isCapture);

@@ -51,3 +51,4 @@ ctest --test-dir build-debug --verbose    # debug
 - Move different classes from Game into different files
 - Look into migrating as many int types to their smallest representation as possible (e.g., uint8_t), and reducing static_cast<>'s
 - Look into noexcept, it may not help performance, but probably doesn't hurt to re-implement after testing bitboards
+- Consider splitting makeMove and undoMove into dispatch functions based on move type (e.g., makeMoveCastle_); they are a bit complex and hard to debug as of right now
