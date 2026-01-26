@@ -1,8 +1,9 @@
+#include <corecrt_wstring.h>
 #include <iostream>
-#include <optional>
 #include <string>
 
 #include "Game.hpp"
+#include "Bitboard.hpp"
 
 PieceType Piece::charToPieceType(const char piece) {
     if(piece == 'P' || piece == 'p') {
@@ -134,8 +135,8 @@ Move Move::fromPieces(int sourceSquare, int targetSquare, Piece sourcePiece, Pie
 
 std::string Move::to_string(const Game& game) const {
     return ( 
-        game.board()[sourceSquare()].to_string_long() + " on " + Game::intToAlgebraicNotation(sourceSquare()) + " to " +
-        game.board()[targetSquare()].to_string_long() + " on " + Game::intToAlgebraicNotation(targetSquare())
+        game.mailbox()[sourceSquare()].to_string_long() + " on " + Game::intToAlgebraicNotation(sourceSquare()) + " to " +
+        game.mailbox()[targetSquare()].to_string_long() + " on " + Game::intToAlgebraicNotation(targetSquare())
     );
 }
 
@@ -180,51 +181,50 @@ Color Game::currentTurn() const {
     return currentTurn_;
 }
 
-// TODO: move to a CLI class
-// std::string Game::to_string() const {
-//     /*
-//     Print in format:
-//     +---------------+
-//     8 |r|n|b|k|q|b|n|r|
-//     7 |p|p|p|p|p|p|p|p|
-//     6 | |#| |#| |#| |#|
-//     5 |#| |#| |#| |#| |
-//     4 | |#| |#| |#| |#|
-//     3 |#| |#| |#| |#| |
-//     2 |P|P|P|P|P|P|P|P|
-//     1 |R|N|B|K|Q|B|N|R|
-//     +---------------+
-//     a b c d e f g h
-//     */
-//     // starting border
-//     std::string out = "  +---------------+\n";
+std::string Game::to_string() const {
+    /*
+    Print in format:
+    +---------------+
+    8 |r|n|b|k|q|b|n|r|
+    7 |p|p|p|p|p|p|p|p|
+    6 | |#| |#| |#| |#|
+    5 |#| |#| |#| |#| |
+    4 | |#| |#| |#| |#|
+    3 |#| |#| |#| |#| |
+    2 |P|P|P|P|P|P|P|P|
+    1 |R|N|B|K|Q|B|N|R|
+    +---------------+
+    a b c d e f g h
+    */
+    // starting border
+    std::string out = "  +---------------+\n";
 
-//     int squareIndex = 0;
-//     for (const auto& piece : board_) {
-//         // print line start if at start of row
-//         if(getCol(squareIndex) == 0) {
-//             out += std::to_string(8 - getRow(squareIndex)) + " |";
-//         }
+    int squareIndex = 0;
+    for (const auto& piece : mailbox_) {
+        // print line start if at start of row
+        if(getCol(squareIndex) == 0) {
+            out += std::to_string(8 - getRow(squareIndex)) + " |";
+        }
     
-//         if(piece.exists()) {
-//             out += piece.to_string_short() + "|";
-//         } else {
-//             // if piece is none, print square color
-//             // square color is white if the col polarity matches row polarity
-//             out += getCol(squareIndex) % 2 == getRow(squareIndex) % 2 ? " |" : "#|";
-//         }
+        if(piece.exists()) {
+            out += piece.to_string_short() + "|";
+        } else {
+            // if piece is none, print square color
+            // square color is white if the col polarity matches row polarity
+            out += getCol(squareIndex) % 2 == getRow(squareIndex) % 2 ? " |" : "#|";
+        }
 
-//         // print line ending if at end of row
-//         if(getCol(squareIndex) == 7) {
-//             out += "\n";
-//         }
+        // print line ending if at end of row
+        if(getCol(squareIndex) == 7) {
+            out += "\n";
+        }
 
-//         squareIndex++;
-//     }
+        squareIndex++;
+    }
 
-//     // print ending border
-//     return out + "  +---------------+\n   a b c d e f g h";
-// }
+    // print ending border
+    return out + "  +---------------+\n   a b c d e f g h";
+}
 
 void Game::loadFEN(const std::string& FEN) {
     /*
@@ -265,16 +265,16 @@ void Game::loadFEN(const std::string& FEN) {
             // We either have a proper piece or an invalid FEN
             const Piece newPiece = Piece::charToPiece(c);
             if(!newPiece.exists()) {
-                throw std::runtime_error("Unable to parse FEN: " + FEN + "\nInvalid char piece: " + "'" + c + "'");
+                std::cerr << "Unable to parse FEN: " << FEN << "\nInvalid char piece: " << "'" << c << "'";
             }
 
             // we have a valid piece, add it and update index
+            mailbox_.at(piecePlacementIndex) = newPiece;
             Bitboard& pieceBitboard = pieceToBitboard(newPiece);
             Bitboard& colorBitboard = colorToOccupancyBitboard(newPiece.color());
             
             pieceBitboard.setSquare(piecePlacementIndex);
             colorBitboard.setSquare(piecePlacementIndex);
-            bbAllPieces_.setSquare(piecePlacementIndex);
 
             piecePlacementIndex++;
             continue;
@@ -288,7 +288,7 @@ void Game::loadFEN(const std::string& FEN) {
                 case 'w': currentTurn_ = Color::White; break;
                 // black's turn
                 case 'b': currentTurn_ = Color::Black; break;
-                default: throw std::runtime_error("Unable to parse FEN: " + FEN + "\nInvalid current color: " + "'" + c + "'");
+                default: std::cerr << "Unable to parse FEN: " << FEN << "\nInvalid current color: " << "'" << c << "'";
             }
             continue;
         }
@@ -306,7 +306,7 @@ void Game::loadFEN(const std::string& FEN) {
                 case 'q': castlingRights_.setBlackQueenside(); break;
                 // No one can castle
                 case '-': break;
-                default: throw std::runtime_error("Unable to parse FEN: " + FEN + "\nInvalid castling char: " + "'" + c + "'");
+                default: std::cerr << "Unable to parse FEN: " << FEN << "\nInvalid castling char: " << "'" << c << "'";
             }
             continue;
         }
@@ -343,14 +343,9 @@ void Game::loadFEN(const std::string& FEN) {
 }
 
 bool Game::isFinished() {
-    std::optional<int> currentTurnKingSquare = findKingSquare(currentTurn_);
-    // king doesn't exist, so game is over
-    if(!currentTurnKingSquare) {
-        return true;
-    }
     // if no legal moves for current turn then the game is over
     MoveList legalMoves;
-    generateLegalMoves(currentTurnKingSquare.value(), legalMoves);
+    generateLegalMoves(legalMoves);
     return legalMoves.size == 0;
 }
 
@@ -505,79 +500,7 @@ void Game::initAttackBitboards_() {
     }
 }
 
-// TODO: move to CLI class
-// std::optional<Move> Game::parseLongNotation_(const std::string& sourceMove, const std::string& targetMove) const {
-//     // TODO: implement pawn promotion eventually
-//     // We assume each string has at least two characters
-//     if(sourceMove.length() < 2 || targetMove.length() < 2) {
-//         // TODO: debug statement
-//         std::cerr << "parseLongNotation: sourceS or targetS not long enough!\n";
-//         return std::nullopt;
-//     }
-
-//     const char sourceColC = sourceMove.at(0);
-//     const char sourceRowC = sourceMove.at(1);
-//     const char targetColC = targetMove.at(0);
-//     const char targetRowC = targetMove.at(1);
-
-//     const int sourceCol = sourceColC - 'a';
-//     const int sourceRow = sourceRowC - '0';
-//     const int targetCol = targetColC - 'a';
-//     const int targetRow = targetRowC - '0';
-
-//     // all files and ranks should be in range 0 - 7
-//     if(sourceCol < 0 || sourceCol > 7 
-//     || sourceRow < 0 || sourceRow > 7
-//     || targetCol < 0 || targetCol > 7 
-//     || targetRow < 0 || targetRow > 7) {
-//         // TODO: debug statement
-//         std::cerr << "parseLongNotation: one file or rank is out of bounds\n";
-//         return std::nullopt;
-//     }
-
-//     // rank 1 starts at at index 0, whereas Game handles the board starting from the top left (rank 8 being 0)
-//     // therefore, we need to reflect it across the middle of the board with (8 - rank)
-//     const int sourceSquare = getSquareIndex(sourceCol, 8 - sourceRow);
-//     const int targetSquare = getSquareIndex(targetCol, 8 - targetRow); 
-
-//     return Move::fromPieces(sourceSquare, targetSquare, board_.at(sourceSquare), board_.at(targetSquare));
-// }
-
-// std::optional<Move> Game::parseAlgebraicNotation_(const std::string& move) const { // NOLINT(readability-convert-member-functions-to-static) undo when finished
-//     std::cerr << "parseAlgebraicNotation: Not yet implemented! " << move;
-//     return std::nullopt;
-// }
-
-// std::optional<Move> Game::parseMove(const std::string& move) const {
-//     int currentPart = 0;
-//     std::string firstPart;
-//     std::string secondPart;
-//     // iterate through and split based on first part before space vs. second part. any unknown characters are ignored. any spaces after the first space are ignored.
-//     for(const char c : move) { // NOLINT(readability-identifier-length)
-//         if(c == ' ' && currentPart == 0) {
-//             currentPart = 1;
-//             continue;
-//         }
-
-//         // ignore any more spaces
-//         if(c == ' ' && currentPart > 0) {
-//             continue;
-//         }
-
-//         if(currentPart == 0) {
-//             firstPart += c;
-//             continue;
-//         }
-
-//         secondPart += c;
-//     }
-
-//     if(secondPart.empty()) {
-//         return parseAlgebraicNotation_(firstPart);
-//     }
-//     return parseLongNotation_(firstPart, secondPart);
-// }
-
+// TODO: this may be a slow point for move gen
 void Game::addAllPawnPromotionsToMoves_(MoveList& moves, const int sourceSquare, const int targetSquare, const Piece sourcePiece, const bool isCapture) {
     const Color pawnColor = sourcePiece.color();
     const int promotionRow = pawnColor == Color::White ? 0 : 7; 
@@ -595,304 +518,537 @@ void Game::addAllPawnPromotionsToMoves_(MoveList& moves, const int sourceSquare,
     }
 }
 
-void Game::generatePseudoLegalPawnMoves_(const int sourceSquare, MoveList& out) {
-    /* 
-        Four pawn capture types:
-        1. One move forward
-        2. Two moves forward, has to start on 2nd rank
-        3. Capture left, has to be opposite color piece (or en passant)
-        4. Capture right, has to be opposite color piece (or en passant)
-    */
-    const Piece sourcePiece = board_[sourceSquare];
-    const Color sourceColor = sourcePiece.color();
+// TODO: consider + profile: all const Bitboard -> const Bitboard&; uint64_t may be fast enough to copy that it is not worth it
 
-    const int row = getRow(sourceSquare);
-    const int col = getCol(sourceSquare);
+void Game::generatePseudoLegalPawnMoves_(MoveList& out) {
+    const bool isWhite = currentTurn_ == Color::White;
 
-    const int dir = (sourceColor == Color::White) ? -1 : 1; // this function is from black's pov
-    const int startRow = (sourceColor == Color::White) ? 6 : 1;  // rank 7 / rank 2
+    Bitboard sourcePawns = isWhite ? bbWhitePawns_ : bbBlackPawns_;
+    const Bitboard sourcePieces = isWhite ? bbWhitePieces_ : bbBlackPieces_;
+    const Bitboard targetPieces = isWhite ? bbBlackPieces_ : bbWhitePieces_;
 
-    // Case 1 and 2
-    const int one = sourceSquare + (dir * 8);
-    if (onBoard(one) && !board_[one].exists()) {
-        addAllPawnPromotionsToMoves_(out, sourceSquare, one, sourcePiece, false);
+    // TODO: consider incrementally updated 'bbAllPieces_' here; its used rarely enough constructing from white + black pieces is probably fine
+    const Bitboard emptySquares = bbWhitePieces_.merge(bbBlackPieces_).flip();
+    if(isWhite) { // black and white pawns move differently
+        // White
 
-        // Case 2
-        const int two = sourceSquare + (dir * 16);
-        if (row == startRow && onBoard(two) && !board_[two].exists()) {
-            out.push_back(Move{sourceSquare, two, MoveFlag::DoublePawnPush, Promotion::None});
-        }
-    }
-
-    // captures
-    // left/right depends on color only through dir:
-    // white captures: -7 (left), -9 (right)
-    // black captures: +9 (left), +7 (right)
-    const int capLeft  = sourceSquare + (dir * 8) - 1;
-    const int capRight = sourceSquare + (dir * 8) + 1;
-
-    // Case 3
-    if (col > 0 && onBoard(capLeft)) {
-        const Piece capPiece = board_[capLeft];
-        if (capPiece.exists() && capPiece.color() != sourceColor) {
-            addAllPawnPromotionsToMoves_(out, sourceSquare, capLeft, sourcePiece, true);
+        // Normal moves
+        // for white we shift down one row (8 squares) if it lands on an empty square
+        const Bitboard oneRowPush = sourcePawns.rightShift(8).mask(emptySquares);
+    
+        Bitboard normal = oneRowPush;
+        while(!normal.empty()) {
+            const int targetSquare = normal.popLsb();
+            addAllPawnPromotionsToMoves_(out, targetSquare+8, targetSquare, Piece{PieceType::Pawn, Color::White}, false);
         }
 
-        // en passant
-        if (capLeft == currentEnPassantSquare_) {
-            out.push_back(Move{sourceSquare, capLeft, MoveFlag::EnPassant, Promotion::None});
-        }
-    }
-
-    // Case 4
-    if (col < 7 && onBoard(capRight)) {
-        const Piece capPiece = board_[capRight];
-        if (capPiece.exists() && capPiece.color() != sourceColor) { 
-            addAllPawnPromotionsToMoves_(out, sourceSquare, capRight, sourcePiece, true);
+        // Double push
+        // for white we shift down two rows (16 squares) if it lands on an empty square on the fourth rank
+        // we shift from 'oneRowPush' to ensure both squares are empty
+        Bitboard doublePush = oneRowPush.rightShift(8).mask(emptySquares).mask(Bitboard{Bitboard::Rank4});
+        while(!doublePush.empty()) {
+            const int targetSquare = doublePush.popLsb();
+            // double push can never be a promotion, so we don't need to call addAllPawnPromotionsToMoves_ here
+            out.push_back(Move{targetSquare+16, targetSquare, MoveFlag::DoublePawnPush, Promotion::None});
         }
 
-        // en passant
-        if (capRight == currentEnPassantSquare_) {
-            // en passant cant be a promotion
-            out.push_back(Move{sourceSquare, capRight, MoveFlag::EnPassant, Promotion::None});
+        // En Passant
+        if (currentEnPassantSquare_ != UndoInfo::noEnPassant) {
+            // we check black pawn attack pattern because pawn moves are not symmetrical
+            Bitboard attackers = bbWhitePawns_.mask(attackBitboards_.blackPawnAttacks[currentEnPassantSquare_]);
+
+            while (!attackers.empty()) {
+                const int from = attackers.popLsb();
+                out.push_back(Move{from, currentEnPassantSquare_, MoveFlag::EnPassant, Promotion::None});
+            }
+        }
+
+        // we can now mutate sourcePawns because we're done with the constant operations
+        while(!sourcePawns.empty()) {
+            const int sourceSquare = sourcePawns.popLsb();
+
+            // Normal capture
+            const Bitboard captureAttacks = attackBitboards_.whitePawnAttacks[sourceSquare].mask(sourcePieces.flip());
+            Bitboard captures = captureAttacks.mask(targetPieces); // attacks that land on target pieces
+            while(!captures.empty()) {
+                const int targetSquare = captures.popLsb();
+                addAllPawnPromotionsToMoves_(out, sourceSquare, targetSquare, Piece{PieceType::Pawn, Color::White}, true);
+            }
+        }
+    } else {
+        // Black
+
+        // Normal moves
+        // for black we shift up one row (8 squares) if it lands on an empty square
+        const Bitboard oneRowPush = sourcePawns.leftShift(8).mask(emptySquares);
+    
+        Bitboard normal = oneRowPush;
+        while(!normal.empty()) {
+            const int targetSquare = normal.popLsb();
+            addAllPawnPromotionsToMoves_(out, targetSquare-8, targetSquare, Piece{PieceType::Pawn, Color::Black}, false);
+        }
+
+        // Double push
+        // for black we shift up two rows (16 squares) if it lands on an empty square on the fifth rank
+        // we shift from 'oneRowPush' to ensure both squares are empty
+        Bitboard doublePush = oneRowPush.leftShift(8).mask(emptySquares).mask(Bitboard{Bitboard::Rank5});
+        while(!doublePush.empty()) {
+            const int targetSquare = doublePush.popLsb();
+            // double push can never be a promotion, so we don't need to call addAllPawnPromotionsToMoves_ here
+            out.push_back(Move{targetSquare-16, targetSquare, MoveFlag::DoublePawnPush, Promotion::None});
+        }
+
+        // En Passant
+        if (currentEnPassantSquare_ != UndoInfo::noEnPassant) {
+            // we check white pawn attack pattern because pawn moves are not symmetrical
+            Bitboard attackers = bbBlackPawns_.mask(attackBitboards_.whitePawnAttacks[currentEnPassantSquare_]);
+
+            while (!attackers.empty()) {
+                const int from = attackers.popLsb();
+                out.push_back(Move{from, currentEnPassantSquare_, MoveFlag::EnPassant, Promotion::None});
+            }
+        }
+
+        // we can now mutate sourcePawns because we're done with the constant operations
+        while(!sourcePawns.empty()) {
+            const int sourceSquare = sourcePawns.popLsb();
+
+            // Normal capture
+            const Bitboard captureAttacks = attackBitboards_.blackPawnAttacks[sourceSquare].mask(sourcePieces.flip());
+            Bitboard captures = captureAttacks.mask(targetPieces); // attacks that land on target pieces
+            while(!captures.empty()) {
+                const int targetSquare = captures.popLsb();
+                addAllPawnPromotionsToMoves_(out, sourceSquare, targetSquare, Piece{PieceType::Pawn, Color::Black}, true);
+            }
         }
     }
 }
 
 
-void Game::generatePseudoLegalKnightMoves_(const int sourceSquare, MoveList& out) {
-    const Piece sourcePiece = board_[sourceSquare];
-    const Color sourceColor = sourcePiece.color();
+void Game::generatePseudoLegalKnightMoves_(MoveList& out) {
+    const bool isWhite = currentTurn_ == Color::White;
 
-    const int row = getRow(sourceSquare);
-    const int col = getCol(sourceSquare);
+    Bitboard sourceKnights = isWhite ? bbWhiteKnights_ : bbBlackKnights_;
+    const Bitboard sourcePieces = isWhite ? bbWhitePieces_ : bbBlackPieces_;
+    const Bitboard targetPieces = isWhite ? bbBlackPieces_ : bbWhitePieces_;
 
-    for(int i = 0; i < 8; i++) {
-        const int col2 = col + knightDeltas[i][0];
-        const int row2 = row + knightDeltas[i][1];
-        if(!onBoard(col2, row2)) {
-            continue;
+    while(!sourceKnights.empty()) {
+        const int sourceSquare = sourceKnights.popLsb();
+        const Bitboard attacks = attackBitboards_.knightAttacks[sourceSquare].mask(sourcePieces.flip()); // can not attack own pieces
+
+        // Normal moves (non-captures)
+        Bitboard normal = attacks.mask(targetPieces.flip()); // attacks that do not land on target pieces
+        while(!normal.empty()) {
+            const int targetSquare = normal.popLsb();
+            out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Normal, Promotion::None});
         }
-        
-        const int square2 = getSquareIndex(col2, row2);
-        const Piece piece2 = board_[square2];
 
-        // Can move if target square is empty or has enemy
-        if (!piece2.exists() || piece2.color() != sourceColor) {
-            const MoveFlag flag = piece2.exists() ? MoveFlag::Capture : MoveFlag::Normal;
-            out.push_back(Move{sourceSquare, square2, flag, Promotion::None});
+        // Capture moves
+        Bitboard captures = attacks.mask(targetPieces); // attacks that land on target pieces
+        while(!captures.empty()) {
+            const int targetSquare = captures.popLsb();
+            out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Capture, Promotion::None});
         }
     }
 }
 
-void Game::generatePseudoLegalBishopMoves_(const int sourceSquare, MoveList& out) {
-    const Piece sourcePiece = board_[sourceSquare];
-    const Color sourceColor = sourcePiece.color();
+// TODO: implement magic bitboards
 
-    const int row = getRow(sourceSquare);
-    const int col = getCol(sourceSquare);
+void Game::generatePseudoLegalBishopMoves_(MoveList& out) {
+    const bool isWhite = currentTurn_ == Color::White;
 
-    for(int i = 0; i < 4; i++) {
-        const int dcol = bishopDeltas[i][0];
-        const int drow = bishopDeltas[i][1];
+    Bitboard sourceBishops = isWhite ? bbWhiteBishops_ : bbBlackBishops_;
+    const Bitboard sourcePieces = isWhite ? bbWhitePieces_ : bbBlackPieces_;
+    const Bitboard targetPieces = isWhite ? bbBlackPieces_ : bbWhitePieces_;
 
-        // start with one delta and continue until off board, or until a piece is hit
-        int curCol = col + dcol;
-        int curRow = row + drow;
-        while(onBoard(curCol, curRow)) {
-            const int curSquare = getSquareIndex(curCol, curRow);
-            const Piece curPiece = board_[curSquare];
+    while (!sourceBishops.empty()) {
+        const int sourceSquare = sourceBishops.popLsb();
 
-            if(!curPiece.exists()) {
-                // empty square; we can continue
-                out.push_back(Move{sourceSquare, curSquare, MoveFlag::Normal, Promotion::None});
-            } else {
-                // theres a piece here
-                
-                if(curPiece.color() != sourceColor) {
-                    // enemy piece, we can capture
-                    out.push_back(Move{sourceSquare, curSquare, MoveFlag::Capture, Promotion::None});
-                }
-
-                // since square is occupied we stop
+        // ---- NE (+9): stop when we hit H-file (col becomes 0 after wrap)
+        for (int targetSquare = sourceSquare + 9; targetSquare <= 63 && getCol(targetSquare) != 0; targetSquare += 9) {
+            // hit our own piece, stop
+            if (sourcePieces.containsSquare(targetSquare)) {
                 break;
             }
 
-            // check next square
-            curCol += dcol;
-            curRow += drow;
-        }
-    }
-}
-
-void Game::generatePseudoLegalRookMoves_(const int sourceSquare, MoveList& out) {
-    const Piece sourcePiece = board_[sourceSquare];
-    const Color sourceColor = sourcePiece.color();
-
-    const int row = getRow(sourceSquare);
-    const int col = getCol(sourceSquare);
-
-    for(int i = 0; i < 4; i++) {
-        const int dcol = rookDeltas[i][0];
-        const int drow = rookDeltas[i][1];
-
-        // start with one delta and continue until off board, or until a piece is hit
-        int curCol = col + dcol;
-        int curRow = row + drow;
-        while(onBoard(curCol, curRow)) {
-            const int curSquare = getSquareIndex(curCol, curRow);
-            const Piece curPiece = board_[curSquare];
-
-            if(!curPiece.exists()) {
-                // empty square; we can continue
-                out.push_back(Move{sourceSquare, curSquare, MoveFlag::Normal, Promotion::None});
-            } else {
-                // theres a piece here
-                
-                if(curPiece.color() != sourceColor) {
-                    // enemy piece, we can capture
-                    out.push_back(Move{sourceSquare, curSquare, MoveFlag::Capture, Promotion::None});
-                }
-
-                // since square is occupied we stop
+            // hit an enemy piece, add it and stop
+            if (targetPieces.containsSquare(targetSquare)) { 
+                out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Capture, Promotion::None});
                 break;
             }
 
-            // check next square
-            curCol += dcol;
-            curRow += drow;
+            // add move and continue
+            out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Normal, Promotion::None});
         }
-    }
-}
 
-void Game::generatePseudoLegalQueenMoves_(const int sourceSquare, MoveList& out) {
-    const Piece sourcePiece = board_[sourceSquare];
-    const Color sourceColor = sourcePiece.color();
-
-    const int row = getRow(sourceSquare);
-    const int col = getCol(sourceSquare);
-
-    for(int i = 0; i < 8; i++) {
-        const int dCol = queenDeltas[i][0];
-        const int dRow = queenDeltas[i][1];
-
-        // start with one delta and continue until off board, or until a piece is hit
-        int curCol = col + dCol;
-        int curRow = row + dRow;
-        while(onBoard(curCol, curRow)) {
-            const int curSquare = getSquareIndex(curCol, curRow);
-            const Piece curPiece = board_[curSquare];
-
-            if(!curPiece.exists()) {
-                // empty square; we can continue
-                out.push_back(Move{sourceSquare, curSquare, MoveFlag::Normal, Promotion::None});
-            } else {
-                // theres a piece here
-                
-                if(curPiece.color() != sourceColor) {
-                    // enemy piece, we can capture
-                    out.push_back(Move{sourceSquare, curSquare, MoveFlag::Capture, Promotion::None});
-                }
-
-                // since square is occupied we stop
+        // ---- NW (+7): stop when we hit A-file (col becomes 7 after wrap)
+        for (int targetSquare = sourceSquare + 7; targetSquare <= 63 && getCol(targetSquare) != 7; targetSquare += 7) {
+            // hit our own piece, stop
+            if (sourcePieces.containsSquare(targetSquare)) {
                 break;
             }
 
-            // check next square
-            curCol += dCol;
-            curRow += dRow;
+            // hit an enemy piece, add it and stop
+            if (targetPieces.containsSquare(targetSquare)) { 
+                out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Capture, Promotion::None});
+                break;
+            }
+
+            // add move and continue
+            out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Normal, Promotion::None});
+        }
+
+        // ---- SE (-7): stop when we hit H-file (col becomes 0 after wrap)
+        for (int targetSquare = sourceSquare - 7; targetSquare >= 0 && getCol(targetSquare) != 0; targetSquare -= 7) {
+            // hit our own piece, stop
+            if (sourcePieces.containsSquare(targetSquare)) {
+                break;
+            }
+
+            // hit an enemy piece, add it and stop
+            if (targetPieces.containsSquare(targetSquare)) { 
+                out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Capture, Promotion::None});
+                break;
+            }
+
+            // add move and continue
+            out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Normal, Promotion::None});
+        }
+
+        // ---- SW (-9): stop when we hit A-file (col becomes 7 after wrap)
+        for (int targetSquare = sourceSquare - 9; targetSquare >= 0 && getCol(targetSquare) != 7; targetSquare -= 9) {
+            // hit our own piece, stop
+            if (sourcePieces.containsSquare(targetSquare)) {
+                break;
+            }
+
+            // hit an enemy piece, add it and stop
+            if (targetPieces.containsSquare(targetSquare)) { 
+                out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Capture, Promotion::None});
+                break;
+            }
+
+            // add move and continue
+            out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Normal, Promotion::None});
         }
     }
 }
 
-void Game::generatePseudoLegalKingMoves_(const int sourceSquare, MoveList& out) {
-    const Piece sourcePiece = board_[sourceSquare];
-    const Color sourceColor = sourcePiece.color();
 
-    const int row = getRow(sourceSquare);
-    const int col = getCol(sourceSquare);
+void Game::generatePseudoLegalRookMoves_(MoveList& out) {
+    const bool isWhite = currentTurn_ == Color::White;
 
-    for(int i = 0; i < 8; i++) {
-        const int col2 = col + kingDeltas[i][0];
-        const int row2 = row + kingDeltas[i][1];
-        if(!onBoard(col2, row2)) {
-            continue;
+    Bitboard sourceRooks = isWhite ? bbWhiteRooks_ : bbBlackRooks_;
+    const Bitboard sourcePieces = isWhite ? bbWhitePieces_ : bbBlackPieces_;
+    const Bitboard targetPieces = isWhite ? bbBlackPieces_ : bbWhitePieces_;
+
+    while (!sourceRooks.empty()) {
+        const int sourceSquare = sourceRooks.popLsb();
+
+        // ---- North (+8)
+        for (int targetSquare = sourceSquare + 8; targetSquare <= 63; targetSquare += 8) {
+            // hit our own piece, stop
+            if (sourcePieces.containsSquare(targetSquare)) {
+                break;
+            }
+
+            // hit an enemy piece, add it and stop
+            if (targetPieces.containsSquare(targetSquare)) { 
+                out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Capture, Promotion::None});
+                break;
+            }
+
+            // add move and continue
+            out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Normal, Promotion::None});
         }
-        
-        const int square2 = getSquareIndex(col2, row2);
-        const Piece piece2 = board_[square2];
 
-        // Can move if target square is empty or has enemy
-        if (!piece2.exists() || piece2.color() != sourceColor) {
-            const MoveFlag flag = piece2.exists() ? MoveFlag::Capture : MoveFlag::Normal;
-            out.push_back(Move{sourceSquare, square2, flag, Promotion::None});
+        // ---- South (-8)
+        for (int targetSquare = sourceSquare - 8; targetSquare >= 0; targetSquare -= 8) {
+            // hit our own piece, stop
+            if (sourcePieces.containsSquare(targetSquare)) {
+                break;
+            }
+
+            // hit an enemy piece, add it and stop
+            if (targetPieces.containsSquare(targetSquare)) { 
+                out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Capture, Promotion::None});
+                break;
+            }
+
+            // add move and continue
+            out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Normal, Promotion::None});
+        }
+
+        // ---- East (+1) stop at H-file
+        for (int targetSquare = sourceSquare + 1; targetSquare <= 63 && getCol(targetSquare) != 0; ++targetSquare) {
+            // getCol(targetSquare) != 0 prevents wrap H->A because when you go from 7 to 8, file becomes 0
+            // hit our own piece, stop
+            if (sourcePieces.containsSquare(targetSquare)) {
+                break;
+            }
+
+            // hit an enemy piece, add it and stop
+            if (targetPieces.containsSquare(targetSquare)) { 
+                out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Capture, Promotion::None});
+                break;
+            }
+
+            // add move and continue
+            out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Normal, Promotion::None});
+        }
+
+        // ---- West (-1) stop at A-file
+        for (int targetSquare = sourceSquare - 1; targetSquare >= 0 && getCol(targetSquare) != 7; targetSquare--) {
+            // getCol(targetSquare) != 7 prevents wrap A->H because when you go from 8 to 7, file becomes 7
+            // hit our own piece, stop
+            if (sourcePieces.containsSquare(targetSquare)) {
+                break;
+            }
+
+            // hit an enemy piece, add it and stop
+            if (targetPieces.containsSquare(targetSquare)) {
+                out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Capture, Promotion::None});
+                break;
+            }
+
+            // add move and continue
+            out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Normal, Promotion::None});
         }
     }
+}
 
-    // TODO: this logic can be cleaned up, remove if(SourceColor)... check
-    // --- CASTLING ---
 
-    if(sourceColor == Color::White) {
+void Game::generatePseudoLegalQueenMoves_(MoveList& out) {
+    const bool isWhite = currentTurn_ == Color::White;
+
+    Bitboard sourceQueens = isWhite ? bbWhiteQueens_ : bbBlackQueens_;
+    const Bitboard sourcePieces = isWhite ? bbWhitePieces_ : bbBlackPieces_;
+    const Bitboard targetPieces = isWhite ? bbBlackPieces_ : bbWhitePieces_;
+
+    while (!sourceQueens.empty()) {
+        const int sourceSquare = sourceQueens.popLsb();
+
+        // ---- Rook Moves ----
+        // ---- North (+8)
+        for (int targetSquare = sourceSquare + 8; targetSquare < NUM_SQUARES; targetSquare += 8) {
+            // hit our own piece, stop
+            if (sourcePieces.containsSquare(targetSquare)) {
+                break;
+            }
+
+            // hit an enemy piece, add it and stop
+            if (targetPieces.containsSquare(targetSquare)) { 
+                out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Capture, Promotion::None});
+                break;
+            }
+
+            // add move and continue
+            out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Normal, Promotion::None});
+        }
+
+        // ---- South (-8)
+        for (int targetSquare = sourceSquare - 8; targetSquare >= 0; targetSquare -= 8) {
+            // hit our own piece, stop
+            if (sourcePieces.containsSquare(targetSquare)) {
+                break;
+            }
+
+            // hit an enemy piece, add it and stop
+            if (targetPieces.containsSquare(targetSquare)) { 
+                out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Capture, Promotion::None});
+                break;
+            }
+
+            // add move and continue
+            out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Normal, Promotion::None});
+        }
+
+        // ---- East (+1) stop at H-file
+        for (int targetSquare = sourceSquare + 1; targetSquare <= 63 && getCol(targetSquare) != 0; ++targetSquare) {
+            // getCol(targetSquare) != 0 prevents wrap H->A because when you go from 7 to 8, file becomes 0
+            // hit our own piece, stop
+            if (sourcePieces.containsSquare(targetSquare)) {
+                break;
+            }
+
+            // hit an enemy piece, add it and stop
+            if (targetPieces.containsSquare(targetSquare)) { 
+                out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Capture, Promotion::None});
+                break;
+            }
+
+            // add move and continue
+            out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Normal, Promotion::None});
+        }
+
+        // ---- West (-1) stop at A-file
+        for (int targetSquare = sourceSquare - 1; targetSquare >= 0 && getCol(targetSquare) != 7; --targetSquare) {
+            // getCol(targetSquare) != 7 prevents wrap A->H because when you go from 8 to 7, file becomes 7
+            // hit our own piece, stop
+            if (sourcePieces.containsSquare(targetSquare)) {
+                break;
+            }
+
+            // hit an enemy piece, add it and stop
+            if (targetPieces.containsSquare(targetSquare)) { 
+                out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Capture, Promotion::None});
+                break;
+            }
+
+            // add move and continue
+            out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Normal, Promotion::None});
+        }
+
+        // ---- Bishop Moves ----
+        // ---- NE (+9): stop when we hit H-file (col becomes 0 after wrap)
+        for (int targetSquare = sourceSquare + 9; targetSquare <= 63 && getCol(targetSquare) != 0; targetSquare += 9) {
+            // hit our own piece, stop
+            if (sourcePieces.containsSquare(targetSquare)) {
+                break;
+            }
+
+            // hit an enemy piece, add it and stop
+            if (targetPieces.containsSquare(targetSquare)) { 
+                out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Capture, Promotion::None});
+                break;
+            }
+
+            // add move and continue
+            out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Normal, Promotion::None});
+        }
+
+        // ---- NW (+7): stop when we hit A-file (col becomes 7 after wrap)
+        for (int targetSquare = sourceSquare + 7; targetSquare <= 63 && getCol(targetSquare) != 7; targetSquare += 7) {
+            // hit our own piece, stop
+            if (sourcePieces.containsSquare(targetSquare)) {
+                break;
+            }
+
+            // hit an enemy piece, add it and stop
+            if (targetPieces.containsSquare(targetSquare)) { 
+                out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Capture, Promotion::None});
+                break;
+            }
+
+            // add move and continue
+            out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Normal, Promotion::None});
+        }
+
+        // ---- SE (-7): stop when we hit H-file (col becomes 0 after wrap)
+        for (int targetSquare = sourceSquare - 7; targetSquare >= 0 && getCol(targetSquare) != 0; targetSquare -= 7) {
+            // hit our own piece, stop
+            if (sourcePieces.containsSquare(targetSquare)) {
+                break;
+            }
+
+            // hit an enemy piece, add it and stop
+            if (targetPieces.containsSquare(targetSquare)) { 
+                out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Capture, Promotion::None});
+                break;
+            }
+
+            // add move and continue
+            out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Normal, Promotion::None});
+        }
+
+        // ---- SW (-9): stop when we hit A-file (col becomes 7 after wrap)
+        for (int targetSquare = sourceSquare - 9; targetSquare >= 0 && getCol(targetSquare) != 7; targetSquare -= 9) {
+            // hit our own piece, stop
+            if (sourcePieces.containsSquare(targetSquare)) {
+                break;
+            }
+
+            // hit an enemy piece, add it and stop
+            if (targetPieces.containsSquare(targetSquare)) { 
+                out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Capture, Promotion::None});
+                break;
+            }
+
+            // add move and continue
+            out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Normal, Promotion::None});
+        }
+    }
+}
+
+void Game::generatePseudoLegalKingMoves_(MoveList& out) {
+    const bool isWhite = (currentTurn_ == Color::White);
+
+    Bitboard sourceKings = isWhite ? bbWhiteKing_ : bbBlackKing_;
+    const Bitboard sourcePieces = isWhite ? bbWhitePieces_ : bbBlackPieces_;
+    const Bitboard targetPieces = isWhite ? bbBlackPieces_ : bbWhitePieces_;
+    const Bitboard allPieces = bbWhitePieces_.merge(bbBlackPieces_);
+
+    // TODO: we assume just one king anyway so we can probably remove the loop, but it's probably fine for readability
+    while(!sourceKings.empty()) {
+        const int sourceSquare = sourceKings.popLsb();
+        const Bitboard attacks = attackBitboards_.kingAttacks[sourceSquare].mask(sourcePieces.flip()); // can not attack own pieces
+
+        // Normal moves (non-captures)
+        Bitboard normal = attacks.mask(targetPieces.flip()); // attacks that do not land on target pieces
+        while(!normal.empty()) {
+            const int targetSquare = normal.popLsb();
+            out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Normal, Promotion::None});
+        }
+
+        // Capture moves
+        Bitboard captures = attacks.mask(targetPieces); // attacks that land on target pieces
+        while(!captures.empty()) {
+            const int targetSquare = captures.popLsb();
+            out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Capture, Promotion::None});
+        }
+
+        // Castling
+        const int kingStartingSquare = isWhite ? WHITE_KING_STARTING_SQUARE : BLACK_KING_STARTING_SQUARE;
+
+        const int kingsidePassingSquare = isWhite ? WHITE_KINGSIDE_PASSING_SQUARE : BLACK_KINGSIDE_PASSING_SQUARE;
+        const int kingsideTargetSquare = isWhite ? WHITE_KINGSIDE_TARGET_SQUARE : BLACK_KINGSIDE_TARGET_SQUARE;
+
+        const int queensidePassingSquare = isWhite ? WHITE_QUEENSIDE_PASSING_SQUARE : BLACK_QUEENSIDE_PASSING_SQUARE;
+        const int queensideTargetSquare = isWhite ? WHITE_QUEENSIDE_TARGET_SQUARE : BLACK_QUEENSIDE_TARGET_SQUARE;
+
+        const bool canKingside = isWhite ? castlingRights_.canWhiteKingside() : castlingRights_.canBlackKingside();
+        const bool canQueenside = isWhite ? castlingRights_.canWhiteQueenside() : castlingRights_.canBlackQueenside();
+
+        // TODO: bitwise masks instead of allPieces.containsSquare(...)
         // King side castling
         if(
-            castlingRights_.canWhiteKingside() &&
-            sourceSquare == WHITE_KING_STARTING_SQUARE &&
-            !board_[WHITE_KINGSIDE_PASSING_SQUARE].exists() &&
-            !board_[WHITE_KINGSIDE_TARGET_SQUARE].exists()
+            canKingside &&
+            sourceSquare == kingStartingSquare &&
+            !allPieces.containsSquare(kingsidePassingSquare) &&  // passing square does not contain a piece 
+            !allPieces.containsSquare(kingsideTargetSquare)      // target square does not contain a piece
         ) {
-            out.push_back(Move{sourceSquare, WHITE_KINGSIDE_TARGET_SQUARE, MoveFlag::KingCastle, Promotion::None});
+            out.push_back(Move{sourceSquare, kingsideTargetSquare, MoveFlag::KingCastle, Promotion::None});
         }
 
         // Queen side castling
         if(
-            castlingRights_.canWhiteQueenside() &&
-            sourceSquare == WHITE_KING_STARTING_SQUARE &&
-            !board_[WHITE_QUEENSIDE_PASSING_SQUARE].exists() &&
-            !board_[WHITE_QUEENSIDE_PASSING_SQUARE - 2].exists() &&  // queenside has two passing squares
-            !board_[WHITE_QUEENSIDE_TARGET_SQUARE].exists()
+            canQueenside &&
+            sourceSquare == kingStartingSquare &&
+            !allPieces.containsSquare(queensidePassingSquare) &&      // passing square does not contain a piece
+            !allPieces.containsSquare(queensidePassingSquare - 2) &&  // queenside has two passing squares
+            !allPieces.containsSquare(queensideTargetSquare)          // target square does not contain a piece
         ) {
-            out.push_back(Move{sourceSquare, WHITE_QUEENSIDE_TARGET_SQUARE, MoveFlag::QueenCastle, Promotion::None});
-        }
-    }
-
-    if(sourceColor == Color::Black) {
-        // King side castling
-        if(
-            castlingRights_.canBlackKingside() &&
-            sourceSquare == BLACK_KING_STARTING_SQUARE &&
-            !board_[BLACK_KINGSIDE_PASSING_SQUARE].exists() &&
-            !board_[BLACK_KINGSIDE_TARGET_SQUARE].exists()
-        ) {
-            out.push_back(Move{sourceSquare, BLACK_KINGSIDE_TARGET_SQUARE, MoveFlag::KingCastle, Promotion::None});
-        }
-
-        // Queen side castling
-        if(
-            castlingRights_.canBlackQueenside() &&
-            sourceSquare == BLACK_KING_STARTING_SQUARE &&
-            !board_[BLACK_QUEENSIDE_PASSING_SQUARE].exists() &&
-            !board_[BLACK_QUEENSIDE_PASSING_SQUARE - 2].exists() &&  // queenside has two passing squares
-            !board_[BLACK_QUEENSIDE_TARGET_SQUARE].exists()
-        ) {
-            out.push_back(Move{sourceSquare, BLACK_QUEENSIDE_TARGET_SQUARE, MoveFlag::QueenCastle, Promotion::None});
+            out.push_back(Move{sourceSquare, queensideTargetSquare, MoveFlag::QueenCastle, Promotion::None});
         }
     }
 }
 
-void Game::generateLegalMoves(const int sourceSquare, MoveList& out) {
+void Game::generateLegalMoves(MoveList& out) {
     // TODO: eventually make generateLegalMoves const by finding a workaround other than simply undoing moves
     MoveList pseudoMoves;
-    generatePseudoLegalMoves_(sourceSquare, pseudoMoves);
+    generatePseudoLegalMoves(pseudoMoves);
 
     // only allow moves that do not leave king in check
     for(int i = 0; i < pseudoMoves.size; i++) {
         const Move move = pseudoMoves.data[i];
-        const Piece& sourcePiece = board_[move.sourceSquare()];
+
+        const Piece sourcePiece = mailbox_[move.sourceSquare()];
         const Color moveColor = sourcePiece.color();
         const Color enemyColor = oppositeColor(moveColor);
+        const bool isSourceWhite = moveColor == Color::White;
 
         // save info to pass to undo move
-        const UndoInfo undoInfo = getUndoInfo(board_[move.targetSquare()]);
+        const UndoInfo undoInfo = getUndoInfo(mailbox_[move.targetSquare()]);
 
         makeMove(move);
 
@@ -903,11 +1059,11 @@ void Game::generateLegalMoves(const int sourceSquare, MoveList& out) {
         }
         
         // castling legality rules
-        const int kingStartingSquare = (moveColor == Color::White) ? Game::WHITE_KING_STARTING_SQUARE : Game::BLACK_KING_STARTING_SQUARE;
+        const int kingStartingSquare = isSourceWhite ? Game::WHITE_KING_STARTING_SQUARE : Game::BLACK_KING_STARTING_SQUARE;
 
         if(move.isKingSideCastle()) {
-            const int kingsidePassingSquare = (moveColor == Color::White) ? Game::WHITE_KINGSIDE_PASSING_SQUARE : Game::BLACK_KINGSIDE_PASSING_SQUARE;
-            const int kingsideTargetSquare = (moveColor == Color::White) ? Game::WHITE_KINGSIDE_TARGET_SQUARE : Game::BLACK_KINGSIDE_TARGET_SQUARE;
+            const int kingsidePassingSquare = isSourceWhite ? Game::WHITE_KINGSIDE_PASSING_SQUARE : Game::BLACK_KINGSIDE_PASSING_SQUARE;
+            const int kingsideTargetSquare = isSourceWhite ? Game::WHITE_KINGSIDE_TARGET_SQUARE : Game::BLACK_KINGSIDE_TARGET_SQUARE;
     
             if(
                 isSquareAttacked(kingStartingSquare, enemyColor) ||   // king cant start in check
@@ -920,8 +1076,8 @@ void Game::generateLegalMoves(const int sourceSquare, MoveList& out) {
         }
 
         if(move.isQueenSideCastle()) {
-            const int queensidePassingSquare = (moveColor == Color::White) ? Game::WHITE_QUEENSIDE_PASSING_SQUARE : Game::BLACK_QUEENSIDE_PASSING_SQUARE;
-            const int queensideTargetSquare = (moveColor == Color::White) ? Game::WHITE_QUEENSIDE_TARGET_SQUARE : Game::BLACK_QUEENSIDE_TARGET_SQUARE;
+            const int queensidePassingSquare = isSourceWhite ? Game::WHITE_QUEENSIDE_PASSING_SQUARE : Game::BLACK_QUEENSIDE_PASSING_SQUARE;
+            const int queensideTargetSquare = isSourceWhite ? Game::WHITE_QUEENSIDE_TARGET_SQUARE : Game::BLACK_QUEENSIDE_TARGET_SQUARE;
             if(
                 isSquareAttacked(kingStartingSquare, enemyColor) ||   // king cant start in check
                 isSquareAttacked(queensidePassingSquare, enemyColor) ||   // king cant pass through check 
@@ -938,43 +1094,30 @@ void Game::generateLegalMoves(const int sourceSquare, MoveList& out) {
     }
 }
 
-void Game::generateAllPseudoLegalMoves(MoveList& out) {
-    out.clear();
+void Game::generateLegalMovesFromSquare(int sourceSquare, MoveList& out) {
+    MoveList legalMoves;
+    generateLegalMoves(legalMoves);
 
-    for(int squareIndex = 0; squareIndex < Game::NUM_SQUARES; squareIndex++) {
-        if(board_[squareIndex].color() != currentTurn()) { // NOLINT allow [] in hot loop
-            continue;
+    for(int i = 0; i < legalMoves.size; i++) {
+        const Move move = legalMoves.data[i];
+        if(move.sourceSquare() == sourceSquare) {
+            out.push_back(move);
         }
-
-        generatePseudoLegalMoves_(squareIndex, out);
     }
 }
 
-void Game::generateAllLegalMoves(MoveList& out) {
-    for(int squareIndex = 0; squareIndex < Game::NUM_SQUARES; squareIndex++) {
-        if(board_[squareIndex].color() != currentTurn()) { // NOLINT allow [] in hot loop
-            continue;
-        }
-
-        generateLegalMoves(squareIndex, out);
-    }
-}
-
-void Game::generatePseudoLegalMoves_(const int sourceSquare, MoveList& out) {
-    switch(board_[sourceSquare].type()) {
-        case PieceType::None: return;
-        case PieceType::Pawn: generatePseudoLegalPawnMoves_(sourceSquare, out); return;
-        case PieceType::Knight: generatePseudoLegalKnightMoves_(sourceSquare, out); return;
-        case PieceType::Bishop: generatePseudoLegalBishopMoves_(sourceSquare, out); return;
-        case PieceType::Rook: generatePseudoLegalRookMoves_(sourceSquare, out); return;
-        case PieceType::Queen: generatePseudoLegalQueenMoves_(sourceSquare, out); return;
-        case PieceType::King: generatePseudoLegalKingMoves_(sourceSquare, out); return;
-    }
+void Game::generatePseudoLegalMoves(MoveList& out) {
+    generatePseudoLegalPawnMoves_(out);
+    generatePseudoLegalKnightMoves_(out);
+    generatePseudoLegalBishopMoves_(out);
+    generatePseudoLegalRookMoves_(out);
+    generatePseudoLegalQueenMoves_(out);
+    generatePseudoLegalKingMoves_(out);
 }
 
 bool Game::isMoveLegal(const Move& move) {
     MoveList legalMoves;
-    generateLegalMoves(move.sourceSquare(), legalMoves);
+    generateLegalMoves(legalMoves);
 
     for (int i = 0; i < legalMoves.size; i++) {
         if (legalMoves.data[i] == move) {
@@ -986,9 +1129,12 @@ bool Game::isMoveLegal(const Move& move) {
 
 
 bool Game::tryMove(const Move& move) {
-    const Piece sourcePiece = board_[move.sourceSquare()];
+    // TODO: consider making isWhite() function in Game; this logic is repeated quite often
+    const bool isWhite = currentTurn_ == Color::White;
+    const bool sourceSquareHasWhitePiece = bbWhitePieces_.containsSquare(move.sourceSquare());
+    const bool sourceSquareHasBlackPiece = bbBlackPieces_.containsSquare(move.sourceSquare());
     // only allow current turn's player to make moves
-    if(sourcePiece.color() != currentTurn_) {
+    if((isWhite && !sourceSquareHasWhitePiece) && (!isWhite && !sourceSquareHasBlackPiece)) {
         std::cerr << "[DEBUG] Attempted move: " + move.to_string(*this) + " is not legal because it is not the correct player's turn\n";
         return false;
     }
@@ -1004,16 +1150,16 @@ bool Game::tryMove(const Move& move) {
 }
 
 void Game::makeMove(const Move& move) {
-    const Piece sourcePiece = board_[move.sourceSquare()];
+    const Piece sourcePiece = mailbox_[move.sourceSquare()];
     const bool isSourcePieceWhite = sourcePiece.color() == Color::White;
     // flip current turn
     currentTurn_ = oppositeColor(currentTurn_);
     // remove en passant (we may set it again later in this function)
     currentEnPassantSquare_ = UndoInfo::noEnPassant;
 
-    // source piece's bitboards
     Bitboard& sourceBitboard = pieceToBitboard(sourcePiece);
     Bitboard& sourceColorBitboard = colorToOccupancyBitboard(sourcePiece.color());
+    Bitboard& targetColorBitboard = colorToOccupancyBitboard(oppositeColor(sourcePiece.color()));
 
     // update castling flags
     if(
@@ -1058,8 +1204,11 @@ void Game::makeMove(const Move& move) {
         Bitboard& bbTargetPawns = pieceToBitboard(PieceType::Pawn, oppositeColor(sourcePiece.color()));
         bbTargetPawns.clearSquare(capturedIndex);
 
-        // clear captured pawn from board
-        board_[capturedIndex] = Piece{};
+        // update occupancy board
+        targetColorBitboard.clearSquare(capturedIndex);
+
+        // clear captured pawn from mailbox
+        mailbox_[capturedIndex] = Piece{};
     }
 
     // If king side castle, also move the rook
@@ -1072,9 +1221,13 @@ void Game::makeMove(const Move& move) {
         bbSourceRooks.setSquare(kingsidePassingSquare);
         bbSourceRooks.clearSquare(kingsideRookSquare);
 
-        // also move rook
-        board_[kingsidePassingSquare] = Piece{PieceType::Rook, sourcePiece.color()};
-        board_[kingsideRookSquare] = Piece{};
+        // update occupancy board
+        sourceColorBitboard.setSquare(kingsidePassingSquare);
+        sourceColorBitboard.clearSquare(kingsideRookSquare);
+
+        // also move rook in mailbox
+        mailbox_[kingsidePassingSquare] = Piece{PieceType::Rook, sourcePiece.color()};
+        mailbox_[kingsideRookSquare] = Piece{};
     }
 
     // If queen side castle, also move the queen
@@ -1087,9 +1240,12 @@ void Game::makeMove(const Move& move) {
         bbSourceRooks.setSquare(queensidePassingSquare);
         bbSourceRooks.clearSquare(queensideRookSquare);
 
-        // also move rook
-        board_[queensidePassingSquare] = Piece{PieceType::Rook, sourcePiece.color()};
-        board_[queensideRookSquare] = Piece{};;
+        sourceColorBitboard.setSquare(queensidePassingSquare);
+        sourceColorBitboard.clearSquare(queensideRookSquare);
+
+        // also move rook in mailbox
+        mailbox_[queensidePassingSquare] = Piece{PieceType::Rook, sourcePiece.color()};
+        mailbox_[queensideRookSquare] = Piece{};;
     }
 
     // handle pawn promotion; different enough we need to return early
@@ -1102,14 +1258,21 @@ void Game::makeMove(const Move& move) {
         // add promoted piece to promoted piece bitboard
         pieceToBitboard(promotionType, sourcePiece.color()).setSquare(move.targetSquare());
 
+        // update occupancy board
+        sourceColorBitboard.clearSquare(move.sourceSquare());
+        sourceColorBitboard.setSquare(move.targetSquare());
+
         if(move.isCapture()) {
-            // remove captured piece from board
-            Bitboard& targetBitboard = pieceToBitboard(board_[move.targetSquare()]);
+            Bitboard& targetBitboard = pieceToBitboard(mailbox_[move.targetSquare()]);
             targetBitboard.clearSquare(move.targetSquare());
+
+            // update target occupancy board
+            targetColorBitboard.clearSquare(move.targetSquare());
         }
 
-        board_[move.targetSquare()] = Piece{promotionType, sourcePiece.color()};
-        board_[move.sourceSquare()] = Piece{};
+        // update mailbox
+        mailbox_[move.targetSquare()] = Piece{promotionType, sourcePiece.color()};
+        mailbox_[move.sourceSquare()] = Piece{};
         return;
     }
 
@@ -1117,47 +1280,53 @@ void Game::makeMove(const Move& move) {
     sourceBitboard.clearSquare(move.sourceSquare());
     sourceBitboard.setSquare(move.targetSquare());
 
+    // update occupancy bitboard
+    sourceColorBitboard.clearSquare(move.sourceSquare());
+    sourceColorBitboard.setSquare(move.targetSquare());
+
     // handle capture
-    if(move.isCapture() && !move.isEnPassant()) {
-        Bitboard& targetBitboard = pieceToBitboard(board_[move.targetSquare()]);
+    if(move.isCapture() && !move.isEnPassant()) { // en passant already handles capture separately
+        Bitboard& targetBitboard = pieceToBitboard(mailbox_[move.targetSquare()]);
         targetBitboard.clearSquare(move.targetSquare());
+
+        // update occupancy bitboard
+        targetColorBitboard.clearSquare(move.targetSquare());
     }
 
-    board_[move.targetSquare()] = sourcePiece;
-    board_[move.sourceSquare()] = Piece{};
-
-    // update king square cache(s)
-    if(sourcePiece.type() == PieceType::King) {
-        if(isSourcePieceWhite) {
-            whiteKingSquare_ = move.targetSquare();
-        } else {
-            blackKingSquare_ = move.targetSquare();
-        }
-    }
+    // update mailbox
+    mailbox_[move.targetSquare()] = sourcePiece;
+    mailbox_[move.sourceSquare()] = Piece{};
 }
 
 void Game::undoMove(const Move& move, const UndoInfo& undoInfo) {
     // sourcePiece is now sitting at targetSquare
-    const Piece sourcePiece = board_[move.targetSquare()];
+    const Piece sourcePiece = mailbox_[move.targetSquare()];
     const bool isSourcePieceWhite = sourcePiece.color() == Color::White;
     // flip current turn
     currentTurn_ = oppositeColor(currentTurn_);
 
     // source piece's bitboard
     Bitboard& sourceBitboard = pieceToBitboard(sourcePiece);
+    Bitboard& sourceColorBitboard = colorToOccupancyBitboard(sourcePiece.color());
+    Bitboard& targetColorBitboard = colorToOccupancyBitboard(oppositeColor(sourcePiece.color()));
 
     // handle king side castle
     if(move.isKingSideCastle()) {
         const int kingsidePassingSquare = isSourcePieceWhite ? WHITE_KINGSIDE_PASSING_SQUARE : BLACK_KINGSIDE_PASSING_SQUARE;
         const int kingsideRookSquare = isSourcePieceWhite ? WHITE_KINGSIDE_ROOK_STARTING_SQUARE : BLACK_KINGSIDE_ROOK_STARTING_SQUARE;
 
+        // undo rook move in bitboard
         Bitboard& bbSourceRooks = pieceToBitboard(PieceType::Rook, sourcePiece.color());
         bbSourceRooks.clearSquare(kingsidePassingSquare);
         bbSourceRooks.setSquare(kingsideRookSquare);
 
-        // undo rook move
-        board_[kingsidePassingSquare] = Piece{};
-        board_[kingsideRookSquare] = Piece{PieceType::Rook, sourcePiece.color()};
+        // update occupancy bitboard
+        sourceColorBitboard.clearSquare(kingsidePassingSquare);
+        sourceColorBitboard.setSquare(kingsideRookSquare);
+
+        // undo rook move in mailbox
+        mailbox_[kingsidePassingSquare] = Piece{};
+        mailbox_[kingsideRookSquare] = Piece{PieceType::Rook, sourcePiece.color()};
     }
 
     // handle queen side castle
@@ -1169,9 +1338,13 @@ void Game::undoMove(const Move& move, const UndoInfo& undoInfo) {
         bbSourceRooks.clearSquare(queensidePassingSquare);
         bbSourceRooks.setSquare(queensideRookSquare);
 
+        // update occupancy bitboard
+        sourceColorBitboard.clearSquare(queensidePassingSquare);
+        sourceColorBitboard.setSquare(queensideRookSquare);
+
         // undo rook move
-        board_[queensidePassingSquare] = Piece{};
-        board_[queensideRookSquare] = Piece{PieceType::Rook, sourcePiece.color()};
+        mailbox_[queensidePassingSquare] = Piece{};
+        mailbox_[queensideRookSquare] = Piece{PieceType::Rook, sourcePiece.color()};
     }
 
     // handle en passant
@@ -1183,27 +1356,39 @@ void Game::undoMove(const Move& move, const UndoInfo& undoInfo) {
         Bitboard& bbEnemyPawns = pieceToBitboard(PieceType::Pawn, oppositeColor(sourcePiece.color()));
         bbEnemyPawns.setSquare(capturedIndex);
 
+        // update occupancy bitboard
+        targetColorBitboard.setSquare(capturedIndex);
+
         // replace captured pawn
-        board_[capturedIndex] = Piece{PieceType::Pawn, oppositeColor(sourcePiece.color())};
+        mailbox_[capturedIndex] = Piece{PieceType::Pawn, oppositeColor(sourcePiece.color())};
     }
 
     // handle promotion; different enough that we need to return early
     if(move.isPromotion()) {
         // update promotion bitboard
         // re-add pawn to pawn bitboard
-        pieceToBitboard(PieceType::Pawn, sourcePiece.color()).clearSquare(move.sourceSquare());
+        pieceToBitboard(PieceType::Pawn, sourcePiece.color()).setSquare(move.sourceSquare());
         // remove promoted piece from promoted piece bitboard
         sourceBitboard.clearSquare(move.targetSquare());
+
+        // update occupancy bitboard
+        // re-add pawn
+        sourceColorBitboard.setSquare(move.sourceSquare());
+        // remove promoted piece
+        sourceColorBitboard.clearSquare(move.targetSquare());
 
         if(move.isCapture()) {
             // re add captured piece to board
             Bitboard& capturedBitboard = pieceToBitboard(undoInfo.capturedPiece);
             capturedBitboard.setSquare(move.targetSquare());
+
+            // update occupancy bitboard
+            targetColorBitboard.setSquare(move.targetSquare());
         }
 
         // 'sourcePiece' is now a promoted piece instead of a pawn; we correct that
-        board_[move.sourceSquare()] = Piece{PieceType::Pawn, sourcePiece.color()};
-        board_[move.targetSquare()] = undoInfo.capturedPiece;
+        mailbox_[move.sourceSquare()] = Piece{PieceType::Pawn, sourcePiece.color()};
+        mailbox_[move.targetSquare()] = undoInfo.capturedPiece;
         return;
     }
 
@@ -1211,184 +1396,174 @@ void Game::undoMove(const Move& move, const UndoInfo& undoInfo) {
     sourceBitboard.setSquare(move.sourceSquare());
     sourceBitboard.clearSquare(move.targetSquare());
 
+    // update occupancy bitboard
+    sourceColorBitboard.setSquare(move.sourceSquare());
+    sourceColorBitboard.clearSquare(move.targetSquare());
+
     // handle capture
     if(move.isCapture() && !move.isEnPassant()) {
         Bitboard& capturedBitboard = pieceToBitboard(undoInfo.capturedPiece);
         capturedBitboard.setSquare(move.targetSquare());
+
+        targetColorBitboard.setSquare(move.targetSquare());
     }
 
     // undo the general move
-    board_[move.sourceSquare()] = sourcePiece;
-    board_[move.targetSquare()] = undoInfo.capturedPiece;
+    mailbox_[move.sourceSquare()] = sourcePiece;
+    mailbox_[move.targetSquare()] = undoInfo.capturedPiece;
 
     // restore all flags
     castlingRights_ = undoInfo.prevCastlingRights;
     currentEnPassantSquare_ = undoInfo.prevEnPassantSquare;
-    whiteKingSquare_ = undoInfo.prevWhiteKingSquare;
-    blackKingSquare_ = undoInfo.prevBlackKingSquare;
 }
 
 bool Game::isSquareAttacked(const int targetSquare, const Color attackingColor) const {
-    const int targetRow = getRow(targetSquare);
-    const int targetCol = getCol(targetSquare);
-
-    // 1. Pawn attacks (only diagonals)
-    // White attacks row - 1, Black attacks row + 1
-    const int pawnDir = (attackingColor == Color::White) ? -1 : +1;
-    const int attackingPawnRow = targetRow - pawnDir; // square where an attacking pawn would sit
-    if (attackingPawnRow >= 0 && attackingPawnRow <= 7) {
-        for (const int deltaColumn : {-1, +1}) {
-            const int curCol = targetCol + deltaColumn;
-            // out of range
-            if (!onBoard(curCol, attackingPawnRow)) {
-                continue;
-            }
-
-            const int attackingPawnSquare = getSquareIndex(curCol, attackingPawnRow);
-            const Piece possibleAttackingPawn = board_[attackingPawnSquare];
-            if (possibleAttackingPawn.type() == PieceType::Pawn && possibleAttackingPawn.color() == attackingColor) {
-                return true;
-            }
-        }
+    const bool isWhiteAttacking = attackingColor == Color::White;
+    const Bitboard allPieces = bbWhitePieces_.merge(bbBlackPieces_);
+    // we compute "is attackingColor attacking targetSquare"
+    // Pawns -- since pawn moves are not symmetric we use the opposite color's attacking bitboard
+    const Bitboard attackingPawns = isWhiteAttacking ? bbWhitePawns_ : bbBlackPawns_;
+    const std::array<Bitboard, 64> attackingPawnsMap = isWhiteAttacking ? attackBitboards_.blackPawnAttacks : attackBitboards_.whitePawnAttacks;
+    if(!attackingPawns.mask(attackingPawnsMap[targetSquare]).empty()) {
+        return true;
     }
 
-    // 2. Knight attacks
-    for (int i = 0; i < 8; i++) {
-        const int curCol = targetCol + knightDeltas[i][0];
-        const int curRow = targetRow + knightDeltas[i][1];
-        // out of bounds
-        if (!onBoard(curCol, curRow)) {
-            continue;
-        }
+    // Knights -- is there an attacking knight sitting a knights move away from targetSquare
+    const Bitboard attackingKnights = isWhiteAttacking ? bbWhiteKnights_ : bbBlackKnights_;
+    if(!attackingKnights.mask(attackBitboards_.knightAttacks[targetSquare]).empty()) {
+        return true;
+    }
 
-        const int curSquare = getSquareIndex(curCol, curRow);
-        const Piece possibleKnight = board_[curSquare];
-        if (possibleKnight.type() == PieceType::Knight && possibleKnight.color() == attackingColor) {
+    // Kings -- is there an attacking king sitting a kings move away from targetSquare
+    const Bitboard attackingKings = isWhiteAttacking ? bbWhiteKing_ : bbBlackKing_;
+    if(!attackingKings.mask(attackBitboards_.kingAttacks[targetSquare]).empty()) {
+        return true;
+    }
+
+    // Sliding pieces -- TODO: implement magic bitboards
+    const Bitboard attackingRooks = isWhiteAttacking ? bbWhiteRooks_ : bbBlackRooks_;
+    const Bitboard attackingBishops = isWhiteAttacking ? bbWhiteBishops_ : bbBlackBishops_;
+    const Bitboard attackingQueens = isWhiteAttacking ? bbWhiteQueens_ : bbBlackQueens_;
+    // Orthogonal, rook / queen
+    const Bitboard rookLike = attackingRooks.merge(attackingQueens);
+    // North (+8)
+    for (int curSquare = targetSquare + 8; curSquare <= 63; curSquare += 8) {
+        // if we hit the correct piece, we are done, the square is attacked
+        if(rookLike.containsSquare(curSquare)) {
             return true;
         }
+
+        // if we hit the wrong piece after, we are done for this direction
+        if(allPieces.containsSquare(curSquare)) {
+            break;
+        }
     }
 
-    // 3. King attacks
-    for (int i = 0; i < 8; i++) {
-        const int curCol = targetCol + kingDeltas[i][0];
-        const int curRow = targetRow + kingDeltas[i][1];
-        // out of bounds
-        if (!onBoard(curCol, curRow)) {
-            continue;
-        }
-
-        const int curSquare = getSquareIndex(curCol, curRow);
-        const Piece possibleKing = board_[curSquare];
-        if (possibleKing.type() == PieceType::King && possibleKing.color() == attackingColor) {
+    // South (-8)
+    for (int curSquare = targetSquare - 8; curSquare >= 0; curSquare -= 8) {
+        // if we hit the correct piece, we are done, the square is attacked
+        if(rookLike.containsSquare(curSquare)) {
             return true;
         }
-    }
 
-    // The following loops are unrolled for speed
-    // 4. Orthogonal (rook/queen)
-    // North
-    for (int curRow = targetRow + 1; curRow < 8; curRow++) {
-        const Piece curPiece = board_[getSquareIndex(targetCol, curRow)];
-        if (curPiece.exists()) {
-            if (curPiece.color() == attackingColor &&
-                (curPiece.type() == PieceType::Rook || curPiece.type() == PieceType::Queen)) {
-                return true;
-            }
-            break; // blocked by some piece
-        }
-    }
-    // South
-    for (int curRow = targetRow - 1; curRow >= 0; curRow--) {
-        const Piece curPiece = board_[getSquareIndex(targetCol, curRow)];
-        if (curPiece.exists()) {
-            if (curPiece.color() == attackingColor &&
-                (curPiece.type() == PieceType::Rook || curPiece.type() == PieceType::Queen)) {
-                return true;
-            }
-            break; // blocked by some piece
-        }
-    }
-    // East
-    for (int curCol = targetCol + 1; curCol < 8; curCol++) {
-        const Piece curPiece = board_[getSquareIndex(curCol, targetRow)];
-        if (curPiece.exists()) {
-            if (curPiece.color() == attackingColor &&
-                (curPiece.type() == PieceType::Rook || curPiece.type() == PieceType::Queen)) {
-                return true;
-            }
-            break; // blocked by some piece
-        }
-    }
-    // West
-    for (int curCol = targetCol - 1; curCol >= 0; curCol--) {
-        const Piece curPiece = board_[getSquareIndex(curCol, targetRow)];
-        if (curPiece.exists()) {
-            if (curPiece.color() == attackingColor &&
-                (curPiece.type() == PieceType::Rook || curPiece.type() == PieceType::Queen)) {
-                return true;
-            }
-            break; // blocked by some piece
+        // if we hit the wrong piece after, we are done for this direction
+        if(allPieces.containsSquare(curSquare)) {
+            break;
         }
     }
 
-    // 5. Diagonals (bishop/queen)
-    // NE
-    for (int curCol = targetCol + 1, curRow = targetRow + 1; curCol < 8 && curRow < 8; curCol++, curRow++) {
-        const Piece curPiece = board_[getSquareIndex(curCol, curRow)];
-        if (curPiece.exists()) {
-            if (curPiece.color() == attackingColor &&
-                (curPiece.type() == PieceType::Bishop || curPiece.type() == PieceType::Queen)) {
-                return true;
-            }
-            break; // blocked by some piece
+    // East (+1) until file wraps (when file becomes 0 after H->A wrap)
+    for (int curSquare = targetSquare + 1; curSquare <= 63 && getCol(curSquare) != 0; curSquare++) {
+        // if we hit the correct piece, we are done, the square is attacked
+        if(rookLike.containsSquare(curSquare)) {
+            return true;
         }
-    }
-    // NW
-    for (int curCol = targetCol - 1, curRow = targetRow + 1; curCol >= 0 && curRow < 8; curCol--, curRow++) {
-        const Piece curPiece = board_[getSquareIndex(curCol, curRow)];
-        if (curPiece.exists()) {
-            if (curPiece.color() == attackingColor &&
-                (curPiece.type() == PieceType::Bishop || curPiece.type() == PieceType::Queen)) {
-                return true;
-            }
-            break; // blocked by some piece
-        }
-    }
-    // SE
-    for (int curCol = targetCol + 1, curRow = targetRow - 1; curCol < 8 && curRow >= 0; curCol++, curRow--) {
-        const Piece curPiece = board_[getSquareIndex(curCol, curRow)];
-        if (curPiece.exists()) {
-            if (curPiece.color() == attackingColor &&
-                (curPiece.type() == PieceType::Bishop || curPiece.type() == PieceType::Queen)) {
-                return true;
-            }
-            break; // blocked by some piece
-        }
-    }
-    // SW
-    for (int curCol = targetCol - 1, curRow = targetRow - 1; curCol >= 0 && curRow >= 0; curCol--, curRow--) {
-        const Piece curPiece = board_[getSquareIndex(curCol, curRow)];
-        if (curPiece.exists()) {
-            if (curPiece.color() == attackingColor &&
-                (curPiece.type() == PieceType::Bishop || curPiece.type() == PieceType::Queen)) {
-                return true;
-            }
-            break; // blocked by some piece
+
+        // if we hit the wrong piece after, we are done for this direction
+        if(allPieces.containsSquare(curSquare)) {
+            break;
         }
     }
 
-    // didn't find anything
+    // West (-1) until file wraps (when file becomes 7 after A->H wrap)
+    for (int curSquare = targetSquare - 1; curSquare >= 0 && getCol(curSquare) != 7; curSquare--) {
+        // if we hit the correct piece, we are done, the square is attacked
+        if(rookLike.containsSquare(curSquare)) {
+            return true;
+        }
+
+        // if we hit the wrong piece after, we are done for this direction
+        if(allPieces.containsSquare(curSquare)) {
+            break;
+        }
+    }
+
+    // Diagonal, bishop / queen
+    const Bitboard bishopLike = attackingBishops.merge(attackingQueens);
+    // NE (+9) stop at H-file wrap (file becomes 0)
+    for (int curSquare = targetSquare + 9; curSquare <= 63 && getCol(curSquare) != 0; curSquare += 9) {
+        // if we hit the correct piece, we are done, the square is attacked
+        if(bishopLike.containsSquare(curSquare)) {
+            return true;
+        }
+
+        // if we hit the wrong piece after, we are done for this direction
+        if(allPieces.containsSquare(curSquare)) {
+            break;
+        }
+    }
+
+    // NW (+7) stop at A-file wrap (file becomes 7)
+    for (int curSquare = targetSquare + 7; curSquare <= 63 && getCol(curSquare) != 7; curSquare += 7) {
+        // if we hit the correct piece, we are done, the square is attacked
+        if(bishopLike.containsSquare(curSquare)) {
+            return true;
+        }
+
+        // if we hit the wrong piece after, we are done for this direction
+        if(allPieces.containsSquare(curSquare)) {
+            break;
+        }
+    }
+
+    // SE (-7) stop at H-file wrap (file becomes 0)
+    for (int curSquare = targetSquare - 7; curSquare >= 0 && getCol(curSquare) != 0; curSquare -= 7) {
+        // if we hit the correct piece, we are done, the square is attacked
+        if(bishopLike.containsSquare(curSquare)) {
+            return true;
+        }
+
+        // if we hit the wrong piece after, we are done for this direction
+        if(allPieces.containsSquare(curSquare)) {
+            break;
+        }
+    }
+
+    // SW (-9) stop at A-file wrap (file becomes 7)
+    for (int curSquare = targetSquare - 9; curSquare >= 0 && getCol(curSquare) != 7; curSquare -= 9) {
+        // if we hit the correct piece, we are done, the square is attacked
+        if(bishopLike.containsSquare(curSquare)) {
+            return true;
+        }
+
+        // if we hit the wrong piece after, we are done for this direction
+        if(allPieces.containsSquare(curSquare)) {
+            break;
+        }
+    }
+
     return false;
 }
 
 bool Game::isInCheck(const Color& colorToFind) const {
-    // TODO: this throws no king on both sides
+    // TODO: this has undefined behavior if no kings on both sides
     const int kingSquare = findKingSquare(colorToFind);
     return isSquareAttacked(kingSquare, oppositeColor(colorToFind));
 }
 
 int Game::findKingSquare(const Color& colorToFind) const {
-    return colorToFind == Color::White ? whiteKingSquare_ : blackKingSquare_;
+    Bitboard bbKing = colorToFind == Color::White ? bbWhiteKing_ : bbBlackKing_;
+    return bbKing.popLsb();
 }
 
 std::string Game::intToAlgebraicNotation(const int square) {

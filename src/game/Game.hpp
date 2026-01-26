@@ -303,8 +303,8 @@ public:
     // Update the board given a FEN.
     void loadFEN(const std::string& FEN);
 
-    // Retrieve board.
-    std::array<Piece, NUM_SQUARES> board() const;
+    // Retrieve mailbox.
+    constexpr std::array<Piece, NUM_SQUARES> mailbox() const { return mailbox_; }
     // Retrieve the color of the current player's turn.
     Color currentTurn() const;
     // Retrieve a string representation of the current state of the board.
@@ -323,12 +323,12 @@ public:
     void undoMove(const Move& move, const UndoInfo& undoInfo);
     // If a move is legal.
     bool isMoveLegal(const Move& move);
-    // Generate all legal moves from a given square.
-    void generateLegalMoves(int sourceSquare, MoveList& out);
-    // Generate all pseudo legal moves using the given current color.
-    void generateAllPseudoLegalMoves(MoveList& out);
-    // Generate all legal moves using the given current color.
-    void generateAllLegalMoves(MoveList& out);
+    // Generate all legal moves.
+    void generateLegalMoves(MoveList& out);
+    // Generate all legal moves from a sourceSquare. This is slow and should only be used sparingly (e.g., in GUI).
+    void generateLegalMovesFromSquare(int sourceSquare, MoveList& out);
+    // Generate all pseudo legal moves. Pseudo legal moves only take piece movement into account, no king check status.
+    void generatePseudoLegalMoves(MoveList& out);
 
     // If the given color is in check.
     bool isInCheck(const Color& colorToFind) const;
@@ -376,11 +376,11 @@ public:
         return attackBitboards_;
     }
 
-    constexpr Bitboard& colorToOccupancyBitboard(Color color) noexcept {
+    constexpr Bitboard& colorToOccupancyBitboard(Color color) {
         switch(color) {
             case Color::White: return bbWhitePieces_;
             case Color::Black: return bbBlackPieces_;
-            case Color::None: return bbAllPieces_; // this overload may not be appropriate here
+            case Color::None: assert(false); throw std::runtime_error("Invalid color for colorToOccupancyBitboard.");
         }
     }
     
@@ -393,7 +393,7 @@ public:
             case PieceType::Rook: return attackBitboards_.rookAttacks;
             case PieceType::Queen: return attackBitboards_.queenAttacks;
             case PieceType::King: return attackBitboards_.kingAttacks;
-            case PieceType::None: return std::array<Bitboard, 64>{}; // shouldn't happen
+            case PieceType::None: assert(false); return std::array<Bitboard, 64>{}; // shouldn't happen
         }
     }
 
@@ -407,7 +407,7 @@ public:
             case PieceType::Rook: return isWhite ? bbWhiteRooks_ : bbBlackRooks_;
             case PieceType::Queen: return isWhite ? bbWhiteQueens_ : bbBlackQueens_;
             case PieceType::King: return isWhite ? bbWhiteKing_ : bbBlackKing_;
-            case PieceType::None: throw std::runtime_error("Bitboard does not exist.");
+            case PieceType::None: assert(false); throw std::runtime_error("Bitboard does not exist.");
         }
     }
 
@@ -422,11 +422,15 @@ public:
             case PieceType::Rook: return isWhite ? bbWhiteRooks_ : bbBlackRooks_;
             case PieceType::Queen: return isWhite ? bbWhiteQueens_ : bbBlackQueens_;
             case PieceType::King: return isWhite ? bbWhiteKing_ : bbBlackKing_;
-            case PieceType::None: throw std::runtime_error("Bitboard does not exist for piece: " + piece.to_string_long());
+            case PieceType::None: assert(false); throw std::runtime_error("Bitboard does not exist for piece: " + piece.to_string_long());
         }
     }
 
 private:
+    // mailbox used to quickly find piece from square; not used for generating pieces
+    std::array<Piece, NUM_SQUARES> mailbox_;
+
+    // TODO: rename "sideToMove_"
     // The game's current turn.
     Color currentTurn_;
 
@@ -457,7 +461,6 @@ private:
     // Occupancy
     Bitboard bbWhitePieces_;
     Bitboard bbBlackPieces_;
-    Bitboard bbAllPieces_;
 
     AttackBitboards attackBitboards_;
 
@@ -466,18 +469,16 @@ private:
     // Add move and all pawn promotion variants to moves. If move is not a pawn promotion, just add move by itself.
     static void addAllPawnPromotionsToMoves_(MoveList& moves, int sourceSquare, int targetSquare, Piece sourcePiece, bool isCapture);
 
-    // Generate all pseudo legal moves from a given square. Pseudo legal moves only take piece movement into account, no king check status.
-    void generatePseudoLegalMoves_(int sourceSquare, MoveList& out);
-    // Generate all pseudo legal pawn moves from a given square.
-    void generatePseudoLegalPawnMoves_(int sourceSquare, MoveList& out);
-    // Generate all pseudo legal knight moves from a given square.
-    void generatePseudoLegalKnightMoves_(int sourceSquare, MoveList& out);
-    // Generate all pseudo legal bishop moves from a given square.
-    void generatePseudoLegalBishopMoves_(int sourceSquare, MoveList& out);
-    // Generate all pseudo legal rook moves from a given square.
-    void generatePseudoLegalRookMoves_(int sourceSquare, MoveList& out);
-    // Generate all pseudo legal queen moves from a given square.
-    void generatePseudoLegalQueenMoves_(int sourceSquare, MoveList& out);
-    // Generate all pseudo legal king moves from a given square.
-    void generatePseudoLegalKingMoves_(int sourceSquare, MoveList& out);
+    // Generate all pseudo legal pawn moves.
+    void generatePseudoLegalPawnMoves_(MoveList& out);
+    // Generate all pseudo legal knight moves.
+    void generatePseudoLegalKnightMoves_(MoveList& out);
+    // Generate all pseudo legal bishop moves.
+    void generatePseudoLegalBishopMoves_(MoveList& out);
+    // Generate all pseudo legal rook moves.
+    void generatePseudoLegalRookMoves_(MoveList& out);
+    // Generate all pseudo legal queen moves.
+    void generatePseudoLegalQueenMoves_(MoveList& out);
+    // Generate all pseudo legal king moves.
+    void generatePseudoLegalKingMoves_(MoveList& out);
 };

@@ -6,6 +6,6 @@
 // collection of perft-related helpers for testing
 class Perft{
 public:
-    static int64_t perft(Game& game, int depth);
-    static int64_t perftDivide(Game& game, int depth);
+    static uint64_t perft(Game& game, int depth);
+    static uint64_t perftDivide(Game& game, int depth);
 };

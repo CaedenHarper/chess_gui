@@ -4,19 +4,20 @@
 #include "Perft.hpp"
 #include "../src/game/Game.hpp"
 
-// limit of 9,223,372,036,854,775,807
-int64_t Perft::perft(Game& game, int depth) { // NOLINT(misc-no-recursion)
+// limit of 18,446,744,073,709,551,615
+uint64_t Perft::perft(Game& game, int depth) { // NOLINT(misc-no-recursion)
     if(depth <= 0) {
         return 1;
     }
     
-    int64_t numPositions = 0;
+    uint64_t numPositions = 0;
     MoveList moves;
-    game.generateAllPseudoLegalMoves(moves);
+    game.generatePseudoLegalMoves(moves);
 
     for (int i = 0; i < moves.size; i++) {
         const Move& move = moves.data[i];
-        const UndoInfo undoInfo = game.getUndoInfo(game.board()[move.targetSquare()]);
+        // TODO: don't use mailbox here
+        const UndoInfo undoInfo = game.getUndoInfo(game.mailbox()[move.targetSquare()]);
         const Color currentTurn = game.currentTurn();
         const Color enemyColor = Game::oppositeColor(currentTurn);
 
@@ -69,18 +70,19 @@ int64_t Perft::perft(Game& game, int depth) { // NOLINT(misc-no-recursion)
 
 
 // Prints each root move and its subtree count; matches Stockfish for debugging
-int64_t Perft::perftDivide(Game& game, int depth) {
+uint64_t Perft::perftDivide(Game& game, int depth) {
     if (depth <= 0) {
         return 1;
     }
 
-    int64_t numPositions = 0;
+    uint64_t numPositions = 0;
     MoveList moves;
-    game.generateAllPseudoLegalMoves(moves);
+    game.generatePseudoLegalMoves(moves);
 
     for (int i = 0; i < moves.size; i++) {
         const Move& move = moves.data[i];
-        const UndoInfo undoInfo = game.getUndoInfo(game.board()[move.targetSquare()]);
+        // TODO: don't use mailbox here
+        const UndoInfo undoInfo = game.getUndoInfo(game.mailbox()[move.targetSquare()]);
         const Color currentTurn = game.currentTurn();
         const Color enemyColor = Game::oppositeColor(currentTurn);
 
@@ -124,11 +126,11 @@ int64_t Perft::perftDivide(Game& game, int depth) {
         }
 
         // no checks, we can continue recursing
-        const int64_t moveNodes = perft(game, depth - 1);
+        const uint64_t moveNodes = perft(game, depth - 1);
 
         game.undoMove(move, undoInfo);
 
-        std::cout << move.toLongAlgebraic() << ": " << moveNodes << "\n";
+        std::cerr << move.toLongAlgebraic() << ": " << moveNodes << "\n";
 
         numPositions += moveNodes;
     }

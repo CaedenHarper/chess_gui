@@ -1,6 +1,4 @@
-#include <SFML/Graphics/RectangleShape.hpp>
-#include <SFML/Graphics/Sprite.hpp>
-#include <SFML/System/Vector2.hpp>
+#include <iostream>
 #include <optional>
 #include <string>
 
@@ -71,7 +69,8 @@ void runGUIBitboardTest() {
 
     // init game
     Game game;
-    game.loadFEN(std::string{Game::STARTING_FEN});
+    // game.loadFEN(std::string{Game::STARTING_FEN});
+    game.loadFEN("7k/P7/1K6/8/8/8/8/8 w - - 0 1");
 
     // init board
     Board board;
@@ -155,7 +154,7 @@ void runGUIBitboardTest() {
                     // no currently held piece
                     if(!heldSquare) {
                         // no need to do additional processing for clicking on empty square, or wrong player's piece
-                        if(!game.board().at(targetSquare).exists() || game.board().at(targetSquare).color() != game.currentTurn()) {
+                        if(!game.mailbox().at(targetSquare).exists() || game.mailbox().at(targetSquare).color() != game.currentTurn()) {
                             continue;
                         }
 
@@ -168,7 +167,7 @@ void runGUIBitboardTest() {
 
                         // highlight legal moves
                         MoveList legalMoves;
-                        game.generateLegalMoves(targetSquare, legalMoves);
+                        game.generateLegalMovesFromSquare(targetSquare, legalMoves);
                         for(int i = 0; i < legalMoves.size; i++) {
                             const Move move = legalMoves.data[i];
                             board.at(move.targetSquare()).setHighlight(Board::LEGAL_HIGHLIGHT);
@@ -189,7 +188,7 @@ void runGUIBitboardTest() {
                     }
                     
                     // Try to make click-click move; if successful, update visual board
-                    const Move potentialMove = Move::fromPieces(sourceSquare, targetSquare, game.board().at(sourceSquare), game.board().at(targetSquare));
+                    const Move potentialMove = Move::fromPieces(sourceSquare, targetSquare, game.mailbox().at(sourceSquare), game.mailbox().at(targetSquare));
                     if(game.tryMove(potentialMove)) {
                         board.updateBoardFromGame(game);
                         PIECE_MOVEMENT_SOUND.play();
@@ -257,7 +256,7 @@ void runGUIBitboardTest() {
                     }
 
                     // move is on board and different square
-                    const Move potentialMove = Move::fromPieces(sourceSquare, targetSquare, game.board().at(sourceSquare), game.board().at(targetSquare));
+                    const Move potentialMove = Move::fromPieces(sourceSquare, targetSquare, game.mailbox().at(sourceSquare), game.mailbox().at(targetSquare));
                     // if move is legal, try it
                     if (game.tryMove(potentialMove)) {
                         board.updateBoardFromGame(game);
@@ -282,29 +281,38 @@ void runGUIBitboardTest() {
 
         // highlight squares based on the chosen bitboard
         board.clearAllHighlights(Board::RIGHT_CLICK_HIGHLIGHT);
+        board.clearAllHighlights(Board::CYAN_HIGHLIGHT);
         if(chosenBitboard.has_value()) {
             const Piece bitboardPiece = bitboardNumberToPiece(chosenBitboard.value());
             const Bitboard bitboard = game.pieceToBitboard(bitboardPiece);
-            const std::array<Bitboard, 64> attackBitboards = game.pieceToAttackBitboard(bitboardPiece);
+            // const std::array<Bitboard, 64> attackBitboards = game.pieceToAttackBitboard(bitboardPiece);
+
+            // highlight allPieces_ based on color of chosenBitboard
+            Bitboard allPieces = game.colorToOccupancyBitboard(bitboardPiece.color());
+            // paint board based on allPieces
+            while(!allPieces.empty()) {
+                const int pieceLocation = allPieces.popLsb();
+                board.at(pieceLocation).setHighlight(Board::CYAN_HIGHLIGHT);
+            }
+
+            // highlight attack bitboards by building all attacks from bitboard
+            // Bitboard allAttacks{0};
+            // Bitboard temp = bitboard;
+            // while(!temp.empty()) {
+            //     const int pieceLocation = temp.popLsb();
+            //     allAttacks.mergeIn(attackBitboards[pieceLocation]);
+            // }
+
+            // // then, paint board based on allAttacks
+            // while(!allAttacks.empty()) {
+            //     const int attackLocation = allAttacks.popLsb();
+            //     board.at(attackLocation).setHighlight(Board::CYAN_HIGHLIGHT);
+            // }
 
             for(int square = 0; square < Game::NUM_SQUARES; square++) {
-                // highlight chosen bitboard
+                // highlight chosen bitboard after so red is on top of cyan
                 if(bitboard.containsSquare(square)) {
                     board.at(square).setHighlight(Board::RIGHT_CLICK_HIGHLIGHT);
-                }
-
-                // highlight attack bitboards by building all attacks from bitboard
-                Bitboard allAttacks{0};
-                Bitboard temp = bitboard;
-                while(!temp.empty()) {
-                    const int pieceLocation = temp.popLsb();
-                    allAttacks.mergeIn(attackBitboards[pieceLocation]);
-                }
-
-                // then, paint board based on allAttacks
-                while(!allAttacks.empty()) {
-                    const int attackLocation = allAttacks.popLsb();
-                    board.at(attackLocation).setHighlight(Board::CYAN_HIGHLIGHT);
                 }
             }
         }
@@ -422,7 +430,7 @@ void runGUIgame() {
                     // no currently held piece
                     if(!heldSquare) {
                         // no need to do additional processing for clicking on empty square, or wrong player's piece
-                        if(!game.board().at(targetSquare).exists() || game.board().at(targetSquare).color() != game.currentTurn()) {
+                        if(!game.mailbox().at(targetSquare).exists() || game.mailbox().at(targetSquare).color() != game.currentTurn()) {
                             continue;
                         }
 
@@ -435,7 +443,7 @@ void runGUIgame() {
 
                         // highlight legal moves
                         MoveList legalMoves;
-                        game.generateLegalMoves(targetSquare, legalMoves);
+                        game.generateLegalMovesFromSquare(targetSquare, legalMoves);
                         for(int i = 0; i < legalMoves.size; i++) {
                             const Move move = legalMoves.data[i];
                             board.at(move.targetSquare()).setHighlight(Board::LEGAL_HIGHLIGHT);
@@ -456,7 +464,7 @@ void runGUIgame() {
                     }
                     
                     // Try to make click-click move; if successful, update visual board
-                    const Move potentialMove = Move::fromPieces(sourceSquare, targetSquare, game.board().at(sourceSquare), game.board().at(targetSquare));
+                    const Move potentialMove = Move::fromPieces(sourceSquare, targetSquare, game.mailbox().at(sourceSquare), game.mailbox().at(targetSquare));
                     if(game.tryMove(potentialMove)) {
                         board.updateBoardFromGame(game);
                         PIECE_MOVEMENT_SOUND.play();
@@ -524,7 +532,7 @@ void runGUIgame() {
                     }
 
                     // move is on board and different square
-                    const Move potentialMove = Move::fromPieces(sourceSquare, targetSquare, game.board().at(sourceSquare), game.board().at(targetSquare));
+                    const Move potentialMove = Move::fromPieces(sourceSquare, targetSquare, game.mailbox().at(sourceSquare), game.mailbox().at(targetSquare));
                     // if move is legal, try it
                     if (game.tryMove(potentialMove)) {
                         board.updateBoardFromGame(game);
@@ -539,8 +547,12 @@ void runGUIgame() {
 
         // highlight attacked squares
         // for(int i = 0; i < Game::NUM_SQUARES; i++) {
-        //     if(game.isSquareAttacked(i, Color::White)) board.at(i).setHighlight(Board::RIGHT_CLICK_HIGHLIGHT);
-        //     if(game.isSquareAttacked(i, Color::Black)) board.at(i).setHighlight(Board::RIGHT_CLICK_HIGHLIGHT);
+        //     if(game.isSquareAttacked(i, Color::White)) {
+        //         board.at(i).setHighlight(Board::CYAN_HIGHLIGHT);
+        //     }
+        //     if(game.isSquareAttacked(i, Color::Black)) {
+        //         board.at(i).setHighlight(Board::CYAN_HIGHLIGHT);
+        //     }
         // }
 
         // TODO: replace check highlight with sprite
