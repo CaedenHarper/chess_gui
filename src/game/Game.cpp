@@ -174,7 +174,9 @@ Game::Game()
     : currentTurn_{Color::White},
     castlingRights_{0},
     currentEnPassantSquare_{UndoInfo::noEnPassant} {
-    initAttackBitboards_(); // any new game should init the attack bitboards
+    // Init lookup tables
+    initAttackBitboards_();
+    initPieceToBBTable_();
 }
 
 Color Game::currentTurn() const {
@@ -450,54 +452,71 @@ void Game::initAttackBitboards_() {
         }
         attackBitboards_.blackPawnAttacks[square] = blackPawnMoves;
 
-    // Sliding attack helper function; this is slower, but it's only called once per game so it's okay
-    // Note also this does not take blocking pieces into account
-    const auto rayHits = [&](int dRow, int dCol) -> Bitboard {
-        Bitboard attacks{0};
-
-        int curRow = row + dRow;
-        int curCol = col + dCol;
-        while (onBoard(curCol, curRow)) {
-            const int curSquare = getSquareIndex(curCol, curRow);
-
-            attacks.setSquare(curSquare);
-            
-            // this direction is not blocked, continue
-            curRow += dRow;
-            curCol += dCol;
+        // Slider rays
+        // North (+8)
+        for (int curSquare = square + 8; curSquare < 64; curSquare += 8) {
+            attackBitboards_.northRay[square].setSquare(curSquare);
         }
 
-        return attacks;
-    };
+        // South (-8)
+        for (int curSquare = square - 8; curSquare >= 0; curSquare -= 8) {
+            attackBitboards_.southRay[square].setSquare(curSquare);
+        }
 
-    // 4. orthogonal rays: rook and queen
-    const Bitboard south = rayHits(+1, 0);
-    attackBitboards_.rookAttacks[square].mergeIn(south);
-    attackBitboards_.queenAttacks[square].mergeIn(south);
-    const Bitboard north = rayHits(-1, 0);
-    attackBitboards_.rookAttacks[square].mergeIn(north);
-    attackBitboards_.queenAttacks[square].mergeIn(north);
-    const Bitboard east = rayHits(0, +1);
-    attackBitboards_.rookAttacks[square].mergeIn(east);
-    attackBitboards_.queenAttacks[square].mergeIn(east);
-    const Bitboard west = rayHits(0, -1);
-    attackBitboards_.rookAttacks[square].mergeIn(west);
-    attackBitboards_.queenAttacks[square].mergeIn(west);
+        // East (+1), stop at H-file
+        for (int curSquare = square + 1; curSquare < 64 && getCol(curSquare) != 0; curSquare++) {
+            attackBitboards_.eastRay[square].setSquare(curSquare);
+        }
 
-    // 5. diagonal rays: bishop and queen
-    const Bitboard southEast = rayHits(+1, +1);
-    attackBitboards_.bishopAttacks[square].mergeIn(southEast);
-    attackBitboards_.queenAttacks[square].mergeIn(southEast);
-    const Bitboard southWest = rayHits(+1, -1);
-    attackBitboards_.bishopAttacks[square].mergeIn(southWest);
-    attackBitboards_.queenAttacks[square].mergeIn(southWest);
-    const Bitboard northEast = rayHits(-1, +1);
-    attackBitboards_.bishopAttacks[square].mergeIn(northEast);
-    attackBitboards_.queenAttacks[square].mergeIn(northEast);
-    const Bitboard northWest = rayHits(-1, -1);
-    attackBitboards_.bishopAttacks[square].mergeIn(northWest);
-    attackBitboards_.queenAttacks[square].mergeIn(northWest);
+        // West (-1), stop at A-file
+        for (int curSquare = square - 1; curSquare >= 0 && getCol(curSquare) != 7; curSquare--) {
+            attackBitboards_.westRay[square].setSquare(curSquare);
+        }
+
+        // North-East (+9), stop at H-file
+        for (int curSquare = square + 9; curSquare < 64 && getCol(curSquare) != 0; curSquare += 9) {
+            attackBitboards_.neRay[square].setSquare(curSquare);
+        }
+
+        // North-West (+7), stop at A-file
+        for (int curSquare = square + 7; curSquare < 64 && getCol(curSquare) != 7; curSquare += 7) {
+            attackBitboards_.nwRay[square].setSquare(curSquare);
+        }
+
+        // South-East (-7), stop at H-file
+        for (int curSquare = square - 7; curSquare >= 0 && getCol(curSquare) != 0; curSquare -= 7) {
+            attackBitboards_.seRay[square].setSquare(curSquare);
+        }
+
+        // South-West (-9), stop at A-file
+        for (int curSquare = square - 9; curSquare >= 0 && getCol(curSquare) != 7; curSquare -= 9) {
+            attackBitboards_.swRay[square].setSquare(curSquare);
+        }
     }
+}
+
+// This is slow, but that's okay because its only ran once per Game instance.
+void Game::initPieceToBBTable_() {
+    piecePackedToBB_.fill(nullptr);
+    // helper to set table value based on piecetype, color, and bitboard
+    auto set = [&](PieceType type, Color color, Bitboard* bitboard){
+        const Piece piece{type, color};
+        piecePackedToBB_[piece.raw()] = bitboard;
+    };
+    // manually set each piece type
+    set(PieceType::Pawn, Color::White, &bbWhitePawns_);
+    set(PieceType::Knight, Color::White, &bbWhiteKnights_);
+    set(PieceType::Bishop, Color::White, &bbWhiteBishops_);
+    set(PieceType::Rook, Color::White, &bbWhiteRooks_);
+    set(PieceType::Queen, Color::White, &bbWhiteQueens_);
+    set(PieceType::King, Color::White, &bbWhiteKing_);
+
+    set(PieceType::Pawn, Color::Black, &bbBlackPawns_);
+    set(PieceType::Knight, Color::Black, &bbBlackKnights_);
+    set(PieceType::Bishop, Color::Black, &bbBlackBishops_);
+    set(PieceType::Rook, Color::Black, &bbBlackRooks_);
+    set(PieceType::Queen, Color::Black, &bbBlackQueens_);
+    set(PieceType::King, Color::Black, &bbBlackKing_);
 }
 
 // TODO: this may be a slow point for move gen
@@ -518,23 +537,23 @@ void Game::addAllPawnPromotionsToMoves_(MoveList& moves, const int sourceSquare,
     }
 }
 
-// TODO: consider + profile: all const Bitboard -> const Bitboard&; uint64_t may be fast enough to copy that it is not worth it
+// TODO: consider + profile: all const Bitboard& -> const Bitboard&&; uint64_t may be fast enough to copy that it is not worth it
 
 void Game::generatePseudoLegalPawnMoves_(MoveList& out) {
     const bool isWhite = currentTurn_ == Color::White;
 
     Bitboard sourcePawns = isWhite ? bbWhitePawns_ : bbBlackPawns_;
-    const Bitboard sourcePieces = isWhite ? bbWhitePieces_ : bbBlackPieces_;
-    const Bitboard targetPieces = isWhite ? bbBlackPieces_ : bbWhitePieces_;
+    const Bitboard& sourcePieces = isWhite ? bbWhitePieces_ : bbBlackPieces_;
+    const Bitboard& targetPieces = isWhite ? bbBlackPieces_ : bbWhitePieces_;
 
     // TODO: consider incrementally updated 'bbAllPieces_' here; its used rarely enough constructing from white + black pieces is probably fine
-    const Bitboard emptySquares = bbWhitePieces_.merge(bbBlackPieces_).flip();
+    const Bitboard& emptySquares = bbWhitePieces_.merge(bbBlackPieces_).flip();
     if(isWhite) { // black and white pawns move differently
         // White
 
         // Normal moves
         // for white we shift down one row (8 squares) if it lands on an empty square
-        const Bitboard oneRowPush = sourcePawns.rightShift(8).mask(emptySquares);
+        const Bitboard& oneRowPush = sourcePawns.rightShift(8).mask(emptySquares);
     
         Bitboard normal = oneRowPush;
         while(!normal.empty()) {
@@ -568,7 +587,7 @@ void Game::generatePseudoLegalPawnMoves_(MoveList& out) {
             const int sourceSquare = sourcePawns.popLsb();
 
             // Normal capture
-            const Bitboard captureAttacks = attackBitboards_.whitePawnAttacks[sourceSquare].mask(sourcePieces.flip());
+            const Bitboard& captureAttacks = attackBitboards_.whitePawnAttacks[sourceSquare].mask(sourcePieces.flip());
             Bitboard captures = captureAttacks.mask(targetPieces); // attacks that land on target pieces
             while(!captures.empty()) {
                 const int targetSquare = captures.popLsb();
@@ -580,7 +599,7 @@ void Game::generatePseudoLegalPawnMoves_(MoveList& out) {
 
         // Normal moves
         // for black we shift up one row (8 squares) if it lands on an empty square
-        const Bitboard oneRowPush = sourcePawns.leftShift(8).mask(emptySquares);
+        const Bitboard& oneRowPush = sourcePawns.leftShift(8).mask(emptySquares);
     
         Bitboard normal = oneRowPush;
         while(!normal.empty()) {
@@ -614,7 +633,7 @@ void Game::generatePseudoLegalPawnMoves_(MoveList& out) {
             const int sourceSquare = sourcePawns.popLsb();
 
             // Normal capture
-            const Bitboard captureAttacks = attackBitboards_.blackPawnAttacks[sourceSquare].mask(sourcePieces.flip());
+            const Bitboard& captureAttacks = attackBitboards_.blackPawnAttacks[sourceSquare].mask(sourcePieces.flip());
             Bitboard captures = captureAttacks.mask(targetPieces); // attacks that land on target pieces
             while(!captures.empty()) {
                 const int targetSquare = captures.popLsb();
@@ -629,12 +648,12 @@ void Game::generatePseudoLegalKnightMoves_(MoveList& out) {
     const bool isWhite = currentTurn_ == Color::White;
 
     Bitboard sourceKnights = isWhite ? bbWhiteKnights_ : bbBlackKnights_;
-    const Bitboard sourcePieces = isWhite ? bbWhitePieces_ : bbBlackPieces_;
-    const Bitboard targetPieces = isWhite ? bbBlackPieces_ : bbWhitePieces_;
+    const Bitboard& sourcePieces = isWhite ? bbWhitePieces_ : bbBlackPieces_;
+    const Bitboard& targetPieces = isWhite ? bbBlackPieces_ : bbWhitePieces_;
 
     while(!sourceKnights.empty()) {
         const int sourceSquare = sourceKnights.popLsb();
-        const Bitboard attacks = attackBitboards_.knightAttacks[sourceSquare].mask(sourcePieces.flip()); // can not attack own pieces
+        const Bitboard& attacks = attackBitboards_.knightAttacks[sourceSquare].mask(sourcePieces.flip()); // can not attack own pieces
 
         // Normal moves (non-captures)
         Bitboard normal = attacks.mask(targetPieces.flip()); // attacks that do not land on target pieces
@@ -658,8 +677,8 @@ void Game::generatePseudoLegalBishopMoves_(MoveList& out) {
     const bool isWhite = currentTurn_ == Color::White;
 
     Bitboard sourceBishops = isWhite ? bbWhiteBishops_ : bbBlackBishops_;
-    const Bitboard sourcePieces = isWhite ? bbWhitePieces_ : bbBlackPieces_;
-    const Bitboard targetPieces = isWhite ? bbBlackPieces_ : bbWhitePieces_;
+    const Bitboard& sourcePieces = isWhite ? bbWhitePieces_ : bbBlackPieces_;
+    const Bitboard& targetPieces = isWhite ? bbBlackPieces_ : bbWhitePieces_;
 
     while (!sourceBishops.empty()) {
         const int sourceSquare = sourceBishops.popLsb();
@@ -739,8 +758,8 @@ void Game::generatePseudoLegalRookMoves_(MoveList& out) {
     const bool isWhite = currentTurn_ == Color::White;
 
     Bitboard sourceRooks = isWhite ? bbWhiteRooks_ : bbBlackRooks_;
-    const Bitboard sourcePieces = isWhite ? bbWhitePieces_ : bbBlackPieces_;
-    const Bitboard targetPieces = isWhite ? bbBlackPieces_ : bbWhitePieces_;
+    const Bitboard& sourcePieces = isWhite ? bbWhitePieces_ : bbBlackPieces_;
+    const Bitboard& targetPieces = isWhite ? bbBlackPieces_ : bbWhitePieces_;
 
     while (!sourceRooks.empty()) {
         const int sourceSquare = sourceRooks.popLsb();
@@ -822,8 +841,8 @@ void Game::generatePseudoLegalQueenMoves_(MoveList& out) {
     const bool isWhite = currentTurn_ == Color::White;
 
     Bitboard sourceQueens = isWhite ? bbWhiteQueens_ : bbBlackQueens_;
-    const Bitboard sourcePieces = isWhite ? bbWhitePieces_ : bbBlackPieces_;
-    const Bitboard targetPieces = isWhite ? bbBlackPieces_ : bbWhitePieces_;
+    const Bitboard& sourcePieces = isWhite ? bbWhitePieces_ : bbBlackPieces_;
+    const Bitboard& targetPieces = isWhite ? bbBlackPieces_ : bbWhitePieces_;
 
     while (!sourceQueens.empty()) {
         const int sourceSquare = sourceQueens.popLsb();
@@ -974,14 +993,14 @@ void Game::generatePseudoLegalKingMoves_(MoveList& out) {
     const bool isWhite = (currentTurn_ == Color::White);
 
     Bitboard sourceKings = isWhite ? bbWhiteKing_ : bbBlackKing_;
-    const Bitboard sourcePieces = isWhite ? bbWhitePieces_ : bbBlackPieces_;
-    const Bitboard targetPieces = isWhite ? bbBlackPieces_ : bbWhitePieces_;
-    const Bitboard allPieces = bbWhitePieces_.merge(bbBlackPieces_);
+    const Bitboard& sourcePieces = isWhite ? bbWhitePieces_ : bbBlackPieces_;
+    const Bitboard& targetPieces = isWhite ? bbBlackPieces_ : bbWhitePieces_;
+    const Bitboard& allPieces = bbWhitePieces_.merge(bbBlackPieces_);
 
     // TODO: we assume just one king anyway so we can probably remove the loop, but it's probably fine for readability
     while(!sourceKings.empty()) {
         const int sourceSquare = sourceKings.popLsb();
-        const Bitboard attacks = attackBitboards_.kingAttacks[sourceSquare].mask(sourcePieces.flip()); // can not attack own pieces
+        const Bitboard& attacks = attackBitboards_.kingAttacks[sourceSquare].mask(sourcePieces.flip()); // can not attack own pieces
 
         // Normal moves (non-captures)
         Bitboard normal = attacks.mask(targetPieces.flip()); // attacks that do not land on target pieces
@@ -1151,15 +1170,18 @@ bool Game::tryMove(const Move& move) {
 
 void Game::makeMove(const Move& move) {
     const Piece sourcePiece = mailbox_[move.sourceSquare()];
-    const bool isSourcePieceWhite = sourcePiece.color() == Color::White;
+    const Color sourceColor = sourcePiece.color();
+
+    const bool isSourcePieceWhite = sourceColor == Color::White;
+
     // flip current turn
     currentTurn_ = oppositeColor(currentTurn_);
     // remove en passant (we may set it again later in this function)
     currentEnPassantSquare_ = UndoInfo::noEnPassant;
 
     Bitboard& sourceBitboard = pieceToBitboard(sourcePiece);
-    Bitboard& sourceColorBitboard = colorToOccupancyBitboard(sourcePiece.color());
-    Bitboard& targetColorBitboard = colorToOccupancyBitboard(oppositeColor(sourcePiece.color()));
+    Bitboard& sourceColorBitboard = colorToOccupancyBitboard(sourceColor);
+    Bitboard& targetColorBitboard = colorToOccupancyBitboard(oppositeColor(sourceColor));
 
     // update castling flags
     if(
@@ -1201,7 +1223,7 @@ void Game::makeMove(const Move& move) {
         const int capturedIndex = move.targetSquare() - (towardsCenter * 8);
 
         // clear captured pawn's bitboard placement
-        Bitboard& bbTargetPawns = pieceToBitboard(PieceType::Pawn, oppositeColor(sourcePiece.color()));
+        Bitboard& bbTargetPawns = pieceToBitboard(Piece{PieceType::Pawn, oppositeColor(sourceColor)});
         bbTargetPawns.clearSquare(capturedIndex);
 
         // update occupancy board
@@ -1217,7 +1239,7 @@ void Game::makeMove(const Move& move) {
         const int kingsideRookSquare = isSourcePieceWhite ? WHITE_KINGSIDE_ROOK_STARTING_SQUARE : BLACK_KINGSIDE_ROOK_STARTING_SQUARE;
 
         // set kingside rook's new position in bitboard and clear old position
-        Bitboard& bbSourceRooks = pieceToBitboard(PieceType::Rook, sourcePiece.color());
+        Bitboard& bbSourceRooks = pieceToBitboard(Piece{PieceType::Rook, sourceColor});
         bbSourceRooks.setSquare(kingsidePassingSquare);
         bbSourceRooks.clearSquare(kingsideRookSquare);
 
@@ -1226,7 +1248,7 @@ void Game::makeMove(const Move& move) {
         sourceColorBitboard.clearSquare(kingsideRookSquare);
 
         // also move rook in mailbox
-        mailbox_[kingsidePassingSquare] = Piece{PieceType::Rook, sourcePiece.color()};
+        mailbox_[kingsidePassingSquare] = Piece{PieceType::Rook, sourceColor};
         mailbox_[kingsideRookSquare] = Piece{};
     }
 
@@ -1236,7 +1258,7 @@ void Game::makeMove(const Move& move) {
         const int queensideRookSquare = isSourcePieceWhite ? WHITE_QUEENSIDE_ROOK_STARTING_SQUARE : BLACK_QUEENSIDE_ROOK_STARTING_SQUARE;
 
         // set kingside rook's new position in bitboard and clear old position
-        Bitboard& bbSourceRooks = pieceToBitboard(PieceType::Rook, sourcePiece.color());
+        Bitboard& bbSourceRooks = pieceToBitboard(Piece{PieceType::Rook, sourceColor});
         bbSourceRooks.setSquare(queensidePassingSquare);
         bbSourceRooks.clearSquare(queensideRookSquare);
 
@@ -1244,7 +1266,7 @@ void Game::makeMove(const Move& move) {
         sourceColorBitboard.clearSquare(queensideRookSquare);
 
         // also move rook in mailbox
-        mailbox_[queensidePassingSquare] = Piece{PieceType::Rook, sourcePiece.color()};
+        mailbox_[queensidePassingSquare] = Piece{PieceType::Rook, sourceColor};
         mailbox_[queensideRookSquare] = Piece{};;
     }
 
@@ -1256,7 +1278,7 @@ void Game::makeMove(const Move& move) {
         // remove pawn from pawn bitboard
         sourceBitboard.clearSquare(move.sourceSquare());
         // add promoted piece to promoted piece bitboard
-        pieceToBitboard(promotionType, sourcePiece.color()).setSquare(move.targetSquare());
+        pieceToBitboard(Piece{promotionType, sourceColor}).setSquare(move.targetSquare());
 
         // update occupancy board
         sourceColorBitboard.clearSquare(move.sourceSquare());
@@ -1271,7 +1293,7 @@ void Game::makeMove(const Move& move) {
         }
 
         // update mailbox
-        mailbox_[move.targetSquare()] = Piece{promotionType, sourcePiece.color()};
+        mailbox_[move.targetSquare()] = Piece{promotionType, sourceColor};
         mailbox_[move.sourceSquare()] = Piece{};
         return;
     }
@@ -1301,14 +1323,17 @@ void Game::makeMove(const Move& move) {
 void Game::undoMove(const Move& move, const UndoInfo& undoInfo) {
     // sourcePiece is now sitting at targetSquare
     const Piece sourcePiece = mailbox_[move.targetSquare()];
-    const bool isSourcePieceWhite = sourcePiece.color() == Color::White;
+    const Color sourceColor = sourcePiece.color();
+
+    const bool isSourcePieceWhite = sourceColor == Color::White;
+
     // flip current turn
     currentTurn_ = oppositeColor(currentTurn_);
 
     // source piece's bitboard
     Bitboard& sourceBitboard = pieceToBitboard(sourcePiece);
-    Bitboard& sourceColorBitboard = colorToOccupancyBitboard(sourcePiece.color());
-    Bitboard& targetColorBitboard = colorToOccupancyBitboard(oppositeColor(sourcePiece.color()));
+    Bitboard& sourceColorBitboard = colorToOccupancyBitboard(sourceColor);
+    Bitboard& targetColorBitboard = colorToOccupancyBitboard(oppositeColor(sourceColor));
 
     // handle king side castle
     if(move.isKingSideCastle()) {
@@ -1316,7 +1341,7 @@ void Game::undoMove(const Move& move, const UndoInfo& undoInfo) {
         const int kingsideRookSquare = isSourcePieceWhite ? WHITE_KINGSIDE_ROOK_STARTING_SQUARE : BLACK_KINGSIDE_ROOK_STARTING_SQUARE;
 
         // undo rook move in bitboard
-        Bitboard& bbSourceRooks = pieceToBitboard(PieceType::Rook, sourcePiece.color());
+        Bitboard& bbSourceRooks = pieceToBitboard(Piece{PieceType::Rook, sourceColor});
         bbSourceRooks.clearSquare(kingsidePassingSquare);
         bbSourceRooks.setSquare(kingsideRookSquare);
 
@@ -1326,7 +1351,7 @@ void Game::undoMove(const Move& move, const UndoInfo& undoInfo) {
 
         // undo rook move in mailbox
         mailbox_[kingsidePassingSquare] = Piece{};
-        mailbox_[kingsideRookSquare] = Piece{PieceType::Rook, sourcePiece.color()};
+        mailbox_[kingsideRookSquare] = Piece{PieceType::Rook, sourceColor};
     }
 
     // handle queen side castle
@@ -1334,7 +1359,7 @@ void Game::undoMove(const Move& move, const UndoInfo& undoInfo) {
         const int queensidePassingSquare = isSourcePieceWhite ? WHITE_QUEENSIDE_PASSING_SQUARE : BLACK_QUEENSIDE_PASSING_SQUARE;
         const int queensideRookSquare = isSourcePieceWhite ? WHITE_QUEENSIDE_ROOK_STARTING_SQUARE : BLACK_QUEENSIDE_ROOK_STARTING_SQUARE;
 
-        Bitboard& bbSourceRooks = pieceToBitboard(PieceType::Rook, sourcePiece.color());
+        Bitboard& bbSourceRooks = pieceToBitboard(Piece{PieceType::Rook, sourceColor});
         bbSourceRooks.clearSquare(queensidePassingSquare);
         bbSourceRooks.setSquare(queensideRookSquare);
 
@@ -1344,7 +1369,7 @@ void Game::undoMove(const Move& move, const UndoInfo& undoInfo) {
 
         // undo rook move
         mailbox_[queensidePassingSquare] = Piece{};
-        mailbox_[queensideRookSquare] = Piece{PieceType::Rook, sourcePiece.color()};
+        mailbox_[queensideRookSquare] = Piece{PieceType::Rook, sourceColor};
     }
 
     // handle en passant
@@ -1353,21 +1378,21 @@ void Game::undoMove(const Move& move, const UndoInfo& undoInfo) {
         const int capturedIndex = move.targetSquare() - (towardsCenter * 8);
 
         // reset captured pawn's bitboard placement
-        Bitboard& bbEnemyPawns = pieceToBitboard(PieceType::Pawn, oppositeColor(sourcePiece.color()));
+        Bitboard& bbEnemyPawns = pieceToBitboard(Piece{PieceType::Pawn, oppositeColor(sourceColor)});
         bbEnemyPawns.setSquare(capturedIndex);
 
         // update occupancy bitboard
         targetColorBitboard.setSquare(capturedIndex);
 
         // replace captured pawn
-        mailbox_[capturedIndex] = Piece{PieceType::Pawn, oppositeColor(sourcePiece.color())};
+        mailbox_[capturedIndex] = Piece{PieceType::Pawn, oppositeColor(sourceColor)};
     }
 
     // handle promotion; different enough that we need to return early
     if(move.isPromotion()) {
         // update promotion bitboard
         // re-add pawn to pawn bitboard
-        pieceToBitboard(PieceType::Pawn, sourcePiece.color()).setSquare(move.sourceSquare());
+        pieceToBitboard(Piece{PieceType::Pawn, sourceColor}).setSquare(move.sourceSquare());
         // remove promoted piece from promoted piece bitboard
         sourceBitboard.clearSquare(move.targetSquare());
 
@@ -1387,7 +1412,7 @@ void Game::undoMove(const Move& move, const UndoInfo& undoInfo) {
         }
 
         // 'sourcePiece' is now a promoted piece instead of a pawn; we correct that
-        mailbox_[move.sourceSquare()] = Piece{PieceType::Pawn, sourcePiece.color()};
+        mailbox_[move.sourceSquare()] = Piece{PieceType::Pawn, sourceColor};
         mailbox_[move.targetSquare()] = undoInfo.capturedPiece;
         return;
     }
@@ -1419,136 +1444,104 @@ void Game::undoMove(const Move& move, const UndoInfo& undoInfo) {
 
 bool Game::isSquareAttacked(const int targetSquare, const Color attackingColor) const {
     const bool isWhiteAttacking = attackingColor == Color::White;
-    const Bitboard allPieces = bbWhitePieces_.merge(bbBlackPieces_);
+    const Bitboard& allPieces = bbWhitePieces_.merge(bbBlackPieces_);
     // we compute "is attackingColor attacking targetSquare"
     // Pawns -- since pawn moves are not symmetric we use the opposite color's attacking bitboard
-    const Bitboard attackingPawns = isWhiteAttacking ? bbWhitePawns_ : bbBlackPawns_;
-    const std::array<Bitboard, 64> attackingPawnsMap = isWhiteAttacking ? attackBitboards_.blackPawnAttacks : attackBitboards_.whitePawnAttacks;
+    const Bitboard& attackingPawns = isWhiteAttacking ? bbWhitePawns_ : bbBlackPawns_;
+    const std::array<Bitboard, 64>& attackingPawnsMap = isWhiteAttacking ? attackBitboards_.blackPawnAttacks : attackBitboards_.whitePawnAttacks;
     if(!attackingPawns.mask(attackingPawnsMap[targetSquare]).empty()) {
         return true;
     }
 
     // Knights -- is there an attacking knight sitting a knights move away from targetSquare
-    const Bitboard attackingKnights = isWhiteAttacking ? bbWhiteKnights_ : bbBlackKnights_;
+    const Bitboard& attackingKnights = isWhiteAttacking ? bbWhiteKnights_ : bbBlackKnights_;
     if(!attackingKnights.mask(attackBitboards_.knightAttacks[targetSquare]).empty()) {
         return true;
     }
 
     // Kings -- is there an attacking king sitting a kings move away from targetSquare
-    const Bitboard attackingKings = isWhiteAttacking ? bbWhiteKing_ : bbBlackKing_;
+    const Bitboard& attackingKings = isWhiteAttacking ? bbWhiteKing_ : bbBlackKing_;
     if(!attackingKings.mask(attackBitboards_.kingAttacks[targetSquare]).empty()) {
         return true;
     }
 
     // Sliding pieces -- TODO: implement magic bitboards
-    const Bitboard attackingRooks = isWhiteAttacking ? bbWhiteRooks_ : bbBlackRooks_;
-    const Bitboard attackingBishops = isWhiteAttacking ? bbWhiteBishops_ : bbBlackBishops_;
-    const Bitboard attackingQueens = isWhiteAttacking ? bbWhiteQueens_ : bbBlackQueens_;
+    const Bitboard& attackingRooks = isWhiteAttacking ? bbWhiteRooks_ : bbBlackRooks_;
+    const Bitboard& attackingBishops = isWhiteAttacking ? bbWhiteBishops_ : bbBlackBishops_;
+    const Bitboard& attackingQueens = isWhiteAttacking ? bbWhiteQueens_ : bbBlackQueens_;
     // Orthogonal, rook / queen
-    const Bitboard rookLike = attackingRooks.merge(attackingQueens);
-    // North (+8)
-    for (int curSquare = targetSquare + 8; curSquare <= 63; curSquare += 8) {
-        // if we hit the correct piece, we are done, the square is attacked
-        if(rookLike.containsSquare(curSquare)) {
+    const Bitboard& rookLike = attackingRooks.merge(attackingQueens);
+    // North (increasing squares) -> nearest blocker = LSB of blockers on that ray
+    const Bitboard northBlockers = attackBitboards_.northRay[targetSquare].mask(allPieces);
+    if(!northBlockers.empty()) {
+        const int blocker = northBlockers.lsbIndex();
+        if(rookLike.containsSquare(blocker)) {
             return true;
-        }
-
-        // if we hit the wrong piece after, we are done for this direction
-        if(allPieces.containsSquare(curSquare)) {
-            break;
         }
     }
 
-    // South (-8)
-    for (int curSquare = targetSquare - 8; curSquare >= 0; curSquare -= 8) {
-        // if we hit the correct piece, we are done, the square is attacked
-        if(rookLike.containsSquare(curSquare)) {
+    // South (decreasing squares) -> nearest blocker = MSB
+    const Bitboard southBlockers = attackBitboards_.southRay[targetSquare].mask(allPieces);
+    if(!southBlockers.empty()) {
+        const int blocker = southBlockers.msbIndex();
+        if(rookLike.containsSquare(blocker)) {
             return true;
-        }
-
-        // if we hit the wrong piece after, we are done for this direction
-        if(allPieces.containsSquare(curSquare)) {
-            break;
         }
     }
 
-    // East (+1) until file wraps (when file becomes 0 after H->A wrap)
-    for (int curSquare = targetSquare + 1; curSquare <= 63 && getCol(curSquare) != 0; curSquare++) {
-        // if we hit the correct piece, we are done, the square is attacked
-        if(rookLike.containsSquare(curSquare)) {
+    // East (increasing) -> LSB
+    const Bitboard eastBlockers = attackBitboards_.eastRay[targetSquare].mask(allPieces);
+    if(!eastBlockers.empty()) {
+        const int blocker = eastBlockers.lsbIndex();
+        if(rookLike.containsSquare(blocker)) {
             return true;
-        }
-
-        // if we hit the wrong piece after, we are done for this direction
-        if(allPieces.containsSquare(curSquare)) {
-            break;
         }
     }
 
-    // West (-1) until file wraps (when file becomes 7 after A->H wrap)
-    for (int curSquare = targetSquare - 1; curSquare >= 0 && getCol(curSquare) != 7; curSquare--) {
-        // if we hit the correct piece, we are done, the square is attacked
-        if(rookLike.containsSquare(curSquare)) {
+    // West (decreasing) -> MSB
+    const Bitboard westBlockers = attackBitboards_.westRay[targetSquare].mask(allPieces);
+    if(!westBlockers.empty()) {
+        const int blocker = westBlockers.msbIndex();
+        if(rookLike.containsSquare(blocker)) {
             return true;
-        }
-
-        // if we hit the wrong piece after, we are done for this direction
-        if(allPieces.containsSquare(curSquare)) {
-            break;
         }
     }
 
     // Diagonal, bishop / queen
-    const Bitboard bishopLike = attackingBishops.merge(attackingQueens);
-    // NE (+9) stop at H-file wrap (file becomes 0)
-    for (int curSquare = targetSquare + 9; curSquare <= 63 && getCol(curSquare) != 0; curSquare += 9) {
-        // if we hit the correct piece, we are done, the square is attacked
-        if(bishopLike.containsSquare(curSquare)) {
+    const Bitboard& bishopLike = attackingBishops.merge(attackingQueens);
+    // NorthEast (increasing squares) -> LSB
+    const Bitboard northEastBlockers = attackBitboards_.neRay[targetSquare].mask(allPieces);
+    if(!northEastBlockers.empty()) {
+        const int blocker = northEastBlockers.lsbIndex();
+        if(bishopLike.containsSquare(blocker)) {
             return true;
-        }
-
-        // if we hit the wrong piece after, we are done for this direction
-        if(allPieces.containsSquare(curSquare)) {
-            break;
         }
     }
 
-    // NW (+7) stop at A-file wrap (file becomes 7)
-    for (int curSquare = targetSquare + 7; curSquare <= 63 && getCol(curSquare) != 7; curSquare += 7) {
-        // if we hit the correct piece, we are done, the square is attacked
-        if(bishopLike.containsSquare(curSquare)) {
+    // NorthWest (increasing squares) -> nearest blocker = LSB
+    const Bitboard northWestBlockers = attackBitboards_.nwRay[targetSquare].mask(allPieces);
+    if(!northWestBlockers.empty()) {
+        const int blocker = northWestBlockers.lsbIndex();
+        if(bishopLike.containsSquare(blocker)) {
             return true;
-        }
-
-        // if we hit the wrong piece after, we are done for this direction
-        if(allPieces.containsSquare(curSquare)) {
-            break;
         }
     }
 
-    // SE (-7) stop at H-file wrap (file becomes 0)
-    for (int curSquare = targetSquare - 7; curSquare >= 0 && getCol(curSquare) != 0; curSquare -= 7) {
-        // if we hit the correct piece, we are done, the square is attacked
-        if(bishopLike.containsSquare(curSquare)) {
+    // SouthEast (decreasing) -> MSB
+    const Bitboard southEastBlockers = attackBitboards_.seRay[targetSquare].mask(allPieces);
+    if(!southEastBlockers.empty()) {
+        const int blocker = southEastBlockers.msbIndex();
+        if(bishopLike.containsSquare(blocker)) {
             return true;
-        }
-
-        // if we hit the wrong piece after, we are done for this direction
-        if(allPieces.containsSquare(curSquare)) {
-            break;
         }
     }
 
-    // SW (-9) stop at A-file wrap (file becomes 7)
-    for (int curSquare = targetSquare - 9; curSquare >= 0 && getCol(curSquare) != 7; curSquare -= 9) {
-        // if we hit the correct piece, we are done, the square is attacked
-        if(bishopLike.containsSquare(curSquare)) {
+    // SouthWest (decreasing) -> MSB
+    const Bitboard southWestBlockers = attackBitboards_.swRay[targetSquare].mask(allPieces);
+    if(!southWestBlockers.empty()) {
+        const int blocker = southWestBlockers.msbIndex();
+        if(bishopLike.containsSquare(blocker)) {
             return true;
-        }
-
-        // if we hit the wrong piece after, we are done for this direction
-        if(allPieces.containsSquare(curSquare)) {
-            break;
         }
     }
 

@@ -35,7 +35,7 @@ public:
     constexpr void clear() { bitboard_ = 0; }
 
     // Mask current bitboard with other bitboard.
-    constexpr Bitboard mask(Bitboard other) const { return Bitboard{bitboard_ & other.bitboard_}; }
+    constexpr Bitboard mask(const Bitboard& other) const { return Bitboard{bitboard_ & other.bitboard_}; }
 
     // Merge given bitboard and create a new bitboard, without updating this bitboard.
     constexpr Bitboard merge(const Bitboard& other) const { return Bitboard(bitboard_ | other.bitboard_); }
@@ -50,6 +50,9 @@ public:
     // Shift to the left by `numBits` bits
     constexpr Bitboard leftShift(uint64_t numBits) const { return Bitboard{bitboard_ << numBits}; }
 
+    constexpr int lsbIndex() const { return __builtin_ctzll(bitboard_); }
+    constexpr int msbIndex() const { return 63 - __builtin_clzll(bitboard_); }
+
     // Get LSB of bitboard. Bitboard must be nonzero.
     constexpr int popLsb() {
         // __builtin_ctzll requires nonzero input
@@ -57,6 +60,7 @@ public:
         bitboard_ &= bitboard_ - 1;
         return lsb;
     }
+
 
     // Get bit from square.
     static constexpr uint64_t bit(int square) { return 1ULL << square; }

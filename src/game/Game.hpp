@@ -2,7 +2,7 @@
 
 #include <array>
 #include <cassert>
-#include <stdexcept>
+#include <cstdint>
 #include <string>
 
 #include "Bitboard.hpp"
@@ -41,6 +41,7 @@ public:
     constexpr Color color() const noexcept { return static_cast<Color>((packed_ >> 3) & COLOR_MASK); }
     // Retrieve if the piece exists. i.e., if the piece is not an empty square.
     constexpr bool exists() const noexcept { return (packed_ & 0x7) != 0; } // 0 -> PieceType::None
+    constexpr uint8_t raw() const noexcept { return packed_; }
 
     // Retrieve a string of length one which represents the piece. Uppercase for white, lowercase for black. E.g., white pawn -> "P"
     std::string to_string_short() const;
@@ -206,10 +207,10 @@ struct AttackBitboards {
     std::array<Bitboard, 64> whitePawnAttacks{};
     std::array<Bitboard, 64> blackPawnAttacks{};
     std::array<Bitboard, 64> knightAttacks{};
-    std::array<Bitboard, 64> bishopAttacks{};
-    std::array<Bitboard, 64> rookAttacks{};
-    std::array<Bitboard, 64> queenAttacks{};
     std::array<Bitboard, 64> kingAttacks{};
+
+    std::array<Bitboard, 64> northRay, southRay, eastRay, westRay;
+    std::array<Bitboard, 64> neRay, nwRay, seRay, swRay;
 } __attribute__((aligned(128))); // align to 128 bytes
 
 // A chess game. Contains information for the game and helpers to generate and validate moves.
@@ -377,53 +378,17 @@ public:
     }
 
     constexpr Bitboard& colorToOccupancyBitboard(Color color) {
-        switch(color) {
-            case Color::White: return bbWhitePieces_;
-            case Color::Black: return bbBlackPieces_;
-            case Color::None: assert(false); throw std::runtime_error("Invalid color for colorToOccupancyBitboard.");
-        }
-    }
-    
-    constexpr std::array<Bitboard, 64> pieceToAttackBitboard(Piece piece) const noexcept {
-        const bool isWhite = piece.color() == Color::White;
-        switch(piece.type()) {
-            case PieceType::Pawn: return isWhite ? attackBitboards_.whitePawnAttacks : attackBitboards_.blackPawnAttacks;
-            case PieceType::Knight: return attackBitboards_.knightAttacks;
-            case PieceType::Bishop: return attackBitboards_.bishopAttacks;
-            case PieceType::Rook: return attackBitboards_.rookAttacks;
-            case PieceType::Queen: return attackBitboards_.queenAttacks;
-            case PieceType::King: return attackBitboards_.kingAttacks;
-            case PieceType::None: assert(false); return std::array<Bitboard, 64>{}; // shouldn't happen
-        }
-    }
-
-    // Get a given piece type's bitboard.
-    constexpr Bitboard& pieceToBitboard(PieceType type, Color color) {
-        const bool isWhite = color == Color::White;
-        switch(type) {
-            case PieceType::Pawn: return isWhite ? bbWhitePawns_ : bbBlackPawns_;
-            case PieceType::Knight: return isWhite ? bbWhiteKnights_ : bbBlackKnights_;
-            case PieceType::Bishop: return isWhite ? bbWhiteBishops_ : bbBlackBishops_;
-            case PieceType::Rook: return isWhite ? bbWhiteRooks_ : bbBlackRooks_;
-            case PieceType::Queen: return isWhite ? bbWhiteQueens_ : bbBlackQueens_;
-            case PieceType::King: return isWhite ? bbWhiteKing_ : bbBlackKing_;
-            case PieceType::None: assert(false); throw std::runtime_error("Bitboard does not exist.");
-        }
+        // use very fast lookup table
+        Bitboard* bitboard = colorToOccupancyBitboard_[static_cast<uint8_t>(color)];
+        return *bitboard;
     }
 
     // Get a given piece's bitboard.
-    constexpr Bitboard& pieceToBitboard(Piece piece) {
-        const bool isWhite = piece.color() == Color::White;
-        const PieceType pieceType = piece.type();
-        switch(pieceType) {
-            case PieceType::Pawn: return isWhite ? bbWhitePawns_ : bbBlackPawns_;
-            case PieceType::Knight: return isWhite ? bbWhiteKnights_ : bbBlackKnights_;
-            case PieceType::Bishop: return isWhite ? bbWhiteBishops_ : bbBlackBishops_;
-            case PieceType::Rook: return isWhite ? bbWhiteRooks_ : bbBlackRooks_;
-            case PieceType::Queen: return isWhite ? bbWhiteQueens_ : bbBlackQueens_;
-            case PieceType::King: return isWhite ? bbWhiteKing_ : bbBlackKing_;
-            case PieceType::None: assert(false); throw std::runtime_error("Bitboard does not exist for piece: " + piece.to_string_long());
-        }
+    constexpr Bitboard& pieceToBitboard(Piece piece) const {
+        // Use lookup table for quick access
+        Bitboard* const bitboard = piecePackedToBB_[piece.raw()];
+        assert(bitboard != nullptr);
+        return *bitboard;
     }
 
 private:
@@ -462,9 +427,18 @@ private:
     Bitboard bbWhitePieces_;
     Bitboard bbBlackPieces_;
 
+    // Attack bitboards
     AttackBitboards attackBitboards_;
 
+    // Lookup table to bb by piece's packed uint8_t representation for quick access
+    std::array<Bitboard*, 256> piecePackedToBB_{};
+
+    // Lookup table to occupancy board by color's uint8_t representation
+    std::array<Bitboard*, 4> colorToOccupancyBitboard_{nullptr, &bbWhitePieces_, &bbBlackPieces_};
+
+    // init lookup tables
     void initAttackBitboards_();
+    void initPieceToBBTable_();
 
     // Add move and all pawn promotion variants to moves. If move is not a pawn promotion, just add move by itself.
     static void addAllPawnPromotionsToMoves_(MoveList& moves, int sourceSquare, int targetSquare, Piece sourcePiece, bool isCapture);
