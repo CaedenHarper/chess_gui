@@ -34,7 +34,7 @@ From project root:
 ```
 
 ## Tests
-- Tests are in tests\
+- Tests are in `tests\`
 - Run with:
 ```
 ctest --test-dir build-release --verbose  # release
@@ -44,11 +44,9 @@ ctest --test-dir build-debug --verbose    # debug
 
 ## TODOs
 - Look into rewriting all const Piece to const Piece& (probably not worth, Piece is small)
-- Look into any more functions we can constexpr
 - Create 'en passant square' class
 - Move different classes from Game into different files
 - Look into migrating as many int types to their smallest representation as possible (e.g., uint8_t), and reducing static_cast<>'s
-- Look into noexcept, it may not help performance, but probably doesn't hurt to re-implement after testing bitboards
 - Consider splitting makeMove and undoMove into dispatch functions based on move type (e.g., makeMoveCastle_); they are a bit complex and hard to debug as of right now
 - Ensure all relevant instances of '64' is using Game::NUM_SQUARES
 - Implement magic bitboards

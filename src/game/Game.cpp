@@ -179,10 +179,6 @@ Game::Game()
     initPieceToBBTable_();
 }
 
-Color Game::currentTurn() const {
-    return currentTurn_;
-}
-
 std::string Game::to_string() const {
     /*
     Print in format:
@@ -358,15 +354,6 @@ bool Game::isFinished() {
     return legalMoves.size == 0;
 }
 
-UndoInfo Game::getUndoInfo(const Piece capturedPiece) const {
-    // pack bools into castling rights uint8_t for speedy lookup
-    return UndoInfo{
-        castlingRights_,
-        static_cast<uint8_t>(currentEnPassantSquare_),
-        capturedPiece
-    };
-}
-
 Piece Game::pieceAtSquareForGui(int square) const noexcept {
     const uint64_t squareBit = Bitboard::bit(square);
 
@@ -525,26 +512,6 @@ void Game::initPieceToBBTable_() {
     set(PieceType::Queen, Color::Black, &bbBlackQueens_);
     set(PieceType::King, Color::Black, &bbBlackKing_);
 }
-
-// TODO: this may be a slow point for move gen
-void Game::addAllPawnPromotionsToMoves_(MoveList& moves, const int sourceSquare, const int targetSquare, const Piece sourcePiece, const bool isCapture) {
-    const Color pawnColor = sourcePiece.color();
-    const int promotionRow = pawnColor == Color::White ? 0 : 7; 
-    if(getRow(targetSquare) == promotionRow) {
-        const MoveFlag flag = isCapture ? MoveFlag::PromotionCapture : MoveFlag::Promotion;
-        // add promotions
-        moves.push_back(Move{sourceSquare, targetSquare, flag, Promotion::Knight});
-        moves.push_back(Move{sourceSquare, targetSquare, flag, Promotion::Bishop});
-        moves.push_back(Move{sourceSquare, targetSquare, flag, Promotion::Rook});
-        moves.push_back(Move{sourceSquare, targetSquare, flag, Promotion::Queen});
-    } else {
-        const MoveFlag flag = isCapture ? MoveFlag::Capture : MoveFlag::Normal;
-        // just add normal move
-        moves.push_back(Move{sourceSquare, targetSquare, flag, Promotion::None});
-    }
-}
-
-// TODO: consider + profile: all const Bitboard& -> const Bitboard&&; uint64_t may be fast enough to copy that it is not worth it
 
 void Game::generatePseudoLegalPawnMoves_(MoveList& out) {
     const bool isWhite = currentTurn_ == Color::White;
@@ -1132,28 +1099,6 @@ void Game::generateLegalMovesFromSquare(int sourceSquare, MoveList& out) {
     }
 }
 
-void Game::generatePseudoLegalMoves(MoveList& out) {
-    generatePseudoLegalPawnMoves_(out);
-    generatePseudoLegalKnightMoves_(out);
-    generatePseudoLegalBishopMoves_(out);
-    generatePseudoLegalRookMoves_(out);
-    generatePseudoLegalQueenMoves_(out);
-    generatePseudoLegalKingMoves_(out);
-}
-
-bool Game::isMoveLegal(const Move& move) {
-    MoveList legalMoves;
-    generateLegalMoves(legalMoves);
-
-    for (int i = 0; i < legalMoves.size; i++) {
-        if (legalMoves.data[i] == move) {
-            return true;
-        }
-    }
-    return false;
-}
-
-
 bool Game::tryMove(const Move& move) {
     // TODO: consider making isWhite() function in Game; this logic is repeated quite often
     const bool isWhite = currentTurn_ == Color::White;
@@ -1553,17 +1498,6 @@ bool Game::isSquareAttacked(const int targetSquare, const Color attackingColor) 
     }
 
     return false;
-}
-
-bool Game::isInCheck(const Color& colorToFind) const {
-    // TODO: this has undefined behavior if no kings on both sides
-    const int kingSquare = findKingSquare(colorToFind);
-    return isSquareAttacked(kingSquare, oppositeColor(colorToFind));
-}
-
-int Game::findKingSquare(const Color& colorToFind) const {
-    Bitboard bbKing = colorToFind == Color::White ? bbWhiteKing_ : bbBlackKing_;
-    return bbKing.popLsb();
 }
 
 std::string Game::intToAlgebraicNotation(const int square) {

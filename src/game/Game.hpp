@@ -194,9 +194,9 @@ struct MoveList {
     // Only moves between [0, MoveList.size) are valid; the rest are placeholder Moves which have undefined behavior
     int size = 0;
 
-    void clear() { size = 0; }
+    constexpr void clear() noexcept { size = 0; }
 
-    void push_back(const Move& move) {
+    constexpr void push_back(const Move& move) noexcept {
         data[size++] = move;
     }
 } __attribute__((aligned(128))); // align to 128 bytes
@@ -305,15 +305,22 @@ public:
     void loadFEN(const std::string& FEN);
 
     // Retrieve mailbox.
-    constexpr std::array<Piece, NUM_SQUARES> mailbox() const { return mailbox_; }
+    constexpr std::array<Piece, NUM_SQUARES> mailbox() const noexcept { return mailbox_; }
     // Retrieve the color of the current player's turn.
-    Color currentTurn() const;
+    constexpr Color currentTurn() const noexcept { return currentTurn_; }
     // Retrieve a string representation of the current state of the board.
     std::string to_string() const;
     // If the game is finished.
     bool isFinished();
     // Get flags in the form of UndoInfo.
-    UndoInfo getUndoInfo(Piece capturedPiece) const;
+    constexpr UndoInfo getUndoInfo(Piece capturedPiece) const noexcept {
+        // pack bools into castling rights uint8_t for speedy lookup
+        return UndoInfo{
+            castlingRights_,
+            static_cast<uint8_t>(currentEnPassantSquare_),
+            capturedPiece
+        };
+    }
     // Get piece at a square for the GUI. Note this method is relatively slow and should not be used in hot loops.
     Piece pieceAtSquareForGui(int square) const noexcept;
     // Try a move and return if the move was made. The move is only made if it is legal.
@@ -323,20 +330,44 @@ public:
     // Undo a move. Does not check if the move we are undoing happened before.
     void undoMove(const Move& move, const UndoInfo& undoInfo);
     // If a move is legal.
-    bool isMoveLegal(const Move& move);
+    constexpr bool isMoveLegal(const Move& move) noexcept {
+        MoveList legalMoves;
+        generateLegalMoves(legalMoves);
+
+        for (int i = 0; i < legalMoves.size; i++) {
+            if (legalMoves.data[i] == move) {
+                return true;
+            }
+        }
+        return false;
+    }
     // Generate all legal moves.
     void generateLegalMoves(MoveList& out);
     // Generate all legal moves from a sourceSquare. This is slow and should only be used sparingly (e.g., in GUI).
     void generateLegalMovesFromSquare(int sourceSquare, MoveList& out);
     // Generate all pseudo legal moves. Pseudo legal moves only take piece movement into account, no king check status.
-    void generatePseudoLegalMoves(MoveList& out);
-
+    constexpr void generatePseudoLegalMoves(MoveList& out) noexcept {
+        generatePseudoLegalPawnMoves_(out);
+        generatePseudoLegalKnightMoves_(out);
+        generatePseudoLegalBishopMoves_(out);
+        generatePseudoLegalRookMoves_(out);
+        generatePseudoLegalQueenMoves_(out);
+        generatePseudoLegalKingMoves_(out);
+    }
     // If the given color is in check.
-    bool isInCheck(const Color& colorToFind) const;
+    constexpr bool isInCheck(const Color& colorToFind) const noexcept {
+        // NOTE: this has undefined behavior if no kings on both sides
+        const int kingSquare = findKingSquare(colorToFind);
+        return isSquareAttacked(kingSquare, oppositeColor(colorToFind));
+    }
     // If a given square is attacked by the attacking color.
     bool isSquareAttacked(int targetSquare, Color attackingColor) const;
     // Retrieve king square for a given color. Does not exist if king is not on board.
-    int findKingSquare(const Color& colorToFind) const;
+    constexpr int findKingSquare(const Color& colorToFind) const noexcept {
+        Bitboard bbKing = colorToFind == Color::White ? bbWhiteKing_ : bbBlackKing_;
+        // NOTE: this has undefined behavior if bbKing is empty
+        return bbKing.popLsb();
+    }
     
     // Retrieve algebraic notation from a given square. E.g., 0 -> "a8".
     static std::string intToAlgebraicNotation(int square);
@@ -373,18 +404,18 @@ public:
         return (color == Color::White) ? Color::Black : Color::White;
     }
 
-    constexpr AttackBitboards attackBitboards() noexcept {
+    constexpr AttackBitboards attackBitboards() const noexcept {
         return attackBitboards_;
     }
 
-    constexpr Bitboard& colorToOccupancyBitboard(Color color) {
+    constexpr Bitboard& colorToOccupancyBitboard(Color color) const noexcept {
         // use very fast lookup table
         Bitboard* bitboard = colorToOccupancyBitboard_[static_cast<uint8_t>(color)];
         return *bitboard;
     }
 
     // Get a given piece's bitboard.
-    constexpr Bitboard& pieceToBitboard(Piece piece) const {
+    constexpr Bitboard& pieceToBitboard(Piece piece) const noexcept {
         // Use lookup table for quick access
         Bitboard* const bitboard = piecePackedToBB_[piece.raw()];
         assert(bitboard != nullptr);
@@ -439,9 +470,24 @@ private:
     // init lookup tables
     void initAttackBitboards_();
     void initPieceToBBTable_();
-
+    
     // Add move and all pawn promotion variants to moves. If move is not a pawn promotion, just add move by itself.
-    static void addAllPawnPromotionsToMoves_(MoveList& moves, int sourceSquare, int targetSquare, Piece sourcePiece, bool isCapture);
+    static constexpr void addAllPawnPromotionsToMoves_(MoveList& moves, int sourceSquare, int targetSquare, Piece sourcePiece, bool isCapture) {
+        const Color pawnColor = sourcePiece.color();
+        const int promotionRow = pawnColor == Color::White ? 0 : 7; 
+        if(getRow(targetSquare) == promotionRow) {
+            const MoveFlag flag = isCapture ? MoveFlag::PromotionCapture : MoveFlag::Promotion;
+            // add promotions
+            moves.push_back(Move{sourceSquare, targetSquare, flag, Promotion::Knight});
+            moves.push_back(Move{sourceSquare, targetSquare, flag, Promotion::Bishop});
+            moves.push_back(Move{sourceSquare, targetSquare, flag, Promotion::Rook});
+            moves.push_back(Move{sourceSquare, targetSquare, flag, Promotion::Queen});
+        } else {
+            const MoveFlag flag = isCapture ? MoveFlag::Capture : MoveFlag::Normal;
+            // just add normal move
+            moves.push_back(Move{sourceSquare, targetSquare, flag, Promotion::None});
+        }
+    }
 
     // Generate all pseudo legal pawn moves.
     void generatePseudoLegalPawnMoves_(MoveList& out);
