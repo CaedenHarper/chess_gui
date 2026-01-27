@@ -43,11 +43,12 @@ ctest --test-dir build-debug --verbose    # debug
 ```
 
 ## TODOs
-- Look into rewriting all const Piece to const Piece& (probably not worth, Piece is small)
 - Create 'en passant square' class
 - Move different classes from Game into different files
 - Look into migrating as many int types to their smallest representation as possible (e.g., uint8_t), and reducing static_cast<>'s
 - Consider splitting makeMove and undoMove into dispatch functions based on move type (e.g., makeMoveCastle_); they are a bit complex and hard to debug as of right now
-- Ensure all relevant instances of '64' is using Game::NUM_SQUARES
 - Implement magic bitboards
 - Add proper finish / checkmate screen
+- PGN support
+- Halfmove / fullmove support, in loadFEN and otherwise
+- Incrementally update full board occupancy

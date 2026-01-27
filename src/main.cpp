@@ -152,7 +152,7 @@ void runGUIBitboardTest() {
                     // no currently held piece
                     if(!heldSquare) {
                         // no need to do additional processing for clicking on empty square, or wrong player's piece
-                        if(!game.mailbox().at(targetSquare).exists() || game.mailbox().at(targetSquare).color() != game.currentTurn()) {
+                        if(!game.mailbox().at(targetSquare).exists() || game.mailbox().at(targetSquare).color() != game.sideToMove()) {
                             continue;
                         }
 
@@ -272,9 +272,9 @@ void runGUIBitboardTest() {
         window.clear(sf::Color::Black);
 
         // TODO: replace check highlight with sprite
-        if(game.isInCheck(game.currentTurn())) {
+        if(game.isInCheck(game.sideToMove())) {
             // add check highlight after main loop to override other highlights
-            board.at(game.findKingSquare(game.currentTurn())).setHighlight(Board::CHECK_HIGHLIGHT);
+            board.at(game.findKingSquare(game.sideToMove())).setHighlight(Board::CHECK_HIGHLIGHT);
         }
 
         // highlight squares based on the chosen bitboard
@@ -428,7 +428,7 @@ void runGUIgame() {
                     // no currently held piece
                     if(!heldSquare) {
                         // no need to do additional processing for clicking on empty square, or wrong player's piece
-                        if(!game.mailbox().at(targetSquare).exists() || game.mailbox().at(targetSquare).color() != game.currentTurn()) {
+                        if(!game.mailbox().at(targetSquare).exists() || game.mailbox().at(targetSquare).color() != game.sideToMove()) {
                             continue;
                         }
 
@@ -554,9 +554,9 @@ void runGUIgame() {
         // }
 
         // TODO: replace check highlight with sprite
-        if(game.isInCheck(game.currentTurn())) {
+        if(game.isInCheck(game.sideToMove())) {
             // add check highlight after main loop to override other highlights
-            board.at(game.findKingSquare(game.currentTurn())).setHighlight(Board::CHECK_HIGHLIGHT);
+            board.at(game.findKingSquare(game.sideToMove())).setHighlight(Board::CHECK_HIGHLIGHT);
         }
 
         // clear the window

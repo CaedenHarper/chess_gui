@@ -203,7 +203,6 @@ struct MoveList {
 
 // Create holder for all AttackBitboards
 struct AttackBitboards {
-    // TODO: can we just rotate whitePawnAttacks?
     std::array<Bitboard, 64> whitePawnAttacks{};
     std::array<Bitboard, 64> blackPawnAttacks{};
     std::array<Bitboard, 64> knightAttacks{};
@@ -307,7 +306,7 @@ public:
     // Retrieve mailbox.
     constexpr std::array<Piece, NUM_SQUARES> mailbox() const noexcept { return mailbox_; }
     // Retrieve the color of the current player's turn.
-    constexpr Color currentTurn() const noexcept { return currentTurn_; }
+    constexpr Color sideToMove() const noexcept { return sideToMove_; }
     // Retrieve a string representation of the current state of the board.
     std::string to_string() const;
     // If the game is finished.
@@ -426,14 +425,12 @@ private:
     // mailbox used to quickly find piece from square; not used for generating pieces
     std::array<Piece, NUM_SQUARES> mailbox_;
 
-    // TODO: rename "sideToMove_"
     // The game's current turn.
-    Color currentTurn_;
+    Color sideToMove_;
 
     // Castling flags.
     CastlingRights castlingRights_;
     
-    // TODO: extract en passant to its own class
     // Current en passant square. Is UndoInfo sentinal if no en passant.
     int currentEnPassantSquare_;
 

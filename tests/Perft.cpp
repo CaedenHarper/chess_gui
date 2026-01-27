@@ -18,18 +18,18 @@ uint64_t Perft::perft(Game& game, int depth) { // NOLINT(misc-no-recursion)
         const Move& move = moves.data[i];
         // TODO: don't use mailbox here
         const UndoInfo undoInfo = game.getUndoInfo(game.mailbox()[move.targetSquare()]);
-        const Color currentTurn = game.currentTurn();
-        const Color enemyColor = Game::oppositeColor(currentTurn);
+        const Color sideToMove = game.sideToMove();
+        const Color enemyColor = Game::oppositeColor(sideToMove);
 
         game.makeMove(move);
 
         // Check any relevant checks
 
-        const int KING_STARTING_SQUARE = (currentTurn == Color::White) ? Game::WHITE_KING_STARTING_SQUARE : Game::BLACK_KING_STARTING_SQUARE;
+        const int KING_STARTING_SQUARE = (sideToMove == Color::White) ? Game::WHITE_KING_STARTING_SQUARE : Game::BLACK_KING_STARTING_SQUARE;
 
         if(move.isKingSideCastle()) {
-            const int KINGSIDE_PASSING_SQUARE = (currentTurn == Color::White) ? Game::WHITE_KINGSIDE_PASSING_SQUARE : Game::BLACK_KINGSIDE_PASSING_SQUARE;
-            const int KINGSIDE_TARGET_SQUARE = (currentTurn == Color::White) ? Game::WHITE_KINGSIDE_TARGET_SQUARE : Game::BLACK_KINGSIDE_TARGET_SQUARE;
+            const int KINGSIDE_PASSING_SQUARE = (sideToMove == Color::White) ? Game::WHITE_KINGSIDE_PASSING_SQUARE : Game::BLACK_KINGSIDE_PASSING_SQUARE;
+            const int KINGSIDE_TARGET_SQUARE = (sideToMove == Color::White) ? Game::WHITE_KINGSIDE_TARGET_SQUARE : Game::BLACK_KINGSIDE_TARGET_SQUARE;
     
             if(
                 game.isSquareAttacked(KING_STARTING_SQUARE, enemyColor) ||   // king cant start in check
@@ -42,8 +42,8 @@ uint64_t Perft::perft(Game& game, int depth) { // NOLINT(misc-no-recursion)
         }
 
         if(move.isQueenSideCastle()) {
-            const int QUEENSIDE_PASSING_SQUARE = (currentTurn == Color::White) ? Game::WHITE_QUEENSIDE_PASSING_SQUARE : Game::BLACK_QUEENSIDE_PASSING_SQUARE;
-            const int QUEENSIDE_TARGET_SQUARE = (currentTurn == Color::White) ? Game::WHITE_QUEENSIDE_TARGET_SQUARE : Game::BLACK_QUEENSIDE_TARGET_SQUARE;
+            const int QUEENSIDE_PASSING_SQUARE = (sideToMove == Color::White) ? Game::WHITE_QUEENSIDE_PASSING_SQUARE : Game::BLACK_QUEENSIDE_PASSING_SQUARE;
+            const int QUEENSIDE_TARGET_SQUARE = (sideToMove == Color::White) ? Game::WHITE_QUEENSIDE_TARGET_SQUARE : Game::BLACK_QUEENSIDE_TARGET_SQUARE;
             if(
                 game.isSquareAttacked(KING_STARTING_SQUARE, enemyColor) ||   // king cant start in check
                 game.isSquareAttacked(QUEENSIDE_PASSING_SQUARE, enemyColor) ||   // king cant pass through check 
@@ -54,7 +54,7 @@ uint64_t Perft::perft(Game& game, int depth) { // NOLINT(misc-no-recursion)
             }
         }
         
-        if (game.isInCheck(currentTurn)) {
+        if (game.isInCheck(sideToMove)) {
             game.undoMove(move, undoInfo);
             continue;
         }
@@ -83,19 +83,19 @@ uint64_t Perft::perftDivide(Game& game, int depth) {
         const Move& move = moves.data[i];
         // TODO: don't use mailbox here
         const UndoInfo undoInfo = game.getUndoInfo(game.mailbox()[move.targetSquare()]);
-        const Color currentTurn = game.currentTurn();
-        const Color enemyColor = Game::oppositeColor(currentTurn);
+        const Color sideToMove = game.sideToMove();
+        const Color enemyColor = Game::oppositeColor(sideToMove);
 
         game.makeMove(move);
 
 
         // Check any relevant checks
 
-        const int KING_STARTING_SQUARE = (currentTurn == Color::White) ? Game::WHITE_KING_STARTING_SQUARE : Game::BLACK_KING_STARTING_SQUARE;
+        const int KING_STARTING_SQUARE = (sideToMove == Color::White) ? Game::WHITE_KING_STARTING_SQUARE : Game::BLACK_KING_STARTING_SQUARE;
 
         if(move.isKingSideCastle()) {
-            const int KINGSIDE_PASSING_SQUARE = (currentTurn == Color::White) ? Game::WHITE_KINGSIDE_PASSING_SQUARE : Game::BLACK_KINGSIDE_PASSING_SQUARE;
-            const int KINGSIDE_TARGET_SQUARE = (currentTurn == Color::White) ? Game::WHITE_KINGSIDE_TARGET_SQUARE : Game::BLACK_KINGSIDE_TARGET_SQUARE;
+            const int KINGSIDE_PASSING_SQUARE = (sideToMove == Color::White) ? Game::WHITE_KINGSIDE_PASSING_SQUARE : Game::BLACK_KINGSIDE_PASSING_SQUARE;
+            const int KINGSIDE_TARGET_SQUARE = (sideToMove == Color::White) ? Game::WHITE_KINGSIDE_TARGET_SQUARE : Game::BLACK_KINGSIDE_TARGET_SQUARE;
     
             if(
                 game.isSquareAttacked(KING_STARTING_SQUARE, enemyColor) ||   // king cant start in check
@@ -108,8 +108,8 @@ uint64_t Perft::perftDivide(Game& game, int depth) {
         }
 
         if(move.isQueenSideCastle()) {
-            const int QUEENSIDE_PASSING_SQUARE = (currentTurn == Color::White) ? Game::WHITE_QUEENSIDE_PASSING_SQUARE : Game::BLACK_QUEENSIDE_PASSING_SQUARE;
-            const int QUEENSIDE_TARGET_SQUARE = (currentTurn == Color::White) ? Game::WHITE_QUEENSIDE_TARGET_SQUARE : Game::BLACK_QUEENSIDE_TARGET_SQUARE;
+            const int QUEENSIDE_PASSING_SQUARE = (sideToMove == Color::White) ? Game::WHITE_QUEENSIDE_PASSING_SQUARE : Game::BLACK_QUEENSIDE_PASSING_SQUARE;
+            const int QUEENSIDE_TARGET_SQUARE = (sideToMove == Color::White) ? Game::WHITE_QUEENSIDE_TARGET_SQUARE : Game::BLACK_QUEENSIDE_TARGET_SQUARE;
             if(
                 game.isSquareAttacked(KING_STARTING_SQUARE, enemyColor) ||   // king cant start in check
                 game.isSquareAttacked(QUEENSIDE_PASSING_SQUARE, enemyColor) ||   // king cant pass through check 
@@ -120,7 +120,7 @@ uint64_t Perft::perftDivide(Game& game, int depth) {
             }
         }
         
-        if (game.isInCheck(currentTurn)) {
+        if (game.isInCheck(sideToMove)) {
             game.undoMove(move, undoInfo);
             continue;
         }

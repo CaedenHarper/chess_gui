@@ -30,7 +30,6 @@ PieceType Piece::charToPieceType(const char piece) {
         return PieceType::King;
     } 
     
-    // TODO: error / debug msg here?
     return PieceType::None;
 }
 
@@ -94,7 +93,6 @@ Move Move::fromPieces(int sourceSquare, int targetSquare, Piece sourcePiece, Pie
     // Pawn promotion iff a pawn is ending on the promotion row
     if(isSourcePiecePawn && targetRow == promotionRow) {
         const MoveFlag flag = isCapture ? MoveFlag::PromotionCapture : MoveFlag::Promotion;
-        // TODO: queen is assumed in fromPieces (e.g., when user makes a move); add a way to specify
         return Move{sourceSquare, targetSquare, flag, Promotion::Queen};
     }
 
@@ -117,7 +115,6 @@ Move Move::fromPieces(int sourceSquare, int targetSquare, Piece sourcePiece, Pie
     // --- Special castling moves ---
     // (note we are just generating a move here, we don't validate it. so its okay if we are castling through a piece for example)
 
-    // TODO: do we have to check if the targetpiece doesn't exist here?
     // Kingside castle iff a king moves from its starting square to the castling target square, and the piece does not exist.
     if(isSourcePieceKing && sourceSquare == kingStartingSquare && targetSquare == kingsideTargetSquare && !targetPiece.exists()) {
         return Move{sourceSquare, targetSquare, MoveFlag::KingCastle, Promotion::None};
@@ -171,7 +168,7 @@ constexpr PieceType Move::promotionToPieceType(Promotion promotion) noexcept {
 }
 
 Game::Game()
-    : currentTurn_{Color::White},
+    : sideToMove_{Color::White},
     castlingRights_{0},
     currentEnPassantSquare_{UndoInfo::noEnPassant} {
     // Init lookup tables
@@ -284,9 +281,9 @@ void Game::loadFEN(const std::string& FEN) {
             // this field only has one character, either w or b
             switch(c) {
                 // white's turn
-                case 'w': currentTurn_ = Color::White; break;
+                case 'w': sideToMove_ = Color::White; break;
                 // black's turn
-                case 'b': currentTurn_ = Color::Black; break;
+                case 'b': sideToMove_ = Color::Black; break;
                 default: std::cerr << "Unable to parse FEN: " << FEN << "\nInvalid current color: " << "'" << c << "'"; throw std::runtime_error("Invalid FEN.");
             }
             continue;
@@ -448,7 +445,7 @@ void Game::initAttackBitboards_() {
 
         // Slider rays
         // North (+8)
-        for (int curSquare = square + 8; curSquare < 64; curSquare += 8) {
+        for (int curSquare = square + 8; curSquare < NUM_SQUARES; curSquare += 8) {
             attackBitboards_.northRay[square].setSquare(curSquare);
         }
 
@@ -458,7 +455,7 @@ void Game::initAttackBitboards_() {
         }
 
         // East (+1), stop at H-file
-        for (int curSquare = square + 1; curSquare < 64 && getCol(curSquare) != 0; curSquare++) {
+        for (int curSquare = square + 1; curSquare < NUM_SQUARES && getCol(curSquare) != 0; curSquare++) {
             attackBitboards_.eastRay[square].setSquare(curSquare);
         }
 
@@ -468,12 +465,12 @@ void Game::initAttackBitboards_() {
         }
 
         // North-East (+9), stop at H-file
-        for (int curSquare = square + 9; curSquare < 64 && getCol(curSquare) != 0; curSquare += 9) {
+        for (int curSquare = square + 9; curSquare < NUM_SQUARES && getCol(curSquare) != 0; curSquare += 9) {
             attackBitboards_.neRay[square].setSquare(curSquare);
         }
 
         // North-West (+7), stop at A-file
-        for (int curSquare = square + 7; curSquare < 64 && getCol(curSquare) != 7; curSquare += 7) {
+        for (int curSquare = square + 7; curSquare < NUM_SQUARES && getCol(curSquare) != 7; curSquare += 7) {
             attackBitboards_.nwRay[square].setSquare(curSquare);
         }
 
@@ -514,13 +511,13 @@ void Game::initPieceToBBTable_() {
 }
 
 void Game::generatePseudoLegalPawnMoves_(MoveList& out) {
-    const bool isWhite = currentTurn_ == Color::White;
+    const bool isWhite = sideToMove_ == Color::White;
 
     Bitboard sourcePawns = isWhite ? bbWhitePawns_ : bbBlackPawns_;
     const Bitboard& sourcePieces = isWhite ? bbWhitePieces_ : bbBlackPieces_;
     const Bitboard& targetPieces = isWhite ? bbBlackPieces_ : bbWhitePieces_;
 
-    // TODO: consider incrementally updated 'bbAllPieces_' here; its used rarely enough constructing from white + black pieces is probably fine
+    // TODO: once bbAllPieces_ is implemented, replace this with bbAllPieces_.flip()
     const Bitboard& emptySquares = bbWhitePieces_.merge(bbBlackPieces_).flip();
     if(isWhite) { // black and white pawns move differently
         // White
@@ -619,7 +616,7 @@ void Game::generatePseudoLegalPawnMoves_(MoveList& out) {
 
 
 void Game::generatePseudoLegalKnightMoves_(MoveList& out) {
-    const bool isWhite = currentTurn_ == Color::White;
+    const bool isWhite = sideToMove_ == Color::White;
 
     Bitboard sourceKnights = isWhite ? bbWhiteKnights_ : bbBlackKnights_;
     const Bitboard& sourcePieces = isWhite ? bbWhitePieces_ : bbBlackPieces_;
@@ -645,10 +642,8 @@ void Game::generatePseudoLegalKnightMoves_(MoveList& out) {
     }
 }
 
-// TODO: implement magic bitboards
-
 void Game::generatePseudoLegalBishopMoves_(MoveList& out) {
-    const bool isWhite = currentTurn_ == Color::White;
+    const bool isWhite = sideToMove_ == Color::White;
 
     Bitboard sourceBishops = isWhite ? bbWhiteBishops_ : bbBlackBishops_;
     const Bitboard& sourcePieces = isWhite ? bbWhitePieces_ : bbBlackPieces_;
@@ -729,7 +724,7 @@ void Game::generatePseudoLegalBishopMoves_(MoveList& out) {
 
 
 void Game::generatePseudoLegalRookMoves_(MoveList& out) {
-    const bool isWhite = currentTurn_ == Color::White;
+    const bool isWhite = sideToMove_ == Color::White;
 
     Bitboard sourceRooks = isWhite ? bbWhiteRooks_ : bbBlackRooks_;
     const Bitboard& sourcePieces = isWhite ? bbWhitePieces_ : bbBlackPieces_;
@@ -812,7 +807,7 @@ void Game::generatePseudoLegalRookMoves_(MoveList& out) {
 
 
 void Game::generatePseudoLegalQueenMoves_(MoveList& out) {
-    const bool isWhite = currentTurn_ == Color::White;
+    const bool isWhite = sideToMove_ == Color::White;
 
     Bitboard sourceQueens = isWhite ? bbWhiteQueens_ : bbBlackQueens_;
     const Bitboard& sourcePieces = isWhite ? bbWhitePieces_ : bbBlackPieces_;
@@ -964,16 +959,17 @@ void Game::generatePseudoLegalQueenMoves_(MoveList& out) {
 }
 
 void Game::generatePseudoLegalKingMoves_(MoveList& out) {
-    const bool isWhite = (currentTurn_ == Color::White);
+    const bool isWhite = sideToMove_ == Color::White;
 
-    Bitboard sourceKings = isWhite ? bbWhiteKing_ : bbBlackKing_;
+    Bitboard sourceKing = isWhite ? bbWhiteKing_ : bbBlackKing_;
     const Bitboard& sourcePieces = isWhite ? bbWhitePieces_ : bbBlackPieces_;
     const Bitboard& targetPieces = isWhite ? bbBlackPieces_ : bbWhitePieces_;
     const Bitboard& allPieces = bbWhitePieces_.merge(bbBlackPieces_);
 
-    // TODO: we assume just one king anyway so we can probably remove the loop, but it's probably fine for readability
-    while(!sourceKings.empty()) {
-        const int sourceSquare = sourceKings.popLsb();
+    // NOTE: because we assume just one king per side, we do not need to loop over all king squares.
+    // for the same reason, we do not need to check if a king exists before using .popLsb();
+    while(!sourceKing.empty()) {
+        const int sourceSquare = sourceKing.popLsb();
         const Bitboard& attacks = attackBitboards_.kingAttacks[sourceSquare].mask(sourcePieces.flip()); // can not attack own pieces
 
         // Normal moves (non-captures)
@@ -1101,7 +1097,7 @@ void Game::generateLegalMovesFromSquare(int sourceSquare, MoveList& out) {
 
 bool Game::tryMove(const Move& move) {
     // TODO: consider making isWhite() function in Game; this logic is repeated quite often
-    const bool isWhite = currentTurn_ == Color::White;
+    const bool isWhite = sideToMove_ == Color::White;
     const bool sourceSquareHasWhitePiece = bbWhitePieces_.containsSquare(move.sourceSquare());
     const bool sourceSquareHasBlackPiece = bbBlackPieces_.containsSquare(move.sourceSquare());
     // only allow current turn's player to make moves
@@ -1127,7 +1123,7 @@ void Game::makeMove(const Move& move) {
     const bool isSourcePieceWhite = sourceColor == Color::White;
 
     // flip current turn
-    currentTurn_ = oppositeColor(currentTurn_);
+    sideToMove_ = oppositeColor(sideToMove_);
     // remove en passant (we may set it again later in this function)
     currentEnPassantSquare_ = UndoInfo::noEnPassant;
 
@@ -1280,7 +1276,7 @@ void Game::undoMove(const Move& move, const UndoInfo& undoInfo) {
     const bool isSourcePieceWhite = sourceColor == Color::White;
 
     // flip current turn
-    currentTurn_ = oppositeColor(currentTurn_);
+    sideToMove_ = oppositeColor(sideToMove_);
 
     // source piece's bitboard
     Bitboard& sourceBitboard = pieceToBitboard(sourcePiece);
@@ -1417,7 +1413,7 @@ bool Game::isSquareAttacked(const int targetSquare, const Color attackingColor) 
         return true;
     }
 
-    // Sliding pieces -- TODO: implement magic bitboards
+    // Sliding pieces -- Find nearest blocker to determine if square is attacked
     const Bitboard& attackingRooks = isWhiteAttacking ? bbWhiteRooks_ : bbBlackRooks_;
     const Bitboard& attackingBishops = isWhiteAttacking ? bbWhiteBishops_ : bbBlackBishops_;
     const Bitboard& attackingQueens = isWhiteAttacking ? bbWhiteQueens_ : bbBlackQueens_;
