@@ -1,5 +1,5 @@
-#include <corecrt_wstring.h>
 #include <iostream>
+#include <stdexcept>
 #include <string>
 
 #include "Game.hpp"
@@ -268,6 +268,7 @@ void Game::loadFEN(const std::string& FEN) {
             const Piece newPiece = Piece::charToPiece(c);
             if(!newPiece.exists()) {
                 std::cerr << "Unable to parse FEN: " << FEN << "\nInvalid char piece: " << "'" << c << "'";
+                throw std::runtime_error("Invalid FEN.");
             }
 
             // we have a valid piece, add it and update index
@@ -290,7 +291,7 @@ void Game::loadFEN(const std::string& FEN) {
                 case 'w': currentTurn_ = Color::White; break;
                 // black's turn
                 case 'b': currentTurn_ = Color::Black; break;
-                default: std::cerr << "Unable to parse FEN: " << FEN << "\nInvalid current color: " << "'" << c << "'";
+                default: std::cerr << "Unable to parse FEN: " << FEN << "\nInvalid current color: " << "'" << c << "'"; throw std::runtime_error("Invalid FEN.");
             }
             continue;
         }
@@ -308,7 +309,7 @@ void Game::loadFEN(const std::string& FEN) {
                 case 'q': castlingRights_.setBlackQueenside(); break;
                 // No one can castle
                 case '-': break;
-                default: std::cerr << "Unable to parse FEN: " << FEN << "\nInvalid castling char: " << "'" << c << "'";
+                default: std::cerr << "Invalid FEN: " << FEN << "\nInvalid castling char: " << "'" << c << "'"; throw std::runtime_error("Invalid FEN.");
             }
             continue;
         }
@@ -341,6 +342,12 @@ void Game::loadFEN(const std::string& FEN) {
         if(field == 5) {
             continue;
         }
+    }
+
+    // throw if either king is missing
+    if(bbWhiteKing_.empty() || bbBlackKing_.empty()) {
+        std::cerr << "Unable to parse FEN: " << FEN << "\nFEN must include both kings.";
+        throw std::runtime_error("Invalid FEN.");
     }
 }
 
