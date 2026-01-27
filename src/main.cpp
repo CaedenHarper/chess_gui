@@ -68,8 +68,7 @@ void runGUIBitboardTest() {
 
     // init game
     Game game;
-    // game.loadFEN(std::string{Game::STARTING_FEN});
-    game.loadFEN("7k/P7/1Q6/8/8/8/8/8 w - - 0 1");
+    game.loadFEN(std::string{Game::STARTING_FEN});
 
     // init board
     Board board;
