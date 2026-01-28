@@ -421,6 +421,55 @@ public:
         return *bitboard;
     }
 
+    // Bitboard getters
+    // White
+    constexpr Bitboard& bbWhitePawns() {
+        return bbWhitePawns_;
+    }
+    constexpr Bitboard& bbWhiteKnights() {
+        return bbWhiteKnights_;
+    }
+    constexpr Bitboard& bbWhiteBishops() {
+        return bbWhiteBishops_;
+    }
+    constexpr Bitboard& bbWhiteRooks() {
+        return bbWhiteRooks_;
+    }
+    constexpr Bitboard& bbWhiteQueens() {
+        return bbWhiteQueens_;
+    }
+    constexpr Bitboard& bbWhiteKing() {
+        return bbWhiteKing_;
+    }
+
+    // Black
+    constexpr Bitboard& bbBlackPawns() {
+        return bbBlackPawns_;
+    }
+    constexpr Bitboard& bbBlackKnights() {
+        return bbBlackKnights_;
+    }
+    constexpr Bitboard& bbBlackBishops() {
+        return bbBlackBishops_;
+    }
+    constexpr Bitboard& bbBlackRooks() {
+        return bbBlackRooks_;
+    }
+    constexpr Bitboard& bbBlackQueens() {
+        return bbBlackQueens_;
+    }
+    constexpr Bitboard& bbBlackKing() {
+        return bbBlackKing_;
+    }
+
+    // Occupancy
+    constexpr Bitboard& bbWhitePieces() {
+        return bbWhitePieces_;
+    }
+    constexpr Bitboard& bbBlackPieces() {
+        return bbBlackPieces_;
+    }
+
 private:
     // mailbox used to quickly find piece from square; not used for generating pieces
     std::array<Piece, NUM_SQUARES> mailbox_;

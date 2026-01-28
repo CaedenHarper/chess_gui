@@ -52,3 +52,4 @@ ctest --test-dir build-debug --verbose    # debug
 - PGN support
 - Halfmove / fullmove support, in loadFEN and otherwise
 - Incrementally update full board occupancy
+- Greatly refactor main()

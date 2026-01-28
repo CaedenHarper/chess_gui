@@ -32,6 +32,7 @@ add_executable(chess
     src/main.cpp
     src/game/Game.cpp
     src/gui/Board.cpp
+    src/engine/Engine.cpp
 )
 
 # link sfml
@@ -45,6 +46,7 @@ target_compile_options(chess PRIVATE -Wall -Wextra -Wpedantic)
 add_library(chess_lib
     src/game/Game.cpp
     src/gui/Board.cpp
+    src/engine/Engine.cpp
 )
 target_include_directories(chess_lib PUBLIC include)
 

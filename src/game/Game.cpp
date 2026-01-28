@@ -1119,6 +1119,7 @@ bool Game::tryMove(const Move& move) {
 void Game::makeMove(const Move& move) {
     const Piece sourcePiece = mailbox_[move.sourceSquare()];
     const Color sourceColor = sourcePiece.color();
+    const Color targetColor = oppositeColor(sourceColor);
 
     const bool isSourcePieceWhite = sourceColor == Color::White;
 
@@ -1129,7 +1130,7 @@ void Game::makeMove(const Move& move) {
 
     Bitboard& sourceBitboard = pieceToBitboard(sourcePiece);
     Bitboard& sourceColorBitboard = colorToOccupancyBitboard(sourceColor);
-    Bitboard& targetColorBitboard = colorToOccupancyBitboard(oppositeColor(sourceColor));
+    Bitboard& targetColorBitboard = colorToOccupancyBitboard(targetColor);
 
     // update castling flags
     if(
@@ -1171,7 +1172,7 @@ void Game::makeMove(const Move& move) {
         const int capturedIndex = move.targetSquare() - (towardsCenter * 8);
 
         // clear captured pawn's bitboard placement
-        Bitboard& bbTargetPawns = pieceToBitboard(Piece{PieceType::Pawn, oppositeColor(sourceColor)});
+        Bitboard& bbTargetPawns = targetColor == Color::White ? bbWhitePawns_ : bbBlackPawns_;
         bbTargetPawns.clearSquare(capturedIndex);
 
         // update occupancy board
@@ -1187,7 +1188,7 @@ void Game::makeMove(const Move& move) {
         const int kingsideRookSquare = isSourcePieceWhite ? WHITE_KINGSIDE_ROOK_STARTING_SQUARE : BLACK_KINGSIDE_ROOK_STARTING_SQUARE;
 
         // set kingside rook's new position in bitboard and clear old position
-        Bitboard& bbSourceRooks = pieceToBitboard(Piece{PieceType::Rook, sourceColor});
+        Bitboard& bbSourceRooks = isSourcePieceWhite ? bbWhiteRooks_ : bbBlackRooks_;
         bbSourceRooks.setSquare(kingsidePassingSquare);
         bbSourceRooks.clearSquare(kingsideRookSquare);
 
@@ -1206,7 +1207,7 @@ void Game::makeMove(const Move& move) {
         const int queensideRookSquare = isSourcePieceWhite ? WHITE_QUEENSIDE_ROOK_STARTING_SQUARE : BLACK_QUEENSIDE_ROOK_STARTING_SQUARE;
 
         // set kingside rook's new position in bitboard and clear old position
-        Bitboard& bbSourceRooks = pieceToBitboard(Piece{PieceType::Rook, sourceColor});
+        Bitboard& bbSourceRooks = isSourcePieceWhite ? bbWhiteRooks_ : bbBlackRooks_;;
         bbSourceRooks.setSquare(queensidePassingSquare);
         bbSourceRooks.clearSquare(queensideRookSquare);
 
@@ -1289,7 +1290,7 @@ void Game::undoMove(const Move& move, const UndoInfo& undoInfo) {
         const int kingsideRookSquare = isSourcePieceWhite ? WHITE_KINGSIDE_ROOK_STARTING_SQUARE : BLACK_KINGSIDE_ROOK_STARTING_SQUARE;
 
         // undo rook move in bitboard
-        Bitboard& bbSourceRooks = pieceToBitboard(Piece{PieceType::Rook, sourceColor});
+        Bitboard& bbSourceRooks = isSourcePieceWhite ? bbWhiteRooks_ : bbBlackRooks_;
         bbSourceRooks.clearSquare(kingsidePassingSquare);
         bbSourceRooks.setSquare(kingsideRookSquare);
 
@@ -1307,7 +1308,7 @@ void Game::undoMove(const Move& move, const UndoInfo& undoInfo) {
         const int queensidePassingSquare = isSourcePieceWhite ? WHITE_QUEENSIDE_PASSING_SQUARE : BLACK_QUEENSIDE_PASSING_SQUARE;
         const int queensideRookSquare = isSourcePieceWhite ? WHITE_QUEENSIDE_ROOK_STARTING_SQUARE : BLACK_QUEENSIDE_ROOK_STARTING_SQUARE;
 
-        Bitboard& bbSourceRooks = pieceToBitboard(Piece{PieceType::Rook, sourceColor});
+        Bitboard& bbSourceRooks = isSourcePieceWhite ? bbWhiteRooks_ : bbBlackRooks_;
         bbSourceRooks.clearSquare(queensidePassingSquare);
         bbSourceRooks.setSquare(queensideRookSquare);
 
@@ -1326,7 +1327,7 @@ void Game::undoMove(const Move& move, const UndoInfo& undoInfo) {
         const int capturedIndex = move.targetSquare() - (towardsCenter * 8);
 
         // reset captured pawn's bitboard placement
-        Bitboard& bbEnemyPawns = pieceToBitboard(Piece{PieceType::Pawn, oppositeColor(sourceColor)});
+        Bitboard& bbEnemyPawns = isSourcePieceWhite ? bbBlackPawns_ : bbWhitePawns_;
         bbEnemyPawns.setSquare(capturedIndex);
 
         // update occupancy bitboard
