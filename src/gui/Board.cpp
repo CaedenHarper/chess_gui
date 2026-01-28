@@ -208,7 +208,7 @@ void Board::clearAllHighlightsExcept(const Highlight highlightToSkip) {
 
 void Board::updateBoardFromGame(const Game& game) {
     // TODO: consider making more performant by checking equality before updating for each piece
-    for(int squareIndex = 0; squareIndex < Game::NUM_SQUARES; squareIndex++) {
+    for(int squareIndex = 0; squareIndex < Utils::NUM_SQUARES; squareIndex++) {
         const int row = Utils::getRow(squareIndex);
         const int col = Utils::getCol(squareIndex);
 

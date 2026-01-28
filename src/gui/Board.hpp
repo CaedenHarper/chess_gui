@@ -154,5 +154,5 @@ public:
 
 private:
     // Board representation: an array of squares.
-    std::array<Square, Game::NUM_SQUARES> board_;
+    std::array<Square, Utils::NUM_SQUARES> board_;
 };

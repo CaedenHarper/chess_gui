@@ -311,7 +311,7 @@ void runGUIBitboardTest() {
             //     board.at(attackLocation).setHighlight(Board::CYAN_HIGHLIGHT);
             // }
 
-            for(int square = 0; square < Game::NUM_SQUARES; square++) {
+            for(int square = 0; square < Utils::NUM_SQUARES; square++) {
                 // highlight chosen bitboard after so red is on top of cyan
                 if(bitboard.containsSquare(square)) {
                     board.at(square).setHighlight(Board::RIGHT_CLICK_HIGHLIGHT);
@@ -548,7 +548,7 @@ void run2PlayerGUIgame() {
         }
 
         // highlight attacked squares
-        // for(int i = 0; i < Game::NUM_SQUARES; i++) {
+        // for(int i = 0; i < Utils::NUM_SQUARES; i++) {
         //     if(game.isSquareAttacked(i, Color::White)) {
         //         board.at(i).setHighlight(Board::CYAN_HIGHLIGHT);
         //     }
@@ -797,7 +797,7 @@ void run1PlayerGUIgame() {
         }
 
         // highlight attacked squares
-        // for(int i = 0; i < Game::NUM_SQUARES; i++) {
+        // for(int i = 0; i < Utils::NUM_SQUARES; i++) {
         //     if(game.isSquareAttacked(i, Color::White)) {
         //         board.at(i).setHighlight(Board::CYAN_HIGHLIGHT);
         //     }

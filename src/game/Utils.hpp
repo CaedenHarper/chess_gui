@@ -37,6 +37,9 @@ namespace Utils {
 
     // --- Constant variables ---
 
+    // Numbr of squares on a chessboard.
+    static constexpr int NUM_SQUARES = 64;
+
     // string_view instead of string for constexpr
     // Starting game's FEN string.
     static constexpr std::string_view STARTING_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";

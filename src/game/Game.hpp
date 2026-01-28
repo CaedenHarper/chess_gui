@@ -71,15 +71,13 @@ struct AttackBitboards {
 // A chess game. Contains information for the game and helpers to generate and validate moves.
 class Game {
 public:
-    static constexpr int NUM_SQUARES = 64;
-
     // Construct a new game with an empty board. Current turn defaults to white.
     Game();
     // Update the board given a FEN.
     void loadFEN(const std::string& FEN);
 
     // Retrieve mailbox.
-    constexpr std::array<Piece, NUM_SQUARES> mailbox() const noexcept { return mailbox_; }
+    constexpr std::array<Piece, Utils::NUM_SQUARES> mailbox() const noexcept { return mailbox_; }
     // Retrieve the color of the current player's turn.
     constexpr Color sideToMove() const noexcept { return sideToMove_; }
     // Retrieve a string representation of the current state of the board.
@@ -217,7 +215,7 @@ public:
 
 private:
     // mailbox used to quickly find piece from square; not used for generating pieces
-    std::array<Piece, NUM_SQUARES> mailbox_;
+    std::array<Piece, Utils::NUM_SQUARES> mailbox_;
 
     // The game's current turn.
     Color sideToMove_;

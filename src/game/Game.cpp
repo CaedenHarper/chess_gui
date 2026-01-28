@@ -234,7 +234,7 @@ Piece Game::pieceAtSquareForGui(int square) const noexcept {
 
 // This is slow, but that's okay because its only ran once per Game instance.
 void Game::initAttackBitboards_() {
-    for (int square = 0; square < Game::NUM_SQUARES; square++) {
+    for (int square = 0; square < Utils::NUM_SQUARES; square++) {
         const int col = Utils::getCol(square);
         const int row = Utils::getRow(square);
 
@@ -281,7 +281,7 @@ void Game::initAttackBitboards_() {
 
         // Slider rays
         // North (+8)
-        for (int curSquare = square + 8; curSquare < NUM_SQUARES; curSquare += 8) {
+        for (int curSquare = square + 8; curSquare < Utils::NUM_SQUARES; curSquare += 8) {
             attackBitboards_.northRay[square].setSquare(curSquare);
         }
 
@@ -291,7 +291,7 @@ void Game::initAttackBitboards_() {
         }
 
         // East (+1), stop at H-file
-        for (int curSquare = square + 1; curSquare < NUM_SQUARES && Utils::getCol(curSquare) != 0; curSquare++) {
+        for (int curSquare = square + 1; curSquare < Utils::NUM_SQUARES && Utils::getCol(curSquare) != 0; curSquare++) {
             attackBitboards_.eastRay[square].setSquare(curSquare);
         }
 
@@ -301,12 +301,12 @@ void Game::initAttackBitboards_() {
         }
 
         // North-East (+9), stop at H-file
-        for (int curSquare = square + 9; curSquare < NUM_SQUARES && Utils::getCol(curSquare) != 0; curSquare += 9) {
+        for (int curSquare = square + 9; curSquare < Utils::NUM_SQUARES && Utils::getCol(curSquare) != 0; curSquare += 9) {
             attackBitboards_.neRay[square].setSquare(curSquare);
         }
 
         // North-West (+7), stop at A-file
-        for (int curSquare = square + 7; curSquare < NUM_SQUARES && Utils::getCol(curSquare) != 7; curSquare += 7) {
+        for (int curSquare = square + 7; curSquare < Utils::NUM_SQUARES && Utils::getCol(curSquare) != 7; curSquare += 7) {
             attackBitboards_.nwRay[square].setSquare(curSquare);
         }
 
@@ -654,7 +654,7 @@ void Game::generatePseudoLegalQueenMoves_(MoveList& out) {
 
         // ---- Rook Moves ----
         // ---- North (+8)
-        for (int targetSquare = sourceSquare + 8; targetSquare < NUM_SQUARES; targetSquare += 8) {
+        for (int targetSquare = sourceSquare + 8; targetSquare < Utils::NUM_SQUARES; targetSquare += 8) {
             // hit our own piece, stop
             if (sourcePieces.containsSquare(targetSquare)) {
                 break;
