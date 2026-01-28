@@ -89,7 +89,7 @@ public:
         // pack bools into castling rights uint8_t for speedy lookup
         return UndoInfo{
             castlingRights_,
-            static_cast<uint8_t>(currentEnPassantSquare_),
+            enPassantSquare_,
             capturedPiece
         };
     }
@@ -224,7 +224,7 @@ private:
     CastlingRights castlingRights_;
     
     // Current en passant square. Is UndoInfo sentinal if no en passant.
-    int currentEnPassantSquare_;
+    uint8_t enPassantSquare_;
 
     // Bitboards to keep state
     // White

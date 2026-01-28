@@ -35,6 +35,8 @@ public:
     // Create a move given a source square, target square, flag, and promotion.
     constexpr Move(uint8_t sourceSquare, uint8_t targetSquare, MoveFlag flag, Promotion promotion) noexcept
                 : packed_{pack_(sourceSquare, targetSquare, flag, promotion)} {}
+    constexpr Move(int sourceSquare, uint8_t targetSquare, MoveFlag flag, Promotion promotion) noexcept
+                : packed_{pack_(sourceSquare, targetSquare, flag, promotion)} {}
     constexpr Move(int sourceSquare, int targetSquare, MoveFlag flag, Promotion promotion) noexcept
                 : packed_{pack_(static_cast<uint8_t>(sourceSquare), static_cast<uint8_t>(targetSquare), flag, promotion)} {}
 

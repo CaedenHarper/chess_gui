@@ -6,7 +6,7 @@
 Game::Game()
     : sideToMove_{Color::White},
     castlingRights_{0},
-    currentEnPassantSquare_{UndoInfo::noEnPassant} {
+    enPassantSquare_{UndoInfo::noEnPassant} {
     // Init lookup tables
     initAttackBitboards_();
     initPieceToBBTable_();
@@ -156,7 +156,7 @@ void Game::loadFEN(const std::string& FEN) {
             } else {
                 // second square, we can set it and we are done
                 enPassantSquare += c;
-                currentEnPassantSquare_ = Utils::algebraicNotationToInt(enPassantSquare);
+                enPassantSquare_ = Utils::algebraicNotationToInt(enPassantSquare);
             }
 
             continue;
@@ -379,13 +379,13 @@ void Game::generatePseudoLegalPawnMoves_(MoveList& out) {
         }
 
         // En Passant
-        if (currentEnPassantSquare_ != UndoInfo::noEnPassant) {
+        if (enPassantSquare_ != UndoInfo::noEnPassant) {
             // we check black pawn attack pattern because pawn moves are not symmetrical
-            Bitboard attackers = bbWhitePawns_.mask(attackBitboards_.blackPawnAttacks[currentEnPassantSquare_]);
+            Bitboard attackers = bbWhitePawns_.mask(attackBitboards_.blackPawnAttacks[enPassantSquare_]);
 
             while (!attackers.empty()) {
                 const int from = attackers.popLsb();
-                out.push_back(Move{from, currentEnPassantSquare_, MoveFlag::EnPassant, Promotion::None});
+                out.push_back(Move{from, enPassantSquare_, MoveFlag::EnPassant, Promotion::None});
             }
         }
 
@@ -425,13 +425,13 @@ void Game::generatePseudoLegalPawnMoves_(MoveList& out) {
         }
 
         // En Passant
-        if (currentEnPassantSquare_ != UndoInfo::noEnPassant) {
+        if (enPassantSquare_ != UndoInfo::noEnPassant) {
             // we check white pawn attack pattern because pawn moves are not symmetrical
-            Bitboard attackers = bbBlackPawns_.mask(attackBitboards_.whitePawnAttacks[currentEnPassantSquare_]);
+            Bitboard attackers = bbBlackPawns_.mask(attackBitboards_.whitePawnAttacks[enPassantSquare_]);
 
             while (!attackers.empty()) {
                 const int from = attackers.popLsb();
-                out.push_back(Move{from, currentEnPassantSquare_, MoveFlag::EnPassant, Promotion::None});
+                out.push_back(Move{from, enPassantSquare_, MoveFlag::EnPassant, Promotion::None});
             }
         }
 
@@ -963,7 +963,7 @@ void Game::makeMove(const Move& move) {
     // flip current turn
     sideToMove_ = oppositeColor(sideToMove_);
     // remove en passant (we may set it again later in this function)
-    currentEnPassantSquare_ = UndoInfo::noEnPassant;
+    enPassantSquare_ = UndoInfo::noEnPassant;
 
     Bitboard& sourceBitboard = pieceToBitboard(sourcePiece);
     Bitboard& sourceColorBitboard = colorToOccupancyBitboard(sourceColor);
@@ -1004,7 +1004,7 @@ void Game::makeMove(const Move& move) {
         const int sourceRow = Utils::getRow(move.sourceSquare());
         const int towardsCenter = isSourcePieceWhite ? -1 : +1;
         const int passedRow = sourceRow + towardsCenter; // row that was passed in the double move  
-        currentEnPassantSquare_ = Utils::getSquareIndex(Utils::getCol(move.sourceSquare()), passedRow); 
+        enPassantSquare_ = Utils::getSquareIndex(Utils::getCol(move.sourceSquare()), passedRow); 
     }
 
     // If en passant capture, remove the captured pawn
@@ -1229,7 +1229,7 @@ void Game::undoMove(const Move& move, const UndoInfo& undoInfo) {
 
     // restore all flags
     castlingRights_ = undoInfo.prevCastlingRights;
-    currentEnPassantSquare_ = undoInfo.prevEnPassantSquare;
+    enPassantSquare_ = undoInfo.prevEnPassantSquare;
 }
 
 bool Game::isSquareAttacked(const int targetSquare, const Color attackingColor) const {
