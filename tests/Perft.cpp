@@ -3,6 +3,7 @@
 
 #include "Perft.hpp"
 #include "../src/game/Game.hpp"
+#include "../src/game/Utils.hpp"
 
 // limit of 18,446,744,073,709,551,615
 uint64_t Perft::perft(Game& game, int depth) { // NOLINT(misc-no-recursion)
@@ -25,11 +26,11 @@ uint64_t Perft::perft(Game& game, int depth) { // NOLINT(misc-no-recursion)
 
         // Check any relevant checks
 
-        const int KING_STARTING_SQUARE = (sideToMove == Color::White) ? Game::WHITE_KING_STARTING_SQUARE : Game::BLACK_KING_STARTING_SQUARE;
+        const int KING_STARTING_SQUARE = (sideToMove == Color::White) ? Utils::WHITE_KING_STARTING_SQUARE : Utils::BLACK_KING_STARTING_SQUARE;
 
         if(move.isKingSideCastle()) {
-            const int KINGSIDE_PASSING_SQUARE = (sideToMove == Color::White) ? Game::WHITE_KINGSIDE_PASSING_SQUARE : Game::BLACK_KINGSIDE_PASSING_SQUARE;
-            const int KINGSIDE_TARGET_SQUARE = (sideToMove == Color::White) ? Game::WHITE_KINGSIDE_TARGET_SQUARE : Game::BLACK_KINGSIDE_TARGET_SQUARE;
+            const int KINGSIDE_PASSING_SQUARE = (sideToMove == Color::White) ? Utils::WHITE_KINGSIDE_PASSING_SQUARE : Utils::BLACK_KINGSIDE_PASSING_SQUARE;
+            const int KINGSIDE_TARGET_SQUARE = (sideToMove == Color::White) ? Utils::WHITE_KINGSIDE_TARGET_SQUARE : Utils::BLACK_KINGSIDE_TARGET_SQUARE;
     
             if(
                 game.isSquareAttacked(KING_STARTING_SQUARE, enemyColor) ||   // king cant start in check
@@ -42,8 +43,8 @@ uint64_t Perft::perft(Game& game, int depth) { // NOLINT(misc-no-recursion)
         }
 
         if(move.isQueenSideCastle()) {
-            const int QUEENSIDE_PASSING_SQUARE = (sideToMove == Color::White) ? Game::WHITE_QUEENSIDE_PASSING_SQUARE : Game::BLACK_QUEENSIDE_PASSING_SQUARE;
-            const int QUEENSIDE_TARGET_SQUARE = (sideToMove == Color::White) ? Game::WHITE_QUEENSIDE_TARGET_SQUARE : Game::BLACK_QUEENSIDE_TARGET_SQUARE;
+            const int QUEENSIDE_PASSING_SQUARE = (sideToMove == Color::White) ? Utils::WHITE_QUEENSIDE_PASSING_SQUARE : Utils::BLACK_QUEENSIDE_PASSING_SQUARE;
+            const int QUEENSIDE_TARGET_SQUARE = (sideToMove == Color::White) ? Utils::WHITE_QUEENSIDE_TARGET_SQUARE : Utils::BLACK_QUEENSIDE_TARGET_SQUARE;
             if(
                 game.isSquareAttacked(KING_STARTING_SQUARE, enemyColor) ||   // king cant start in check
                 game.isSquareAttacked(QUEENSIDE_PASSING_SQUARE, enemyColor) ||   // king cant pass through check 
@@ -91,11 +92,11 @@ uint64_t Perft::perftDivide(Game& game, int depth) {
 
         // Check any relevant checks
 
-        const int KING_STARTING_SQUARE = (sideToMove == Color::White) ? Game::WHITE_KING_STARTING_SQUARE : Game::BLACK_KING_STARTING_SQUARE;
+        const int KING_STARTING_SQUARE = (sideToMove == Color::White) ? Utils::WHITE_KING_STARTING_SQUARE : Utils::BLACK_KING_STARTING_SQUARE;
 
         if(move.isKingSideCastle()) {
-            const int KINGSIDE_PASSING_SQUARE = (sideToMove == Color::White) ? Game::WHITE_KINGSIDE_PASSING_SQUARE : Game::BLACK_KINGSIDE_PASSING_SQUARE;
-            const int KINGSIDE_TARGET_SQUARE = (sideToMove == Color::White) ? Game::WHITE_KINGSIDE_TARGET_SQUARE : Game::BLACK_KINGSIDE_TARGET_SQUARE;
+            const int KINGSIDE_PASSING_SQUARE = (sideToMove == Color::White) ? Utils::WHITE_KINGSIDE_PASSING_SQUARE : Utils::BLACK_KINGSIDE_PASSING_SQUARE;
+            const int KINGSIDE_TARGET_SQUARE = (sideToMove == Color::White) ? Utils::WHITE_KINGSIDE_TARGET_SQUARE : Utils::BLACK_KINGSIDE_TARGET_SQUARE;
     
             if(
                 game.isSquareAttacked(KING_STARTING_SQUARE, enemyColor) ||   // king cant start in check
@@ -108,8 +109,8 @@ uint64_t Perft::perftDivide(Game& game, int depth) {
         }
 
         if(move.isQueenSideCastle()) {
-            const int QUEENSIDE_PASSING_SQUARE = (sideToMove == Color::White) ? Game::WHITE_QUEENSIDE_PASSING_SQUARE : Game::BLACK_QUEENSIDE_PASSING_SQUARE;
-            const int QUEENSIDE_TARGET_SQUARE = (sideToMove == Color::White) ? Game::WHITE_QUEENSIDE_TARGET_SQUARE : Game::BLACK_QUEENSIDE_TARGET_SQUARE;
+            const int QUEENSIDE_PASSING_SQUARE = (sideToMove == Color::White) ? Utils::WHITE_QUEENSIDE_PASSING_SQUARE : Utils::BLACK_QUEENSIDE_PASSING_SQUARE;
+            const int QUEENSIDE_TARGET_SQUARE = (sideToMove == Color::White) ? Utils::WHITE_QUEENSIDE_TARGET_SQUARE : Utils::BLACK_QUEENSIDE_TARGET_SQUARE;
             if(
                 game.isSquareAttacked(KING_STARTING_SQUARE, enemyColor) ||   // king cant start in check
                 game.isSquareAttacked(QUEENSIDE_PASSING_SQUARE, enemyColor) ||   // king cant pass through check 

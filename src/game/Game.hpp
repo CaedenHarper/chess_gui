@@ -6,68 +6,9 @@
 #include <string>
 
 #include "Bitboard.hpp"
-
-// Colors a piece can have. None represents an empty square.
-enum class Color : uint8_t  {
-    None,
-    White,
-    Black
-};
-
-// Types a piece can have. None represents an empty square.
-enum class PieceType: uint8_t  {
-    None,
-    Pawn,
-    Knight,
-    Bishop,
-    Rook,
-    Queen,
-    King
-};
-
-// A chess piece, with a piece type and color. Stored in uint8_t as (PieceType | Color).
-class Piece {
-public:
-    // Construct an empty piece, which represents an empty square.
-    constexpr Piece() noexcept : packed_{0} {}
-    // Construct a piece given a type and color.
-    constexpr Piece(PieceType type, Color color) noexcept : packed_{pack_(type, color)} {}
-
-    // If a piece is equal to another piece. A piece is equal if the type and color matches.
-    constexpr bool operator==(Piece other) const noexcept { return packed_ == other.packed_; }
-
-    // Setters use bitwise ops to quickly extract info from packed_.
-    constexpr PieceType type() const noexcept { return static_cast<PieceType>(packed_ & TYPE_MASK); }
-    constexpr Color color() const noexcept { return static_cast<Color>((packed_ >> 3) & COLOR_MASK); }
-    // Retrieve if the piece exists. i.e., if the piece is not an empty square.
-    constexpr bool exists() const noexcept { return (packed_ & 0x7) != 0; } // 0 -> PieceType::None
-    constexpr uint8_t raw() const noexcept { return packed_; }
-
-    // Retrieve a string of length one which represents the piece. Uppercase for white, lowercase for black. E.g., white pawn -> "P"
-    std::string to_string_short() const;
-    // Retrieve a string which represents the piece. E.g., white pawn -> "White Pawn"
-    std::string to_string_long() const;
-    
-    // Determine piece type from char. E.g., 'P' -> Pawn
-    static PieceType charToPieceType(char piece);
-    // Determine piece from char. Uppercase for white, lowercase for black. E.g., 'P' -> White Pawn
-    static Piece charToPiece(char piece);
-
-protected:
-    // packed representation of PieceType | Color. 
-    uint8_t packed_;
-
-    // 3 bits for type, 2 for color, and corresponding bitmasks
-    static constexpr uint8_t TYPE_BITS = 3;
-    static constexpr uint8_t COLOR_BITS = 2;
-    static constexpr uint8_t TYPE_MASK = (1 << TYPE_BITS) - 1;
-    static constexpr uint8_t COLOR_MASK = (1 << COLOR_BITS) - 1;
-
-    // Pack PieceType and Color into uint8_t
-    static constexpr uint8_t pack_(PieceType type, Color color) noexcept {
-        return (static_cast<uint8_t>(type) & TYPE_MASK) | ((static_cast<uint8_t>(color) & COLOR_MASK) << 3);
-    }
-};
+#include "Move.hpp"
+#include "Piece.hpp"
+#include "Utils.hpp"
 
 // TODO: fixup magic numbers
 // Representation of the castling rights of a position, stored in uint8_t for maximum speed.
@@ -116,91 +57,6 @@ struct UndoInfo {
           capturedPiece{capturedPiece_} {}
 } __attribute__((aligned(4))); // align to 4 bytes
 
-enum class MoveFlag : uint8_t {
-    Normal,  // no special flags
-    Capture,
-    DoublePawnPush,
-    KingCastle,
-    QueenCastle,
-    EnPassant,
-    Promotion,  // non-capture promotion
-    PromotionCapture
-};
-
-enum class Promotion : uint8_t { 
-    None,
-    Knight,
-    Bishop,
-    Rook,
-    Queen
-};
-
-class Game; // forward declare for Move
-
-// TODO: rewrite without magic numbers here
-// A chess move, with information for squares, pieces, and special flags like promotion and castling.
-class Move {
-public:
-    // Create a default move that should not be used; only needed for MoveList to quickly initialize many default Moves
-    constexpr Move() noexcept : packed_{0} {}
-    // Create a move given a source square, target square, flag, and promotion.
-    constexpr Move(uint8_t sourceSquare, uint8_t targetSquare, MoveFlag flag, Promotion promotion) noexcept
-                : packed_{pack_(sourceSquare, targetSquare, flag, promotion)} {}
-    constexpr Move(int sourceSquare, int targetSquare, MoveFlag flag, Promotion promotion) noexcept
-                : packed_{pack_(static_cast<uint8_t>(sourceSquare), static_cast<uint8_t>(targetSquare), flag, promotion)} {}
-
-    // Create a move using Pieces for context for flag + promotion. This is slower, only use if necessary / not in hot loop.
-    static Move fromPieces(int sourceSquare, int targetSquare, Piece sourcePiece, Piece targetPiece);
-
-    // Has to have the same starting and target squares, pieces, and any special flags.
-    constexpr bool operator==(Move other) const noexcept { return packed_ == other.packed_; }
-
-    // Setters use bitwise ops to quickly extract info from packed_.
-    constexpr uint8_t sourceSquare() const noexcept { return (packed_ >> 0) & 0x3F; }
-    constexpr uint8_t targetSquare() const noexcept { return (packed_ >> 6) & 0x3F; }
-    constexpr MoveFlag flag() const noexcept { return static_cast<MoveFlag>((packed_ >> 12) & 0xF); }
-    constexpr Promotion promotion() const noexcept { return static_cast<Promotion>((packed_ >> 16) & 0x7); }
-    constexpr bool isPromotion() const noexcept { return flag() == MoveFlag::Promotion || flag() == MoveFlag::PromotionCapture; }
-    constexpr bool isEnPassant() const noexcept { return flag() == MoveFlag::EnPassant; }
-    constexpr bool isDoublePawn() const noexcept { return flag() == MoveFlag::DoublePawnPush; }
-    constexpr bool isKingSideCastle() const noexcept { return flag() == MoveFlag::KingCastle; }
-    constexpr bool isQueenSideCastle() const noexcept { return flag() == MoveFlag::QueenCastle; }
-    constexpr bool isCapture() const noexcept { return flag() == MoveFlag::Capture || flag() == MoveFlag::PromotionCapture || flag() == MoveFlag::EnPassant; }
-
-    // Retrieve a string representation of the move. E.g., "White Pawn on e2 to Empty Square on e4".
-    std::string to_string(const Game& game) const;
-    // Retrieve a long algebraic representation of the move. E.g., "e2e4"
-    std::string toLongAlgebraic() const;
-
-    // Get piece type from promotion class.
-    static constexpr PieceType promotionToPieceType(Promotion promotion) noexcept;
-
-private:
-    uint32_t packed_;
-
-    static constexpr uint32_t pack_(uint8_t sourceSquare, uint8_t targetSquare, MoveFlag flag, Promotion promotion) noexcept {
-        return (static_cast<uint32_t>(sourceSquare) & 0x3F)
-             | ((static_cast<uint32_t>(targetSquare) & 0x3F) << 6)
-             | ((static_cast<uint32_t>(flag) & 0xF) << 12)
-             | ((static_cast<uint32_t>(promotion) & 0x7) << 16);
-    }
-};
-
-// A list of moves. Wrapper for std::array<> for quick lookups. 
-struct MoveList {
-    // Max amount of moves; somewhat arbitrary, but should be enough for any pseudo-legal move count
-    static constexpr int kMaxMoves = 256;
-    std::array<Move, kMaxMoves> data;
-    // Only moves between [0, MoveList.size) are valid; the rest are placeholder Moves which have undefined behavior
-    int size = 0;
-
-    constexpr void clear() noexcept { size = 0; }
-
-    constexpr void push_back(const Move& move) noexcept {
-        data[size++] = move;
-    }
-} __attribute__((aligned(128))); // align to 128 bytes
-
 // Create holder for all AttackBitboards
 struct AttackBitboards {
     std::array<Bitboard, 64> whitePawnAttacks{};
@@ -216,87 +72,6 @@ struct AttackBitboards {
 class Game {
 public:
     static constexpr int NUM_SQUARES = 64;
-
-    // stringview for constexpr
-    // Starting game's FEN string.
-    static constexpr std::string_view STARTING_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-
-    // Constants for castling.
-    static constexpr int WHITE_KING_STARTING_SQUARE = 60;
-    static constexpr int BLACK_KING_STARTING_SQUARE = 4;
-
-    static constexpr int WHITE_KINGSIDE_TARGET_SQUARE = 62;
-    static constexpr int BLACK_KINGSIDE_TARGET_SQUARE = 6;
-
-    static constexpr int WHITE_QUEENSIDE_TARGET_SQUARE = 58;
-    static constexpr int BLACK_QUEENSIDE_TARGET_SQUARE = 2;
-
-    static constexpr int WHITE_KINGSIDE_PASSING_SQUARE = 61;
-    static constexpr int BLACK_KINGSIDE_PASSING_SQUARE = 5;
-
-    static constexpr int WHITE_QUEENSIDE_PASSING_SQUARE = 59;
-    static constexpr int BLACK_QUEENSIDE_PASSING_SQUARE = 3;
-
-    static constexpr int WHITE_KINGSIDE_ROOK_STARTING_SQUARE = 63;
-    static constexpr int BLACK_KINGSIDE_ROOK_STARTING_SQUARE = 7;
-
-    static constexpr int WHITE_QUEENSIDE_ROOK_STARTING_SQUARE = 56;
-    static constexpr int BLACK_QUEENSIDE_ROOK_STARTING_SQUARE = 0;
-
-    // Constants for some piece's movements
-    static constexpr std::array<std::array<int, 2>, 8> knightDeltas {{
-        // col (x), row (y)
-        {-2, -1}, // left up
-        {-1, -2}, // up left
-        {1, -2}, // up right
-        {2, -1}, // right up
-        {2, 1}, // right down
-        {1, 2}, // down right
-        {-1, 2}, // down left
-        {-2, 1}, // left down
-    }};
-
-    static constexpr std::array<std::array<int, 2>, 4> bishopDeltas {{
-        // col (x), row (y)
-        {-1, -1}, // up left
-        {1, -1}, // up right
-        {-1, 1}, // down left
-        {1, 1}, // down right
-    }};
-
-    static constexpr std::array<std::array<int, 2>, 4> rookDeltas {{
-        // col (x), row (y)
-        {0, 1}, // up
-        {0, -1}, // down
-        {1, 0}, // right
-        {-1, 0}, // left
-    }};
-
-    static constexpr std::array<std::array<int, 2>, 8> queenDeltas {{
-        // col (x), row (y)
-        // rook moves
-        {0, 1}, // up
-        {0, -1}, // down
-        {1, 0}, // right
-        {-1, 0}, // left
-        // bishop moves
-        {-1, -1}, // up left
-        {1, -1}, // up right
-        {-1, 1}, // down left
-        {1, 1}, // down right
-    }};
-
-    static constexpr std::array<std::array<int, 2>, 8> kingDeltas {{
-        // col (x), row (y)
-        {-1, -1}, // up left
-        {0, -1}, // up
-        {1, -1}, // up right
-        {-1, 0}, // left
-        {1, 0}, // right
-        {-1, 1}, // down left
-        {0, 1}, // down
-        {1, 1}, // down right
-    }};
 
     // Construct a new game with an empty board. Current turn defaults to white.
     Game();
@@ -366,36 +141,6 @@ public:
         Bitboard bbKing = colorToFind == Color::White ? bbWhiteKing_ : bbBlackKing_;
         // NOTE: this has undefined behavior if bbKing is empty
         return bbKing.popLsb();
-    }
-    
-    // Retrieve algebraic notation from a given square. E.g., 0 -> "a8".
-    static std::string intToAlgebraicNotation(int square);
-    // Retrieve square int from a given algebraic notation. E.g., "a8" -> 0.
-    static int algebraicNotationToInt(const std::string& square);
-
-    // If the square is on the board, in bounds.
-    static constexpr bool onBoard(int square) noexcept {
-        return 0 <= square && square <= 63;
-    }
-    // If a column and row is on the board, in bounds.
-    static constexpr bool onBoard(int col, int row) noexcept {
-        return 0 <= col && col <= 7 && 0 <= row && row <= 7;
-    }
-
-    // Get column of square.
-    static constexpr int getCol(int square) noexcept {
-        // equivalent to square % 8
-        return square & 7;
-    }
-    // Get row of square.
-    static constexpr int getRow(int square) noexcept {
-        // equivalent to square / 8
-        return square >> 3;
-    }
-    // Get square index from column and row.
-    static constexpr int getSquareIndex(int col, int row) noexcept {
-        // equivalent to (8 * row) + col
-        return (row << 3) | col;
     }
 
     // Get the opposite color of a given color.
@@ -521,7 +266,7 @@ private:
     static constexpr void addAllPawnPromotionsToMoves_(MoveList& moves, int sourceSquare, int targetSquare, Piece sourcePiece, bool isCapture) {
         const Color pawnColor = sourcePiece.color();
         const int promotionRow = pawnColor == Color::White ? 0 : 7; 
-        if(getRow(targetSquare) == promotionRow) {
+        if(Utils::getRow(targetSquare) == promotionRow) {
             const MoveFlag flag = isCapture ? MoveFlag::PromotionCapture : MoveFlag::Promotion;
             // add promotions
             moves.push_back(Move{sourceSquare, targetSquare, flag, Promotion::Knight});

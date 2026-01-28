@@ -1,4 +1,3 @@
-#include <SFML/Graphics/Text.hpp>
 #include <iostream>
 #include <optional>
 #include <sstream>
@@ -9,6 +8,7 @@
 
 #include "engine/Engine.hpp"
 #include "game/Game.hpp"
+#include "game/Utils.hpp"
 #include "gui/Board.hpp"
 
 // TODO: implement CLI class and move Game.to_string()
@@ -72,7 +72,7 @@ void runGUIBitboardTest() {
 
     // init game
     Game game;
-    game.loadFEN(std::string{Game::STARTING_FEN});
+    game.loadFEN(std::string{Utils::STARTING_FEN});
 
     // init board
     Board board;
@@ -147,7 +147,7 @@ void runGUIBitboardTest() {
                     int targetSquare = Board::getSquareIndexFromCoordinates(mousePos.x, mousePos.y);
                     
                     // square does not exist; reset any selected piece and continue
-                    if(!Game::onBoard(targetSquare)) {
+                    if(!Utils::onBoard(targetSquare)) {
                         heldSquare.reset();
                         continue;
                     }
@@ -219,7 +219,7 @@ void runGUIBitboardTest() {
                     const int targetSquare = Board::getSquareIndexFromCoordinates(mousePos.x, mousePos.y);
                     
                     // swap highlight status of square
-                    if(Game::onBoard(targetSquare)) {
+                    if(Utils::onBoard(targetSquare)) {
                         board.at(targetSquare).toggleHighlight(Board::RIGHT_CLICK_HIGHLIGHT);
                     }
                 }
@@ -246,7 +246,7 @@ void runGUIBitboardTest() {
                     const int targetSquare = Board::getSquareIndexFromCoordinates(mouseObject->position.x, mouseObject->position.y);
                     
                     // out of bounds
-                    if(!Game::onBoard(targetSquare)) {
+                    if(!Utils::onBoard(targetSquare)) {
                         continue;
                     }
 
@@ -375,7 +375,7 @@ void run2PlayerGUIgame() {
 
     // init game
     Game game;
-    game.loadFEN(std::string{Game::STARTING_FEN});
+    game.loadFEN(std::string{Utils::STARTING_FEN});
 
     // init board
     Board board;
@@ -423,7 +423,7 @@ void run2PlayerGUIgame() {
                     int targetSquare = Board::getSquareIndexFromCoordinates(mousePos.x, mousePos.y);
                     
                     // square does not exist; reset any selected piece and continue
-                    if(!Game::onBoard(targetSquare)) {
+                    if(!Utils::onBoard(targetSquare)) {
                         heldSquare.reset();
                         continue;
                     }
@@ -495,7 +495,7 @@ void run2PlayerGUIgame() {
                     const int targetSquare = Board::getSquareIndexFromCoordinates(mousePos.x, mousePos.y);
                     
                     // swap highlight status of square
-                    if(Game::onBoard(targetSquare)) {
+                    if(Utils::onBoard(targetSquare)) {
                         board.at(targetSquare).toggleHighlight(Board::RIGHT_CLICK_HIGHLIGHT);
                     }
                 }
@@ -522,7 +522,7 @@ void run2PlayerGUIgame() {
                     const int targetSquare = Board::getSquareIndexFromCoordinates(mouseObject->position.x, mouseObject->position.y);
                     
                     // out of bounds
-                    if(!Game::onBoard(targetSquare)) {
+                    if(!Utils::onBoard(targetSquare)) {
                         continue;
                     }
 
@@ -590,7 +590,7 @@ void run1PlayerGUIgame() {
 
     // init game
     Game game;
-    game.loadFEN(std::string{Game::STARTING_FEN});
+    game.loadFEN(std::string{Utils::STARTING_FEN});
 
     // init board
     Board board;
@@ -672,7 +672,7 @@ void run1PlayerGUIgame() {
                     int targetSquare = Board::getSquareIndexFromCoordinates(mousePos.x, mousePos.y);
                     
                     // square does not exist; reset any selected piece and continue
-                    if(!Game::onBoard(targetSquare)) {
+                    if(!Utils::onBoard(targetSquare)) {
                         heldSquare.reset();
                         continue;
                     }
@@ -744,7 +744,7 @@ void run1PlayerGUIgame() {
                     const int targetSquare = Board::getSquareIndexFromCoordinates(mousePos.x, mousePos.y);
                     
                     // swap highlight status of square
-                    if(Game::onBoard(targetSquare)) {
+                    if(Utils::onBoard(targetSquare)) {
                         board.at(targetSquare).toggleHighlight(Board::RIGHT_CLICK_HIGHLIGHT);
                     }
                 }
@@ -771,7 +771,7 @@ void run1PlayerGUIgame() {
                     const int targetSquare = Board::getSquareIndexFromCoordinates(mouseObject->position.x, mouseObject->position.y);
                     
                     // out of bounds
-                    if(!Game::onBoard(targetSquare)) {
+                    if(!Utils::onBoard(targetSquare)) {
                         continue;
                     }
 

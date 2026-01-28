@@ -35,7 +35,7 @@ int main() {
     const std::vector<uint64_t> position6Perfts {0, 46, 2'079, 89'890, 3'894'594, 164'075'551, 6'923'051'137, 287'188'994'746, 11'923'589'843'526, 490'154'852'788'714};
 
     // we test all of these to a max of ~200,000,000, which is about 10s each
-    if(!checkPosition(positionStartPerfts, "Start Position", std::string{Game::STARTING_FEN}, 6)) {
+    if(!checkPosition(positionStartPerfts, "Start Position", std::string{Utils::STARTING_FEN}, 6)) {
         return EXIT_FAILURE;
     }
 

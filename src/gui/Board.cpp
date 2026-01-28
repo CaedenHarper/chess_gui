@@ -7,7 +7,7 @@
 #include <SFML/Graphics.hpp>
 
 #include "Board.hpp"
-#include "../game/Game.hpp"
+#include "../game/Utils.hpp"
 
 const sf::Texture& TextureCache::get(const PieceType type, const Color color) {
     static std::map<std::string, sf::Texture> cache;
@@ -133,7 +133,7 @@ void Square::clearHighlight(Highlight highlight) {
 int Board::getSquareIndexFromCoordinates(int xPos, int yPos) {
     const int row = static_cast<int>(yPos / SQUARE_WIDTH);
     const int col = static_cast<int>(xPos / SQUARE_HEIGHT);
-    return Game::getSquareIndex(col, row);
+    return Utils::getSquareIndex(col, row);
 }
 
 Square& Board::at(int squareIndex) {
@@ -149,8 +149,8 @@ void Board::draw(sf::RenderWindow& window, const std::optional<int> heldSquare) 
     // draw row by row
     for(int squareIndex = 0; squareIndex < 64; squareIndex++) {
         // get row and col from index
-        const int row = Game::getRow(squareIndex);
-        const int col = Game::getCol(squareIndex);
+        const int row = Utils::getRow(squareIndex);
+        const int col = Utils::getCol(squareIndex);
         const bool isLight = row%2 == col%2;
         Square squareObject = board_.at(squareIndex);
 
@@ -209,8 +209,8 @@ void Board::clearAllHighlightsExcept(const Highlight highlightToSkip) {
 void Board::updateBoardFromGame(const Game& game) {
     // TODO: consider making more performant by checking equality before updating for each piece
     for(int squareIndex = 0; squareIndex < Game::NUM_SQUARES; squareIndex++) {
-        const int row = Game::getRow(squareIndex);
-        const int col = Game::getCol(squareIndex);
+        const int row = Utils::getRow(squareIndex);
+        const int col = Utils::getCol(squareIndex);
 
         const float xPos = SQUARE_WIDTH * col;
         const float yPos = SQUARE_WIDTH * row;
