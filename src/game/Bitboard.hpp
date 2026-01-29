@@ -1,4 +1,5 @@
 #pragma once
+#include "Utils.hpp"
 #include <bitset>
 #include <cstdint>
 
@@ -51,7 +52,7 @@ public:
     constexpr Bitboard leftShift(uint64_t numBits) const { return Bitboard{bitboard_ << numBits}; }
 
     constexpr int lsbIndex() const { return __builtin_ctzll(bitboard_); }
-    constexpr int msbIndex() const { return 63 - __builtin_clzll(bitboard_); }
+    constexpr int msbIndex() const { return (Utils::NUM_SQUARES - 1) - __builtin_clzll(bitboard_); }
 
     // Get LSB of bitboard. Bitboard must be nonzero.
     constexpr int popLsb() {
@@ -66,7 +67,7 @@ public:
     static constexpr uint64_t bit(int square) { return 1ULL << square; }
 
     // Get string representation of bitboard.
-    std::string to_string() const { return std::bitset<64>(raw()).to_string(); }
+    std::string to_string() const { return std::bitset<Utils::NUM_SQUARES>(raw()).to_string(); }
 
     // Helper bitmasks
     static constexpr uint64_t FileA = 0x0101010101010101ULL;

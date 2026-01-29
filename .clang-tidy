@@ -7,16 +7,15 @@ Checks:
   - '-llvmlibc-inline-function-decl'                      # This is not a llvmlibc project
   - '-altera-id-dependent-backward-branch'                # This is not necessary for this project
   - '-cppcoreguidelines-pro-bounds-constant-array-index'  # [] in favor of .at() is required for speedup throughout this project
+  - '-modernize-use-trailing-return-type'                 # I don't like trailing return types
+  - '-boost-use-ranges'                                   # This project does not use boost
 
   # --- Might change one day ---
   - '-altera-unroll-loops'                                        # Performance boost not really needed, may be worth investigating some day
-  - '-performance-enum-size'                                      # Performance boost not really needed, may be worth investigating some day
   - '-google-readability-todo'                                    # No need for specific bug tracking in this project
   - '-fuchsia-default-arguments-calls'                            # This project allows default argument calls
   - '-misc-use-internal-linkage'                                  # Not really necessary for this project
-  - '-fuchsia-overloaded-operator'                                # Operator overloading is fine and makes sense in this project
-  - '-modernize-use-trailing-return-type'                         # I don't like trailing return types
-  - '-boost-use-ranges'                                           # This project does not use boost
+  - '-fuchsia-overloaded-operator'                                # Operator overloading is fine and makes sense in some parts of this project
   - '-misc-non-private-member-variables-in-classes'               # Private member variables is fine for this program; may re-evaluate in the future
   - '-cppcoreguidelines-non-private-member-variables-in-classes'  # Same as above ^
 
