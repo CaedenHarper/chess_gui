@@ -2,6 +2,7 @@
 #include <string>
 
 #include "Game.hpp"
+#include "Utils.hpp"
 
 Game::Game()
     : sideToMove_{Color::White},
@@ -34,7 +35,7 @@ std::string Game::to_string() const {
     for (const auto& piece : mailbox_) {
         // print line start if at start of row
         if(Utils::getCol(squareIndex) == 0) {
-            out += std::to_string(8 - Utils::getRow(squareIndex)) + " |";
+            out += std::to_string(Utils::BOARD_HEIGHT - Utils::getRow(squareIndex)) + " |";
         }
     
         if(piece.exists()) {
@@ -46,7 +47,7 @@ std::string Game::to_string() const {
         }
 
         // print line ending if at end of row
-        if(Utils::getCol(squareIndex) == 7) {
+        if(Utils::getCol(squareIndex) == Utils::BOARD_WIDTH-1) {
             out += "\n";
         }
 
@@ -60,13 +61,20 @@ std::string Game::to_string() const {
 void Game::loadFEN(const std::string& FEN) {
     /*
     Fen has 6 fields:
-    0 - piece placement
-    1 - current color
-    2 - castling
-    3 - en passant
-    4 - halfmove clock
-    5 - fullmove clock
+        0 - piece placement
+        1 - current color
+        2 - castling
+        3 - en passant
+        4 - halfmove clock
+        5 - fullmove clock
     */
+    constexpr int PIECE_PLACEMENT = 0;
+    constexpr int SIDE_TO_MOVE = 1;
+    constexpr int CASTLING = 2;
+    constexpr int EN_PASSANT = 3;
+    constexpr int HALFMOVE_CLOCK = 4;
+    constexpr int FULLMOVE_CLOCK = 5;
+
     int field = 0;
     // used for piece placement field to find out where we are putting each piece
     int piecePlacementIndex = 0;
@@ -79,8 +87,7 @@ void Game::loadFEN(const std::string& FEN) {
             continue;
         }
 
-        // piece placement
-        if(field == 0) {
+        if(field == PIECE_PLACEMENT) {
             if(c >= '1' && c <= '8') {
                 // Numbers indicate n empty squares; we don't have to do anything except increase the piecePlacementIndex because bitboards have empty space by default
                 const int numberEmptySquares = c-'0';
@@ -112,8 +119,7 @@ void Game::loadFEN(const std::string& FEN) {
             continue;
         }
 
-        // current color
-        if(field == 1) {
+        if(field == SIDE_TO_MOVE) {
             // this field only has one character, either w or b
             switch(c) {
                 // white's turn
@@ -125,8 +131,7 @@ void Game::loadFEN(const std::string& FEN) {
             continue;
         }
 
-        // castling
-        if(field == 2) {
+        if(field == CASTLING) {
             switch (c) {
                 // White may castle kingside
                 case 'K': castlingRights_.setWhiteKingside(); break;
@@ -143,8 +148,7 @@ void Game::loadFEN(const std::string& FEN) {
             continue;
         }
 
-        // en passant
-        if(field == 3) {
+        if(field == EN_PASSANT) {
             // This field has '-' for no en passant, or algebraic notation of the current en passant square
             if(c == '-') {
                 continue;
@@ -163,12 +167,12 @@ void Game::loadFEN(const std::string& FEN) {
         }
 
         // TODO: halfmove clock
-        if(field == 4) {
+        if(field == HALFMOVE_CLOCK) {
             continue;
         }
 
         // TODO: fullmove clock
-        if(field == 5) {
+        if(field == FULLMOVE_CLOCK) {
             continue;
         }
     }
@@ -240,9 +244,9 @@ void Game::initAttackBitboards_() {
 
         // Knight attacks
         Bitboard knightMoves{0};
-        for (int i = 0; i < 8; ++i) {
-            const int curCol = col + Utils::knightDeltas[i][0];
-            const int curRow = row + Utils::knightDeltas[i][1];
+        for (const auto knightDelta : Utils::knightDeltas) {
+            const int curCol = col + knightDelta[0];
+            const int curRow = row + knightDelta[1];
             if (Utils::onBoard(curCol, curRow)) {
                 knightMoves.setSquare(Utils::getSquareIndex(curCol, curRow));
             }
@@ -251,9 +255,9 @@ void Game::initAttackBitboards_() {
 
         // King attacks
         Bitboard kingMoves{0};
-        for (int i = 0; i < 8; ++i) {
-            const int curCol = col + Utils::kingDeltas[i][0];
-            const int curRow = row + Utils::kingDeltas[i][1];
+        for (const auto kingDelta: Utils::kingDeltas) {
+            const int curCol = col + kingDelta[0];
+            const int curRow = row + kingDelta[1];
             if (Utils::onBoard(curCol, curRow)) {
                 kingMoves.setSquare(Utils::getSquareIndex(curCol, curRow));
             }
@@ -280,43 +284,41 @@ void Game::initAttackBitboards_() {
         attackBitboards_.blackPawnAttacks[square] = blackPawnMoves;
 
         // Slider rays
-        // North (+8)
-        for (int curSquare = square + 8; curSquare < Utils::NUM_SQUARES; curSquare += 8) {
+        for (int curSquare = square + Utils::NORTH; curSquare < Utils::NUM_SQUARES; curSquare += Utils::NORTH) {
             attackBitboards_.northRay[square].setSquare(curSquare);
         }
 
-        // South (-8)
-        for (int curSquare = square - 8; curSquare >= 0; curSquare -= 8) {
+        for (int curSquare = square + Utils::SOUTH; curSquare >= 0; curSquare += Utils::SOUTH) {
             attackBitboards_.southRay[square].setSquare(curSquare);
         }
 
-        // East (+1), stop at H-file
-        for (int curSquare = square + 1; curSquare < Utils::NUM_SQUARES && Utils::getCol(curSquare) != 0; curSquare++) {
+        // Stop at H-file
+        for (int curSquare = square + Utils::EAST; curSquare < Utils::NUM_SQUARES && Utils::getCol(curSquare) != 0; curSquare += Utils::EAST) {
             attackBitboards_.eastRay[square].setSquare(curSquare);
         }
 
-        // West (-1), stop at A-file
-        for (int curSquare = square - 1; curSquare >= 0 && Utils::getCol(curSquare) != 7; curSquare--) {
+        // Stop at A-file
+        for (int curSquare = square + Utils::WEST; curSquare >= 0 && Utils::getCol(curSquare) != Utils::BOARD_WIDTH-1; curSquare += Utils::WEST) {
             attackBitboards_.westRay[square].setSquare(curSquare);
         }
 
-        // North-East (+9), stop at H-file
-        for (int curSquare = square + 9; curSquare < Utils::NUM_SQUARES && Utils::getCol(curSquare) != 0; curSquare += 9) {
+        // Stop at H-file
+        for (int curSquare = square + Utils::NORTH_EAST; curSquare < Utils::NUM_SQUARES && Utils::getCol(curSquare) != 0; curSquare += Utils::NORTH_EAST) {
             attackBitboards_.neRay[square].setSquare(curSquare);
         }
 
-        // North-West (+7), stop at A-file
-        for (int curSquare = square + 7; curSquare < Utils::NUM_SQUARES && Utils::getCol(curSquare) != 7; curSquare += 7) {
+        // Stop at A-file
+        for (int curSquare = square + Utils::NORTH_WEST; curSquare < Utils::NUM_SQUARES && Utils::getCol(curSquare) != Utils::BOARD_WIDTH-1; curSquare += Utils::NORTH_WEST) {
             attackBitboards_.nwRay[square].setSquare(curSquare);
         }
 
-        // South-East (-7), stop at H-file
-        for (int curSquare = square - 7; curSquare >= 0 && Utils::getCol(curSquare) != 0; curSquare -= 7) {
+        // Stop at H-file
+        for (int curSquare = square + Utils::SOUTH_EAST; curSquare >= 0 && Utils::getCol(curSquare) != 0; curSquare += Utils::SOUTH_EAST) {
             attackBitboards_.seRay[square].setSquare(curSquare);
         }
 
-        // South-West (-9), stop at A-file
-        for (int curSquare = square - 9; curSquare >= 0 && Utils::getCol(curSquare) != 7; curSquare -= 9) {
+        // Stop at A-file
+        for (int curSquare = square + Utils::SOUTH_WEST; curSquare >= 0 && Utils::getCol(curSquare) != Utils::BOARD_WIDTH-1; curSquare += Utils::SOUTH_WEST) {
             attackBitboards_.swRay[square].setSquare(curSquare);
         }
     }
@@ -359,23 +361,23 @@ void Game::generatePseudoLegalPawnMoves_(MoveList& out) {
         // White
 
         // Normal moves
-        // for white we shift down one row (8 squares) if it lands on an empty square
-        const Bitboard& oneRowPush = sourcePawns.rightShift(8).mask(emptySquares);
+        // for white we shift up one row (8 squares) if it lands on an empty square
+        const Bitboard& oneRowPush = sourcePawns.rightShift(Utils::NORTH).mask(emptySquares);
     
         Bitboard normal = oneRowPush;
         while(!normal.empty()) {
             const int targetSquare = normal.popLsb();
-            addAllPawnPromotionsToMoves_(out, targetSquare+8, targetSquare, Piece{PieceType::Pawn, Color::White}, false);
+            addAllPawnPromotionsToMoves_(out, targetSquare+Utils::NORTH, targetSquare, Piece{PieceType::Pawn, Color::White}, false);
         }
 
         // Double push
-        // for white we shift down two rows (16 squares) if it lands on an empty square on the fourth rank
+        // for white we shift up two rows (16 squares) if it lands on an empty square on the fourth rank
         // we shift from 'oneRowPush' to ensure both squares are empty
-        Bitboard doublePush = oneRowPush.rightShift(8).mask(emptySquares).mask(Bitboard{Bitboard::Rank4});
+        Bitboard doublePush = oneRowPush.rightShift(Utils::NORTH).mask(emptySquares).mask(Bitboard{Bitboard::Rank4});
         while(!doublePush.empty()) {
             const int targetSquare = doublePush.popLsb();
             // double push can never be a promotion, so we don't need to call addAllPawnPromotionsToMoves_ here
-            out.push_back(Move{targetSquare+16, targetSquare, MoveFlag::DoublePawnPush, Promotion::None});
+            out.push_back(Move{targetSquare+(2*Utils::NORTH), targetSquare, MoveFlag::DoublePawnPush, Promotion::None});
         }
 
         // En Passant
@@ -405,23 +407,24 @@ void Game::generatePseudoLegalPawnMoves_(MoveList& out) {
         // Black
 
         // Normal moves
-        // for black we shift up one row (8 squares) if it lands on an empty square
-        const Bitboard& oneRowPush = sourcePawns.leftShift(8).mask(emptySquares);
+        // for black we shift down one row (8 squares) if it lands on an empty square
+        constexpr int ONE_ROW = 8;
+        const Bitboard& oneRowPush = sourcePawns.leftShift(ONE_ROW).mask(emptySquares);
     
         Bitboard normal = oneRowPush;
         while(!normal.empty()) {
             const int targetSquare = normal.popLsb();
-            addAllPawnPromotionsToMoves_(out, targetSquare-8, targetSquare, Piece{PieceType::Pawn, Color::Black}, false);
+            addAllPawnPromotionsToMoves_(out, targetSquare+Utils::SOUTH, targetSquare, Piece{PieceType::Pawn, Color::Black}, false);
         }
 
         // Double push
-        // for black we shift up two rows (16 squares) if it lands on an empty square on the fifth rank
+        // for black we shift down two rows (16 squares) if it lands on an empty square on the fifth rank
         // we shift from 'oneRowPush' to ensure both squares are empty
-        Bitboard doublePush = oneRowPush.leftShift(8).mask(emptySquares).mask(Bitboard{Bitboard::Rank5});
+        Bitboard doublePush = oneRowPush.leftShift(ONE_ROW).mask(emptySquares).mask(Bitboard{Bitboard::Rank5});
         while(!doublePush.empty()) {
             const int targetSquare = doublePush.popLsb();
             // double push can never be a promotion, so we don't need to call addAllPawnPromotionsToMoves_ here
-            out.push_back(Move{targetSquare-16, targetSquare, MoveFlag::DoublePawnPush, Promotion::None});
+            out.push_back(Move{targetSquare+(2*Utils::SOUTH), targetSquare, MoveFlag::DoublePawnPush, Promotion::None});
         }
 
         // En Passant
@@ -488,8 +491,9 @@ void Game::generatePseudoLegalBishopMoves_(MoveList& out) {
     while (!sourceBishops.empty()) {
         const int sourceSquare = sourceBishops.popLsb();
 
-        // ---- NE (+9): stop when we hit H-file (col becomes 0 after wrap)
-        for (int targetSquare = sourceSquare + 9; targetSquare <= 63 && Utils::getCol(targetSquare) != 0; targetSquare += 9) {
+        // NOTE: loop unrolled here; less readable, but faster
+        // Stop when we hit H-file
+        for (int targetSquare = sourceSquare + Utils::NORTH_EAST; targetSquare < Utils::NUM_SQUARES && Utils::getCol(targetSquare) != 0; targetSquare += Utils::NORTH_EAST) {
             // hit our own piece, stop
             if (sourcePieces.containsSquare(targetSquare)) {
                 break;
@@ -505,8 +509,8 @@ void Game::generatePseudoLegalBishopMoves_(MoveList& out) {
             out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Normal, Promotion::None});
         }
 
-        // ---- NW (+7): stop when we hit A-file (col becomes 7 after wrap)
-        for (int targetSquare = sourceSquare + 7; targetSquare <= 63 && Utils::getCol(targetSquare) != 7; targetSquare += 7) {
+        // Stop when we hit A-file
+        for (int targetSquare = sourceSquare + Utils::NORTH_WEST; targetSquare < Utils::NUM_SQUARES && Utils::getCol(targetSquare) != Utils::BOARD_WIDTH-1; targetSquare += Utils::NORTH_WEST) {
             // hit our own piece, stop
             if (sourcePieces.containsSquare(targetSquare)) {
                 break;
@@ -522,8 +526,8 @@ void Game::generatePseudoLegalBishopMoves_(MoveList& out) {
             out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Normal, Promotion::None});
         }
 
-        // ---- SE (-7): stop when we hit H-file (col becomes 0 after wrap)
-        for (int targetSquare = sourceSquare - 7; targetSquare >= 0 && Utils::getCol(targetSquare) != 0; targetSquare -= 7) {
+        // Stop when we hit H-file
+        for (int targetSquare = sourceSquare + Utils::SOUTH_EAST; targetSquare >= 0 && Utils::getCol(targetSquare) != 0; targetSquare += Utils::SOUTH_EAST) {
             // hit our own piece, stop
             if (sourcePieces.containsSquare(targetSquare)) {
                 break;
@@ -539,8 +543,8 @@ void Game::generatePseudoLegalBishopMoves_(MoveList& out) {
             out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Normal, Promotion::None});
         }
 
-        // ---- SW (-9): stop when we hit A-file (col becomes 7 after wrap)
-        for (int targetSquare = sourceSquare - 9; targetSquare >= 0 && Utils::getCol(targetSquare) != 7; targetSquare -= 9) {
+        // Stop when we hit A-file
+        for (int targetSquare = sourceSquare + Utils::SOUTH_WEST; targetSquare >= 0 && Utils::getCol(targetSquare) != Utils::BOARD_WIDTH-1; targetSquare += Utils::SOUTH_WEST) {
             // hit our own piece, stop
             if (sourcePieces.containsSquare(targetSquare)) {
                 break;
@@ -569,8 +573,7 @@ void Game::generatePseudoLegalRookMoves_(MoveList& out) {
     while (!sourceRooks.empty()) {
         const int sourceSquare = sourceRooks.popLsb();
 
-        // ---- North (+8)
-        for (int targetSquare = sourceSquare + 8; targetSquare <= 63; targetSquare += 8) {
+        for (int targetSquare = sourceSquare + Utils::NORTH; targetSquare < Utils::NUM_SQUARES; targetSquare += Utils::NORTH) {
             // hit our own piece, stop
             if (sourcePieces.containsSquare(targetSquare)) {
                 break;
@@ -586,8 +589,7 @@ void Game::generatePseudoLegalRookMoves_(MoveList& out) {
             out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Normal, Promotion::None});
         }
 
-        // ---- South (-8)
-        for (int targetSquare = sourceSquare - 8; targetSquare >= 0; targetSquare -= 8) {
+        for (int targetSquare = sourceSquare + Utils::SOUTH; targetSquare >= 0; targetSquare += Utils::SOUTH) {
             // hit our own piece, stop
             if (sourcePieces.containsSquare(targetSquare)) {
                 break;
@@ -603,8 +605,8 @@ void Game::generatePseudoLegalRookMoves_(MoveList& out) {
             out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Normal, Promotion::None});
         }
 
-        // ---- East (+1) stop at H-file
-        for (int targetSquare = sourceSquare + 1; targetSquare <= 63 && Utils::getCol(targetSquare) != 0; ++targetSquare) {
+        // Stop at H-file
+        for (int targetSquare = sourceSquare + Utils::EAST; targetSquare < Utils::NUM_SQUARES && Utils::getCol(targetSquare) != 0; targetSquare += Utils::EAST) {
             // Utils::getCol(targetSquare) != 0 prevents wrap H->A because when you go from 7 to 8, file becomes 0
             // hit our own piece, stop
             if (sourcePieces.containsSquare(targetSquare)) {
@@ -621,8 +623,8 @@ void Game::generatePseudoLegalRookMoves_(MoveList& out) {
             out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Normal, Promotion::None});
         }
 
-        // ---- West (-1) stop at A-file
-        for (int targetSquare = sourceSquare - 1; targetSquare >= 0 && Utils::getCol(targetSquare) != 7; targetSquare--) {
+        // Stop at A-file
+        for (int targetSquare = sourceSquare + Utils::WEST; targetSquare >= 0 && Utils::getCol(targetSquare) != Utils::BOARD_WIDTH-1; targetSquare += Utils::WEST) {
             // Utils::getCol(targetSquare) != 7 prevents wrap A->H because when you go from 8 to 7, file becomes 7
             // hit our own piece, stop
             if (sourcePieces.containsSquare(targetSquare)) {
@@ -653,8 +655,7 @@ void Game::generatePseudoLegalQueenMoves_(MoveList& out) {
         const int sourceSquare = sourceQueens.popLsb();
 
         // ---- Rook Moves ----
-        // ---- North (+8)
-        for (int targetSquare = sourceSquare + 8; targetSquare < Utils::NUM_SQUARES; targetSquare += 8) {
+        for (int targetSquare = sourceSquare + Utils::NORTH; targetSquare < Utils::NUM_SQUARES; targetSquare += Utils::NORTH) {
             // hit our own piece, stop
             if (sourcePieces.containsSquare(targetSquare)) {
                 break;
@@ -670,8 +671,7 @@ void Game::generatePseudoLegalQueenMoves_(MoveList& out) {
             out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Normal, Promotion::None});
         }
 
-        // ---- South (-8)
-        for (int targetSquare = sourceSquare - 8; targetSquare >= 0; targetSquare -= 8) {
+        for (int targetSquare = sourceSquare + Utils::SOUTH; targetSquare >= 0; targetSquare += Utils::SOUTH) {
             // hit our own piece, stop
             if (sourcePieces.containsSquare(targetSquare)) {
                 break;
@@ -687,9 +687,8 @@ void Game::generatePseudoLegalQueenMoves_(MoveList& out) {
             out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Normal, Promotion::None});
         }
 
-        // ---- East (+1) stop at H-file
-        for (int targetSquare = sourceSquare + 1; targetSquare <= 63 && Utils::getCol(targetSquare) != 0; ++targetSquare) {
-            // Utils::getCol(targetSquare) != 0 prevents wrap H->A because when you go from 7 to 8, file becomes 0
+        // Stop at H-file
+        for (int targetSquare = sourceSquare + Utils::EAST; targetSquare < Utils::NUM_SQUARES && Utils::getCol(targetSquare) != 0; targetSquare += Utils::EAST) {
             // hit our own piece, stop
             if (sourcePieces.containsSquare(targetSquare)) {
                 break;
@@ -705,8 +704,8 @@ void Game::generatePseudoLegalQueenMoves_(MoveList& out) {
             out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Normal, Promotion::None});
         }
 
-        // ---- West (-1) stop at A-file
-        for (int targetSquare = sourceSquare - 1; targetSquare >= 0 && Utils::getCol(targetSquare) != 7; --targetSquare) {
+        // Stop at A-file
+        for (int targetSquare = sourceSquare + Utils::WEST; targetSquare >= 0 && Utils::getCol(targetSquare) != Utils::BOARD_WIDTH-1; targetSquare += Utils::WEST) {
             // Utils::getCol(targetSquare) != 7 prevents wrap A->H because when you go from 8 to 7, file becomes 7
             // hit our own piece, stop
             if (sourcePieces.containsSquare(targetSquare)) {
@@ -724,8 +723,8 @@ void Game::generatePseudoLegalQueenMoves_(MoveList& out) {
         }
 
         // ---- Bishop Moves ----
-        // ---- NE (+9): stop when we hit H-file (col becomes 0 after wrap)
-        for (int targetSquare = sourceSquare + 9; targetSquare <= 63 && Utils::getCol(targetSquare) != 0; targetSquare += 9) {
+        // Stop when we hit H-file (col becomes 0 after wrap)
+        for (int targetSquare = sourceSquare + Utils::NORTH_EAST; targetSquare < Utils::NUM_SQUARES && Utils::getCol(targetSquare) != 0; targetSquare += Utils::NORTH_EAST) {
             // hit our own piece, stop
             if (sourcePieces.containsSquare(targetSquare)) {
                 break;
@@ -741,8 +740,8 @@ void Game::generatePseudoLegalQueenMoves_(MoveList& out) {
             out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Normal, Promotion::None});
         }
 
-        // ---- NW (+7): stop when we hit A-file (col becomes 7 after wrap)
-        for (int targetSquare = sourceSquare + 7; targetSquare <= 63 && Utils::getCol(targetSquare) != 7; targetSquare += 7) {
+        // Stop when we hit A-file
+        for (int targetSquare = sourceSquare + Utils::NORTH_WEST; targetSquare < Utils::NUM_SQUARES && Utils::getCol(targetSquare) != Utils::BOARD_WIDTH-1; targetSquare += Utils::NORTH_WEST) {
             // hit our own piece, stop
             if (sourcePieces.containsSquare(targetSquare)) {
                 break;
@@ -758,8 +757,8 @@ void Game::generatePseudoLegalQueenMoves_(MoveList& out) {
             out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Normal, Promotion::None});
         }
 
-        // ---- SE (-7): stop when we hit H-file (col becomes 0 after wrap)
-        for (int targetSquare = sourceSquare - 7; targetSquare >= 0 && Utils::getCol(targetSquare) != 0; targetSquare -= 7) {
+        // Stop when we hit H-file
+        for (int targetSquare = sourceSquare + Utils::SOUTH_EAST; targetSquare >= 0 && Utils::getCol(targetSquare) != 0; targetSquare += Utils::SOUTH_EAST) {
             // hit our own piece, stop
             if (sourcePieces.containsSquare(targetSquare)) {
                 break;
@@ -775,8 +774,8 @@ void Game::generatePseudoLegalQueenMoves_(MoveList& out) {
             out.push_back(Move{sourceSquare, targetSquare, MoveFlag::Normal, Promotion::None});
         }
 
-        // ---- SW (-9): stop when we hit A-file (col becomes 7 after wrap)
-        for (int targetSquare = sourceSquare - 9; targetSquare >= 0 && Utils::getCol(targetSquare) != 7; targetSquare -= 9) {
+        // Stop when we hit A-file
+        for (int targetSquare = sourceSquare + Utils::SOUTH_WEST; targetSquare >= 0 && Utils::getCol(targetSquare) != Utils::BOARD_WIDTH-1; targetSquare += Utils::SOUTH_WEST) {
             // hit our own piece, stop
             if (sourcePieces.containsSquare(targetSquare)) {
                 break;
@@ -1238,7 +1237,7 @@ bool Game::isSquareAttacked(const int targetSquare, const Color attackingColor) 
     // we compute "is attackingColor attacking targetSquare"
     // Pawns -- since pawn moves are not symmetric we use the opposite color's attacking bitboard
     const Bitboard& attackingPawns = isWhiteAttacking ? bbWhitePawns_ : bbBlackPawns_;
-    const std::array<Bitboard, 64>& attackingPawnsMap = isWhiteAttacking ? attackBitboards_.blackPawnAttacks : attackBitboards_.whitePawnAttacks;
+    const std::array<Bitboard, Utils::NUM_SQUARES>& attackingPawnsMap = isWhiteAttacking ? attackBitboards_.blackPawnAttacks : attackBitboards_.whitePawnAttacks;
     if(!attackingPawns.mask(attackingPawnsMap[targetSquare]).empty()) {
         return true;
     }

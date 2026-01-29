@@ -36,7 +36,7 @@ public:
     constexpr PieceType type() const noexcept { return static_cast<PieceType>(packed_ & TYPE_MASK); }
     constexpr Color color() const noexcept { return static_cast<Color>((packed_ >> 3) & COLOR_MASK); }
     // Retrieve if the piece exists. i.e., if the piece is not an empty square.
-    constexpr bool exists() const noexcept { return (packed_ & 0x7) != 0; } // 0 -> PieceType::None
+    constexpr bool exists() const noexcept { return (packed_ & TYPE_MASK) != 0; } // 0 -> PieceType::None
     constexpr uint8_t raw() const noexcept { return packed_; }
 
     // Retrieve a string of length one which represents the piece. Uppercase for white, lowercase for black. E.g., white pawn -> "P"

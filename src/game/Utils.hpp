@@ -4,41 +4,14 @@
 #include <string>
 
 namespace Utils {
-    // Get column of square.
-    constexpr int getCol(int square) noexcept {
-        // equivalent to square % 8
-        return square & 7;
-    }
-    // Get row of square.
-    constexpr int getRow(int square) noexcept {
-        // equivalent to square / 8
-        return square >> 3;
-    }
-    // Get square index from column and row.
-    constexpr int getSquareIndex(int col, int row) noexcept {
-        // equivalent to (8 * row) + col
-        return (row << 3) | col;
-    }
-
-    // If the square is on the board, in bounds.
-    constexpr bool onBoard(int square) noexcept {
-        return 0 <= square && square <= 63;
-    }
-    // If a column and row is on the board, in bounds.
-    constexpr bool onBoard(int col, int row) noexcept {
-        return 0 <= col && col <= 7 && 0 <= row && row <= 7;
-    }
-
-    // Retrieve algebraic notation from a given square. E.g., 0 -> "a8".
-    std::string intToAlgebraicNotation(int square);
-
-    // Retrieve square int from a given algebraic notation. E.g., "a8" -> 0.
-    int algebraicNotationToInt(const std::string& square);
-
     // --- Constant variables ---
 
-    // Numbr of squares on a chessboard.
+    // Number of squares on a chessboard.
     static constexpr int NUM_SQUARES = 64;
+
+    // Width and height of a chessboard.
+    constexpr int BOARD_WIDTH = 8;
+    constexpr int BOARD_HEIGHT = 8;
 
     // string_view instead of string for constexpr
     // Starting game's FEN string.
@@ -65,6 +38,16 @@ namespace Utils {
 
     static constexpr int WHITE_QUEENSIDE_ROOK_STARTING_SQUARE = 56;
     static constexpr int BLACK_QUEENSIDE_ROOK_STARTING_SQUARE = 0;
+
+    // Constants for directions (e.g., NORTH -> one square up)
+    constexpr int NORTH = 8;
+    constexpr int EAST = 1;
+    constexpr int SOUTH = -8;
+    constexpr int WEST = -1;
+    constexpr int NORTH_EAST = 9;
+    constexpr int NORTH_WEST = 7;
+    constexpr int SOUTH_EAST = -7;
+    constexpr int SOUTH_WEST = -9;
 
     // Constants for some piece's movements
     static constexpr std::array<std::array<int, 2>, 8> knightDeltas {{
@@ -121,4 +104,40 @@ namespace Utils {
         {1, 1}, // down right
     }};
 
+    // Get column of square.
+    constexpr int getCol(int square) noexcept {
+        // equivalent to square % 8
+        constexpr int COLUMN_MASK = 0b111;
+
+        return square & COLUMN_MASK;
+    }
+    // Get row of square.
+    constexpr int getRow(int square) noexcept {
+        // equivalent to square / 8
+        constexpr int ROW_SHIFT = 3;
+
+        return square >> ROW_SHIFT;
+    }
+    // Get square index from column and row.
+    constexpr int getSquareIndex(int col, int row) noexcept {
+        // equivalent to (8 * row) + col
+        constexpr int ROW_SHIFT = 3;
+        
+        return (row << ROW_SHIFT) | col;
+    }
+
+    // If the square is on the board, in bounds.
+    constexpr bool onBoard(int square) noexcept {
+        return 0 <= square && square <= NUM_SQUARES;
+    }
+    // If a column and row is on the board, in bounds.
+    constexpr bool onBoard(int col, int row) noexcept {
+        return 0 <= col && col < BOARD_WIDTH && 0 <= row && row < BOARD_HEIGHT;
+    }
+
+    // Retrieve algebraic notation from a given square. E.g., 0 -> "a8".
+    std::string intToAlgebraicNotation(int square);
+
+    // Retrieve square int from a given algebraic notation. E.g., "a8" -> 0.
+    int algebraicNotationToInt(const std::string& square);
 } // namespace Utils

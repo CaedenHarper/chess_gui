@@ -99,7 +99,11 @@ void PieceSprite::centerOrigin() {
         return;
     }
     const sf::FloatRect bounds = sprite_->getLocalBounds(); // {left, top, width, height}
-    sprite_->setOrigin({bounds.position.x + (bounds.size.x / 2.F), bounds.position.y + (bounds.size.y / 2.F)});
+
+    const float BOUNDS_CENTER_X_OFFSET = bounds.size.x * 0.5F;
+    const float BOUNDS_CENTER_Y_OFFSET = bounds.position.y * 0.5F;
+
+    sprite_->setOrigin({bounds.position.x + BOUNDS_CENTER_X_OFFSET, bounds.position.y + BOUNDS_CENTER_Y_OFFSET});
 }
 
 void PieceSprite::updateSpritePosition(const float xPos, const float yPos) {
@@ -147,7 +151,7 @@ void Board::draw(sf::RenderWindow& window) const {
 
 void Board::draw(sf::RenderWindow& window, const std::optional<int> heldSquare) const {
     // draw row by row
-    for(int squareIndex = 0; squareIndex < 64; squareIndex++) {
+    for(int squareIndex = 0; squareIndex < Utils::NUM_SQUARES; squareIndex++) {
         // get row and col from index
         const int row = Utils::getRow(squareIndex);
         const int col = Utils::getCol(squareIndex);
@@ -207,6 +211,9 @@ void Board::clearAllHighlightsExcept(const Highlight highlightToSkip) {
 }
 
 void Board::updateBoardFromGame(const Game& game) {
+    // Square takes up 97% of the square
+    constexpr float piecePercentageInSquare = 0.97F;
+
     // TODO: consider making more performant by checking equality before updating for each piece
     for(int squareIndex = 0; squareIndex < Utils::NUM_SQUARES; squareIndex++) {
         const int row = Utils::getRow(squareIndex);
@@ -215,13 +222,17 @@ void Board::updateBoardFromGame(const Game& game) {
         const float xPos = SQUARE_WIDTH * col;
         const float yPos = SQUARE_WIDTH * row;
 
+        constexpr float SPRITE_CENTER_X_OFFSET = SQUARE_WIDTH * 0.5F;
+        constexpr float SPRITE_CENTER_Y_OFFSET = SQUARE_HEIGHT * 0.5F;
+
         Square& square = board_.at(squareIndex);
         const Piece piece = game.pieceAtSquareForGui(squareIndex);
         // const Piece piece = game.board()[squareIndex];
         square.pieceSprite() = PieceSprite{piece};
         // fit to center of square
         square.pieceSprite().centerOrigin();
-        square.pieceSprite().fitToSquare(SQUARE_WIDTH * 0.97F);
-        square.pieceSprite().updateSpritePosition(xPos + (SQUARE_WIDTH / 2.F), yPos + (SQUARE_HEIGHT / 2.F));
+        square.pieceSprite().fitToSquare(SQUARE_WIDTH * piecePercentageInSquare);
+
+        square.pieceSprite().updateSpritePosition(xPos + SPRITE_CENTER_X_OFFSET, yPos + SPRITE_CENTER_Y_OFFSET);
     }
 }

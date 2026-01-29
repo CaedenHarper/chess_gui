@@ -10,7 +10,6 @@
 #include "Piece.hpp"
 #include "Utils.hpp"
 
-// TODO: fixup magic numbers
 // Representation of the castling rights of a position, stored in uint8_t for maximum speed.
 struct CastlingRights {
     uint8_t castlingRights;
@@ -59,14 +58,14 @@ struct UndoInfo {
 
 // Create holder for all AttackBitboards
 struct AttackBitboards {
-    std::array<Bitboard, 64> whitePawnAttacks{};
-    std::array<Bitboard, 64> blackPawnAttacks{};
-    std::array<Bitboard, 64> knightAttacks{};
-    std::array<Bitboard, 64> kingAttacks{};
+    std::array<Bitboard, Utils::NUM_SQUARES> whitePawnAttacks{};
+    std::array<Bitboard, Utils::NUM_SQUARES> blackPawnAttacks{};
+    std::array<Bitboard, Utils::NUM_SQUARES> knightAttacks{};
+    std::array<Bitboard, Utils::NUM_SQUARES> kingAttacks{};
 
-    std::array<Bitboard, 64> northRay, southRay, eastRay, westRay;
-    std::array<Bitboard, 64> neRay, nwRay, seRay, swRay;
-} __attribute__((aligned(128))); // align to 128 bytes
+    std::array<Bitboard, Utils::NUM_SQUARES> northRay, southRay, eastRay, westRay;
+    std::array<Bitboard, Utils::NUM_SQUARES> neRay, nwRay, seRay, swRay;
+} __attribute__((aligned(128))); // NOLINT[magic numbers] align to 128 bytes
 
 // A chess game. Contains information for the game and helpers to generate and validate moves.
 class Game {
@@ -251,7 +250,8 @@ private:
     AttackBitboards attackBitboards_;
 
     // Lookup table to bb by piece's packed uint8_t representation for quick access
-    std::array<Bitboard*, 256> piecePackedToBB_{};
+    static constexpr int numPieceCombinations = 256;
+    std::array<Bitboard*, numPieceCombinations> piecePackedToBB_{};
 
     // Lookup table to occupancy board by color's uint8_t representation
     std::array<Bitboard*, 4> colorToOccupancyBitboard_{nullptr, &bbWhitePieces_, &bbBlackPieces_};

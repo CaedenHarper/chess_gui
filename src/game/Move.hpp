@@ -26,7 +26,6 @@ enum class Promotion : uint8_t {
 
 class Game; // forward declare for Move
 
-// TODO: rewrite without magic numbers here
 // A chess move, with information for squares, pieces, and special flags like promotion and castling.
 class Move {
 public:
@@ -47,10 +46,10 @@ public:
     constexpr bool operator==(Move other) const noexcept { return packed_ == other.packed_; }
 
     // Getters use bitwise ops to quickly extract info from packed_.
-    constexpr uint8_t sourceSquare() const noexcept { return (packed_ >> 0) & 0x3F; }
-    constexpr uint8_t targetSquare() const noexcept { return (packed_ >> 6) & 0x3F; }
-    constexpr MoveFlag flag() const noexcept { return static_cast<MoveFlag>((packed_ >> 12) & 0xF); }
-    constexpr Promotion promotion() const noexcept { return static_cast<Promotion>((packed_ >> 16) & 0x7); }
+    constexpr uint8_t sourceSquare() const noexcept { return (packed_ >> SOURCE_SHIFT) & SOURCE_MASK; }
+    constexpr uint8_t targetSquare() const noexcept { return (packed_ >> TARGET_SHIFT) & TARGET_MASK; }
+    constexpr MoveFlag flag() const noexcept { return static_cast<MoveFlag>((packed_ >> FLAG_SHIFT) & FLAG_MASK); }
+    constexpr Promotion promotion() const noexcept { return static_cast<Promotion>((packed_ >> PROMO_SHIFT) & PROMO_MASK); }
     constexpr bool isPromotion() const noexcept { return flag() == MoveFlag::Promotion || flag() == MoveFlag::PromotionCapture; }
     constexpr bool isEnPassant() const noexcept { return flag() == MoveFlag::EnPassant; }
     constexpr bool isDoublePawn() const noexcept { return flag() == MoveFlag::DoublePawnPush; }
@@ -79,11 +78,27 @@ public:
 private:
     uint32_t packed_;
 
+    // Constants to improve readability in MOVE
+    static constexpr int SOURCE_BITS = 6;
+    static constexpr int TARGET_BITS = 6;
+    static constexpr int FLAG_BITS = 4;
+    static constexpr int PROMO_BITS = 3;
+
+    static constexpr int SOURCE_SHIFT = 0;
+    static constexpr int TARGET_SHIFT = SOURCE_SHIFT + SOURCE_BITS; // 6
+    static constexpr int FLAG_SHIFT = TARGET_SHIFT + TARGET_BITS; // 12
+    static constexpr int PROMO_SHIFT = FLAG_SHIFT   + FLAG_BITS;   // 16
+
+    static constexpr uint32_t SOURCE_MASK = (1U << SOURCE_BITS) - 1; // 0x3F
+    static constexpr uint32_t TARGET_MASK = (1U << TARGET_BITS) - 1; // 0x3F
+    static constexpr uint32_t FLAG_MASK = (1U << FLAG_BITS)   - 1; // 0xF
+    static constexpr uint32_t PROMO_MASK  = (1U << PROMO_BITS)  - 1; // 0x7
+
     static constexpr uint32_t pack_(uint8_t sourceSquare, uint8_t targetSquare, MoveFlag flag, Promotion promotion) noexcept {
-        return (static_cast<uint32_t>(sourceSquare) & 0x3F)
-             | ((static_cast<uint32_t>(targetSquare) & 0x3F) << 6)
-             | ((static_cast<uint32_t>(flag) & 0xF) << 12)
-             | ((static_cast<uint32_t>(promotion) & 0x7) << 16);
+        return (static_cast<uint32_t>(sourceSquare) & SOURCE_MASK)
+             | ((static_cast<uint32_t>(targetSquare) & TARGET_MASK) << TARGET_SHIFT)
+             | ((static_cast<uint32_t>(flag) & FLAG_MASK) << FLAG_SHIFT)
+             | ((static_cast<uint32_t>(promotion) & PROMO_MASK) << PROMO_SHIFT);
     }
 };
 
@@ -100,4 +115,4 @@ struct MoveList {
     constexpr void push_back(const Move& move) noexcept {
         data[size++] = move;
     }
-} __attribute__((aligned(128))); // align to 128 bytes
+} __attribute__((aligned(128))); // NOLINT[magic numbers] align to 128 bytes
