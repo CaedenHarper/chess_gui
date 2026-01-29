@@ -1,3 +1,5 @@
+// NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers) this file has arbitrary maxDepths
+
 #include <cstdlib>
 #include <iostream>
 #include <vector>
@@ -63,3 +65,5 @@ int main() {
         return EXIT_FAILURE;
     }
 }
+
+// NOLINTEND(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers)

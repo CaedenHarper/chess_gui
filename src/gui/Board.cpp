@@ -100,8 +100,8 @@ void PieceSprite::centerOrigin() {
     }
     const sf::FloatRect bounds = sprite_->getLocalBounds(); // {left, top, width, height}
 
-    const float BOUNDS_CENTER_X_OFFSET = bounds.size.x * 0.5F;
-    const float BOUNDS_CENTER_Y_OFFSET = bounds.position.y * 0.5F;
+    const int BOUNDS_CENTER_X_OFFSET = bounds.size.x / 2.F;
+    const int BOUNDS_CENTER_Y_OFFSET = bounds.size.y / 2.F;
 
     sprite_->setOrigin({bounds.position.x + BOUNDS_CENTER_X_OFFSET, bounds.position.y + BOUNDS_CENTER_Y_OFFSET});
 }

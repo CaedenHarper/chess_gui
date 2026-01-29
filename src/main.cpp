@@ -1,3 +1,4 @@
+#include <SFML/System/Vector2.hpp>
 #include <iostream>
 #include <optional>
 #include <sstream>
@@ -10,6 +11,14 @@
 #include "game/Game.hpp"
 #include "game/Utils.hpp"
 #include "gui/Board.hpp"
+
+constexpr int STARTING_WINDOW_WIDTH = 1000;
+constexpr int STARTING_WINDOW_HEIGHT = 1000;
+// stringview for constexpr
+constexpr std::string_view WINDOW_TITLE = "Chess";
+constexpr float VOLUME_PERCENTAGE = 0.75F;
+constexpr int BOARD_WIDTH = 800;
+constexpr int BOARD_HEIGHT = 800; 
 
 // TODO: implement CLI class and move Game.to_string()
 // void runCLIGame() {
@@ -42,22 +51,41 @@
 // }
 
 void runGUIBitboardTest() {
+    constexpr int BITBOARD_BUTTONS_X_START = 820;
+    constexpr int BITBOARD_BUTTONS_X_END = 980;
+    constexpr int NUM_BITBOARD_BUTTONS = 12;
+
+    enum class bitboardNumber : uint8_t {
+        whitePawn,
+        whiteKnight,
+        whiteBishop,
+        whiteRook,
+        whiteQueen,
+        whiteKing,
+        blackPawn,
+        blackKnight,
+        blackBishop,
+        blackRook,
+        blackQueen,
+        blackKing
+    };
+
     // helper function for this bitboard test; using the arbitrary bitboard button number, get a piece that matches so we can further extract information from Game
-    const auto bitboardNumberToPiece = [] (int n) -> Piece {
+    const auto bitboardNumberToPiece = [] (bitboardNumber n) -> Piece {
         switch(n) {
-            case 0: return Piece{PieceType::Pawn, Color::White};
-            case 1: return Piece{PieceType::Knight, Color::White};
-            case 2: return Piece{PieceType::Bishop, Color::White};
-            case 3: return Piece{PieceType::Rook, Color::White};
-            case 4: return Piece{PieceType::Queen, Color::White};
-            case 5: return Piece{PieceType::King, Color::White};
-            case 6: return Piece{PieceType::Pawn, Color::Black};
-            case 7: return Piece{PieceType::Knight, Color::Black};;
-            case 8: return Piece{PieceType::Bishop, Color::Black};;
-            case 9: return Piece{PieceType::Rook, Color::Black};;
-            case 10: return Piece{PieceType::Queen, Color::Black};;
-            case 11: return Piece{PieceType::King, Color::Black};;
-            default: return Piece{}; // shouldn't happen
+            case bitboardNumber::whitePawn: return Piece{PieceType::Pawn, Color::White};
+            case bitboardNumber::whiteKnight: return Piece{PieceType::Knight, Color::White};
+            case bitboardNumber::whiteBishop: return Piece{PieceType::Bishop, Color::White};
+            case bitboardNumber::whiteRook: return Piece{PieceType::Rook, Color::White};
+            case bitboardNumber::whiteQueen: return Piece{PieceType::Queen, Color::White};
+            case bitboardNumber::whiteKing: return Piece{PieceType::King, Color::White};
+            case bitboardNumber::blackPawn: return Piece{PieceType::Pawn, Color::Black};
+            case bitboardNumber::blackKnight: return Piece{PieceType::Knight, Color::Black};;
+            case bitboardNumber::blackBishop: return Piece{PieceType::Bishop, Color::Black};;
+            case bitboardNumber::blackRook: return Piece{PieceType::Rook, Color::Black};;
+            case bitboardNumber::blackQueen: return Piece{PieceType::Queen, Color::Black};;
+            case bitboardNumber::blackKing: return Piece{PieceType::King, Color::Black};;
+            default: assert(false); return Piece{}; // shouldn't happen
         }
     };
 
@@ -65,10 +93,6 @@ void runGUIBitboardTest() {
         "White Pawn", "White Knight", "White Bishop", "White Rook", "White Queen", "White King",
         "Black Pawn", "Black Knight", "Black Bishop", "Black Rook", "Black Queen", "Black King"
     };
-
-    constexpr int STARTING_WINDOW_WIDTH = 1000;
-    constexpr int STARTING_WINDOW_HEIGHT = 1000;
-    const std::string WINDOW_TITLE = "Chess";
 
     // init game
     Game game;
@@ -79,7 +103,7 @@ void runGUIBitboardTest() {
     board.updateBoardFromGame(game);
 
     // init window
-    sf::RenderWindow window{sf::VideoMode{{STARTING_WINDOW_WIDTH, STARTING_WINDOW_HEIGHT}}, WINDOW_TITLE};
+    sf::RenderWindow window{sf::VideoMode{{STARTING_WINDOW_WIDTH, STARTING_WINDOW_HEIGHT}}, std::string{WINDOW_TITLE}};
     // enable vsync
     window.setVerticalSyncEnabled(true);
 
@@ -87,7 +111,7 @@ void runGUIBitboardTest() {
     // TODO: potentially throw / recover from file missing
     const sf::SoundBuffer PIECE_MOVEMENT_BUFFER{"assets/sounds/piece_movement.wav"};
     sf::Sound PIECE_MOVEMENT_SOUND{PIECE_MOVEMENT_BUFFER};
-    PIECE_MOVEMENT_SOUND.setVolume(75.F);
+    PIECE_MOVEMENT_SOUND.setVolume(VOLUME_PERCENTAGE);
 
     // init font
     const sf::Font font{"assets/fonts/LiberationSans-Regular.ttf"};
@@ -120,27 +144,27 @@ void runGUIBitboardTest() {
 
                     // check if we hit a button before doing other bounds checking
                     // x range -> 820 - 980
-                    if(mousePos.x >= 820 && mousePos.x <= 980) {
+                    if(mousePos.x >= BITBOARD_BUTTONS_X_START && mousePos.x <= BITBOARD_BUTTONS_X_END) {
                         // y range 20 -> 70, 100 -> 170, ..., 900 -> 950
-                        for (int i = 0; i < 12; i++) {
-                            const int top = (80 * i) + 20;
+                        for (int bitboardButtonIndex = 0; bitboardButtonIndex < NUM_BITBOARD_BUTTONS; bitboardButtonIndex++) {
+                            const int top = (80 * bitboardButtonIndex) + 20;
                             const int bottom = top + 50;
 
                             if (mousePos.y >= top && mousePos.y <= bottom) {
                                 // we've hit button i
 
-                                if(chosenBitboard.value_or(-1) == i) {
+                                if(chosenBitboard.value_or(-1) == bitboardButtonIndex) {
                                     // clicked twice, we can unset it
                                     chosenBitboard.reset();
                                 } else{
-                                    chosenBitboard = i;
+                                    chosenBitboard = bitboardButtonIndex;
                                 }
                             }
                         }
                     }
 
                     // only allow other left clicks on the physical board
-                    if(mousePos.x > 800 || mousePos.y > 800) {
+                    if(mousePos.x > BOARD_WIDTH || mousePos.y > BOARD_HEIGHT) {
                         continue;
                     }
 
@@ -212,7 +236,7 @@ void runGUIBitboardTest() {
                     const sf::Vector2i mousePos = mouseObject->position;
 
                     // only allow right clicks on the physical board
-                    if(mousePos.x > 800 || mousePos.y > 800) {
+                    if(mousePos.x > BOARD_WIDTH || mousePos.y > BOARD_HEIGHT) {
                         continue;
                     }
 
@@ -237,7 +261,7 @@ void runGUIBitboardTest() {
                     const int sourceSquare = heldSquare.value();
 
                     // only allow left click releases on the physical board
-                    if(mouseObject->position.x > 800 || mouseObject->position.y > 800) {
+                    if(mouseObject->position.x > BOARD_WIDTH || mouseObject->position.y > BOARD_HEIGHT) {
                         // release piece if we click oob
                         heldSquare.reset();
                         continue;
@@ -285,7 +309,7 @@ void runGUIBitboardTest() {
         board.clearAllHighlights(Board::RIGHT_CLICK_HIGHLIGHT);
         board.clearAllHighlights(Board::CYAN_HIGHLIGHT);
         if(chosenBitboard.has_value()) {
-            const Piece bitboardPiece = bitboardNumberToPiece(chosenBitboard.value());
+            const Piece bitboardPiece = bitboardNumberToPiece(static_cast<bitboardNumber>(chosenBitboard.value()));
             const Bitboard bitboard = game.pieceToBitboard(bitboardPiece);
             // const std::array<Bitboard, 64> attackBitboards = game.pieceToAttackBitboard(bitboardPiece);
 
@@ -332,33 +356,39 @@ void runGUIBitboardTest() {
         }
 
         // draw the bitboard test buttons
-        for(int i = 0; i < 12; i++) {
-            const sf::Vector2f bitboardButtonSize{160.F, 50.F};
+        for(int bitboardButtonIndex = 0; bitboardButtonIndex < NUM_BITBOARD_BUTTONS; bitboardButtonIndex++) {
+            constexpr sf::Vector2f bitboardButtonSize{160.F, 50.F};
             sf::RectangleShape bitboardButton{bitboardButtonSize};
-            if(chosenBitboard == i) {
+            if(chosenBitboard == bitboardButtonIndex) {
                 // red, rgb(230, 87, 87)
-                bitboardButton.setFillColor(sf::Color{230, 87, 87});
+                constexpr sf::Color chosenBitboardColor{230, 87, 87};
+                bitboardButton.setFillColor(chosenBitboardColor);
             } else {
                 // white, rgb(255, 255, 255)
-                bitboardButton.setFillColor(sf::Color{255, 255, 255});
+                constexpr sf::Color normalBitboardColor{255, 255, 255};
+                bitboardButton.setFillColor(normalBitboardColor);
             }
-            bitboardButton.setOutlineThickness(2.F);
+            constexpr int bitboardButtonOutlineThickness = 2.F;
+            bitboardButton.setOutlineThickness(bitboardButtonOutlineThickness);
             // black, rgb(0, 0, 0)
             bitboardButton.setOutlineColor(sf::Color{0, 0, 0});
             // space out from y=20 to y=900
             const float bitboardXPos = 820;
-            const float bitboardYPos = (80 * i) + 20;
+            const float bitboardYPos = (80 * bitboardButtonIndex) + 20;
             bitboardButton.setPosition({bitboardXPos, bitboardYPos});
             window.draw(bitboardButton);
 
             // draw text
+            constexpr int fontSize = 22;
+            constexpr int textOffsetX = 20;
+            constexpr int textOffsetY = 10;
             sf::Text text{font};
-            text.setString(std::string{bitboardButtonText[i]});
-            text.setCharacterSize(22);
+            text.setString(std::string{bitboardButtonText[bitboardButtonIndex]});
+            text.setCharacterSize(fontSize);
             // black, rgb(0, 0, 0)
             text.setFillColor(sf::Color{0, 0, 0});
 
-            text.setPosition({bitboardXPos + 20, bitboardYPos + 10});
+            text.setPosition({bitboardXPos + textOffsetX, bitboardYPos + textOffsetY});
 
             window.draw(text);
         }
@@ -390,7 +420,7 @@ void run2PlayerGUIgame() {
     // TODO: potentially throw / recover from file missing
     const sf::SoundBuffer PIECE_MOVEMENT_BUFFER{"assets/sounds/piece_movement.wav"};
     sf::Sound PIECE_MOVEMENT_SOUND{PIECE_MOVEMENT_BUFFER};
-    PIECE_MOVEMENT_SOUND.setVolume(75.F);
+    PIECE_MOVEMENT_SOUND.setVolume(VOLUME_PERCENTAGE);
 
     // init current held square for making moves
     std::optional<int> heldSquare;
@@ -416,7 +446,7 @@ void run2PlayerGUIgame() {
                     const sf::Vector2i mousePos = mouseObject->position;
 
                     // only allow left clicks on the physical board
-                    if(mousePos.x > 800 || mousePos.y > 800) {
+                    if(mousePos.x > BOARD_WIDTH || mousePos.y > BOARD_HEIGHT) {
                         continue;
                     }
 
@@ -488,7 +518,7 @@ void run2PlayerGUIgame() {
                     const sf::Vector2i mousePos = mouseObject->position;
 
                     // only allow right clicks on the physical board
-                    if(mousePos.x > 800 || mousePos.y > 800) {
+                    if(mousePos.x > BOARD_WIDTH || mousePos.y > BOARD_HEIGHT) {
                         continue;
                     }
 
@@ -513,7 +543,7 @@ void run2PlayerGUIgame() {
                     const int sourceSquare = heldSquare.value();
                     
                     // only allow left click releases on the physical board
-                    if(mouseObject->position.x > 800 || mouseObject->position.y > 800) {
+                    if(mouseObject->position.x > BOARD_WIDTH || mouseObject->position.y > BOARD_HEIGHT) {
                         // release piece if we click oob
                         heldSquare.reset();
                         continue;
@@ -584,10 +614,6 @@ void run2PlayerGUIgame() {
 }
 
 void run1PlayerGUIgame() {
-    constexpr int STARTING_WINDOW_WIDTH = 1000;
-    constexpr int STARTING_WINDOW_HEIGHT = 1000;
-    const std::string WINDOW_TITLE = "Chess";
-
     // init game
     Game game;
     game.loadFEN(std::string{Utils::STARTING_FEN});
@@ -597,7 +623,7 @@ void run1PlayerGUIgame() {
     board.updateBoardFromGame(game);
 
     // init window
-    sf::RenderWindow window{sf::VideoMode{{STARTING_WINDOW_WIDTH, STARTING_WINDOW_HEIGHT}}, WINDOW_TITLE};
+    sf::RenderWindow window{sf::VideoMode{{STARTING_WINDOW_WIDTH, STARTING_WINDOW_HEIGHT}}, std::string{WINDOW_TITLE}};
     // enable vsync
     window.setVerticalSyncEnabled(true);
 
@@ -608,7 +634,7 @@ void run1PlayerGUIgame() {
     // TODO: potentially throw / recover from file missing
     const sf::SoundBuffer PIECE_MOVEMENT_BUFFER{"assets/sounds/piece_movement.wav"};
     sf::Sound PIECE_MOVEMENT_SOUND{PIECE_MOVEMENT_BUFFER};
-    PIECE_MOVEMENT_SOUND.setVolume(75.F);
+    PIECE_MOVEMENT_SOUND.setVolume(VOLUME_PERCENTAGE);
 
     // init font
     const sf::Font font{"assets/fonts/LiberationSans-Regular.ttf"};
@@ -665,7 +691,7 @@ void run1PlayerGUIgame() {
                     const sf::Vector2i mousePos = mouseObject->position;
 
                     // only allow left clicks on the physical board
-                    if(mousePos.x > 800 || mousePos.y > 800) {
+                    if(mousePos.x > BOARD_WIDTH || mousePos.y > BOARD_HEIGHT) {
                         continue;
                     }
 
@@ -737,7 +763,7 @@ void run1PlayerGUIgame() {
                     const sf::Vector2i mousePos = mouseObject->position;
 
                     // only allow right clicks on the physical board
-                    if(mousePos.x > 800 || mousePos.y > 800) {
+                    if(mousePos.x > BOARD_WIDTH || mousePos.y > BOARD_HEIGHT) {
                         continue;
                     }
 
@@ -762,7 +788,7 @@ void run1PlayerGUIgame() {
                     const int sourceSquare = heldSquare.value();
                     
                     // only allow left click releases on the physical board
-                    if(mouseObject->position.x > 800 || mouseObject->position.y > 800) {
+                    if(mouseObject->position.x > BOARD_WIDTH || mouseObject->position.y > BOARD_HEIGHT) {
                         // release piece if we click oob
                         heldSquare.reset();
                         continue;
@@ -829,15 +855,17 @@ void run1PlayerGUIgame() {
         }
 
         // draw the engine's evaluation of the position
+        constexpr sf::Vector2f evalTextPosition = {500.F, 500.F};
+        const int evalTextFontSize = 50; 
         const float currentEval = engine.evaluatePosition(game);
         // load currentEval into string with 2 decimal places
         std::stringstream stream;
         stream << std::fixed << std::setprecision(2) << currentEval;
         sf::Text evalText{font};
         evalText.setString(stream.str());
-        evalText.setPosition({500.F, 850.F});
+        evalText.setPosition(evalTextPosition);
         evalText.setFillColor(sf::Color::White);
-        evalText.setCharacterSize(50);
+        evalText.setCharacterSize(evalTextFontSize);
         window.draw(evalText);
 
         // end the current frame
