@@ -43,6 +43,7 @@ ctest --test-dir build-debug --verbose    # debug
 ```
 
 ## TODOs
+- Incrementally update material in Game
 - Create 'en passant square' class
 - Look into migrating as many int types to their smallest representation as possible (e.g., uint8_t), and reducing static_cast<>'s
 - Consider splitting makeMove and undoMove into dispatch functions based on move type (e.g., makeMoveCastle_); they are a bit complex and hard to debug as of right now
@@ -52,3 +53,7 @@ ctest --test-dir build-debug --verbose    # debug
 - Halfmove / fullmove support, in loadFEN and otherwise
 - Incrementally update full board occupancy
 - Greatly refactor main()
+
+## TODOs (testing)
+- Unit tests for Piece, Move, Game
+- Verify all incremental building is correct in Game (e.g., maybe perft with material status?)

@@ -1109,6 +1109,15 @@ void Game::makeMove(const Move& move) {
     mailbox_[move.sourceSquare()] = Piece{};
 }
 
+UndoInfo Game::makeMoveWithUndoInfo(const Move& move) {
+    // save info to return
+    const UndoInfo undoInfo = getUndoInfo(mailbox_[move.targetSquare()]);
+
+    makeMove(move);
+
+    return undoInfo;
+}
+
 void Game::undoMove(const Move& move, const UndoInfo& undoInfo) {
     // sourcePiece is now sitting at targetSquare
     const Piece sourcePiece = mailbox_[move.targetSquare()];

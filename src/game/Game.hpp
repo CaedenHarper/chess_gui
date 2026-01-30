@@ -98,6 +98,8 @@ public:
     bool tryMove(const Move& move);
     // Make a move, even if it is not legal.
     void makeMove(const Move& move);
+    // Make a move and return the necessary undoInfo
+    UndoInfo makeMoveWithUndoInfo(const Move& move);
     // Undo a move. Does not check if the move we are undoing happened before.
     void undoMove(const Move& move, const UndoInfo& undoInfo);
     // If a move is legal.

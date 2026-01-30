@@ -18,6 +18,7 @@ Checks:
   - '-fuchsia-overloaded-operator'                                # Operator overloading is fine and makes sense in some parts of this project
   - '-misc-non-private-member-variables-in-classes'               # Private member variables is fine for this program; may re-evaluate in the future
   - '-cppcoreguidelines-non-private-member-variables-in-classes'  # Same as above ^
+  - '-readability-use-std-min-max'                                # I find std::min / ::max less readable, especially in the logic of Engine::
 
   # --- Should change one day ---
   - '-readability-function-cognitive-complexity'  # Ideally functions should be simpler, but this is too much work right now

@@ -1,7 +1,6 @@
 #include <SFML/System/Vector2.hpp>
 #include <iostream>
 #include <optional>
-#include <sstream>
 #include <string>
 
 #include <SFML/Audio.hpp>
@@ -628,7 +627,7 @@ void run1PlayerGUIgame() {
     window.setVerticalSyncEnabled(true);
 
     // init engine
-    const Engine engine;
+    Engine engine;
 
     // init sounds
     // TODO: potentially throw / recover from file missing
@@ -648,6 +647,9 @@ void run1PlayerGUIgame() {
     bool isDragging = false;
     sf::Vector2f dragPosPx{0.F, 0.F};
 
+    // init engine's current eval of the position to show to player
+    int currentEval = 0;
+
     // main game loop
     while (true) {
         // if window is ever closed, we're done with the game
@@ -658,14 +660,28 @@ void run1PlayerGUIgame() {
         // handle engine moves
         if(!game.isFinished() && game.sideToMove() != player1Color) {
             // make engine move
-            const Move engineMove = engine.bestMove(game);
+            const auto [possibleEngineMove, possibleCurrentEval] = engine.bestMove(game);
+            if(!possibleEngineMove.has_value()) {
+                // game is finished
+                break;
+            }
+            const Move engineMove = possibleEngineMove.value();
             // try to make move and post error message if move could not be made
             if(!game.tryMove(engineMove)) {
                 std::cerr << "Engine tried to make move: " << engineMove.to_string(game);
                 assert(false);
             }
+            currentEval = possibleCurrentEval;
 
             board.updateBoardFromGame(game);
+
+            // remove any buffered events that are not sf::Event::Closed
+            while (const std::optional<sf::Event> event = window.pollEvent()) {
+                if (event->is<sf::Event::Closed>()) {
+                    window.close();
+                    break;
+                }
+            }
         }
         
         // handle events
@@ -855,14 +871,11 @@ void run1PlayerGUIgame() {
         }
 
         // draw the engine's evaluation of the position
-        constexpr sf::Vector2f evalTextPosition = {500.F, 500.F};
-        const int evalTextFontSize = 50; 
-        const float currentEval = engine.evaluatePosition(game);
+        constexpr sf::Vector2f evalTextPosition = {500.F, 850.F};
+        const int evalTextFontSize = 50;
         // load currentEval into string with 2 decimal places
-        std::stringstream stream;
-        stream << std::fixed << std::setprecision(2) << currentEval;
         sf::Text evalText{font};
-        evalText.setString(stream.str());
+        evalText.setString(std::to_string(currentEval * (player1Color == Color::White ? -1 : 1)));
         evalText.setPosition(evalTextPosition);
         evalText.setFillColor(sf::Color::White);
         evalText.setCharacterSize(evalTextFontSize);
