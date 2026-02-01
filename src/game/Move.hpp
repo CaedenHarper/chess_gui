@@ -29,8 +29,8 @@ class Game; // forward declare for Move
 // A chess move, with information for squares, pieces, and special flags like promotion and castling.
 class Move {
 public:
-    // Create a default move that should not be used; only needed for MoveList to quickly initialize many default Moves
-    constexpr Move() noexcept : packed_{0} {}
+    // Create a junk Move. Note packed_ will hold undefined data. This is needed so MoveList is faster (instead of initializing packed to 0).
+    Move() noexcept = default;
     // Create a move given a source square, target square, flag, and promotion.
     constexpr Move(uint8_t sourceSquare, uint8_t targetSquare, MoveFlag flag, Promotion promotion) noexcept
                 : packed_{pack_(sourceSquare, targetSquare, flag, promotion)} {}
@@ -102,8 +102,9 @@ private:
     }
 };
 
-// A list of moves. Wrapper for std::array<> for quick lookups. 
-struct MoveList {
+// A list of moves. Wrapper for std::array<> for quick lookups.
+// NOLINTNEXTLINE(altera-struct-pack-align) aligning to 128 seems to have a performance penalty here
+struct MoveList {  // NOLINT(cppcoreguidelines-pro-type-member-init, hicpp-member-init) It's okay that data is junk data here, it heavily improves performance
     // Max amount of moves; somewhat arbitrary, but should be enough for any pseudo-legal move count
     static constexpr int kMaxMoves = 256;
     std::array<Move, kMaxMoves> data;
@@ -113,6 +114,7 @@ struct MoveList {
     constexpr void clear() noexcept { size = 0; }
 
     constexpr void push_back(const Move& move) noexcept {
+        assert(size < kMaxMoves);
         data[size++] = move;
     }
-} __attribute__((aligned(128))); // NOLINT[magic numbers] align to 128 bytes
+};

@@ -135,6 +135,13 @@ namespace Utils {
         return 0 <= col && col < BOARD_WIDTH && 0 <= row && row < BOARD_HEIGHT;
     }
 
+    // Mirror square White -> Black or Black -> White
+    constexpr int mirrorSquare(int square) noexcept {
+        // Flip the first three bits and leave the last three untouched, flipping the rank from white <-> black.
+        constexpr int FLIP_CONSTANT = 0b111000;
+        return square ^ FLIP_CONSTANT;
+    }
+
     // Retrieve algebraic notation from a given square. E.g., 0 -> "a8".
     std::string intToAlgebraicNotation(int square);
 

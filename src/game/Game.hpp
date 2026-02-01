@@ -92,6 +92,15 @@ public:
             capturedPiece
         };
     }
+
+    constexpr UndoInfo getUndoInfo(Move move) const noexcept {
+        // pack bools into castling rights uint8_t for speedy lookup
+        return UndoInfo{
+            castlingRights_,
+            enPassantSquare_,
+            mailbox_[move.targetSquare()]
+        };
+    }
     // Get piece at a square for the GUI. Note this method is relatively slow and should not be used in hot loops.
     Piece pieceAtSquareForGui(int square) const noexcept;
     // Try a move and return if the move was made. The move is only made if it is legal.
@@ -103,15 +112,47 @@ public:
     // Undo a move. Does not check if the move we are undoing happened before.
     void undoMove(const Move& move, const UndoInfo& undoInfo);
     // If a move is legal.
-    constexpr bool isMoveLegal(const Move& move) noexcept {
-        MoveList legalMoves;
-        generateLegalMoves(legalMoves);
+    bool isMoveLegal(const Move& move);
+    // If a move puts us in check (including castling through check). This has to be called after the move is made
+    constexpr bool doesMovePutUsInCheck(const Move& move) const {
+        // since move has already been played, targetColor is currentColor
+        const Color targetColor = sideToMove_;
+        const Color moveColor = oppositeColor(targetColor);
+        const bool isSourceWhite = moveColor == Color::White;
 
-        for (int i = 0; i < legalMoves.size; i++) {
-            if (legalMoves.data[i] == move) {
+        // can't cause king to be in check
+        if(isInCheck(moveColor)) {
+            return true;
+        }
+        
+        // castling legality rules
+        if(move.isKingSideCastle()) {
+            const int kingStartingSquare = isSourceWhite ? Utils::WHITE_KING_STARTING_SQUARE : Utils::BLACK_KING_STARTING_SQUARE;
+            const int kingsidePassingSquare = isSourceWhite ? Utils::WHITE_KINGSIDE_PASSING_SQUARE : Utils::BLACK_KINGSIDE_PASSING_SQUARE;
+            const int kingsideTargetSquare = isSourceWhite ? Utils::WHITE_KINGSIDE_TARGET_SQUARE : Utils::BLACK_KINGSIDE_TARGET_SQUARE;
+
+            if(
+                isSquareAttacked(kingStartingSquare, targetColor) ||   // king cant start in check
+                isSquareAttacked(kingsidePassingSquare, targetColor) ||   // king cant pass through check 
+                isSquareAttacked(kingsideTargetSquare, targetColor)      // king cant end in check
+            ) {
                 return true;
             }
         }
+
+        if(move.isQueenSideCastle()) {
+            const int kingStartingSquare = isSourceWhite ? Utils::WHITE_KING_STARTING_SQUARE : Utils::BLACK_KING_STARTING_SQUARE;
+            const int queensidePassingSquare = isSourceWhite ? Utils::WHITE_QUEENSIDE_PASSING_SQUARE : Utils::BLACK_QUEENSIDE_PASSING_SQUARE;
+            const int queensideTargetSquare = isSourceWhite ? Utils::WHITE_QUEENSIDE_TARGET_SQUARE : Utils::BLACK_QUEENSIDE_TARGET_SQUARE;
+            if(
+                isSquareAttacked(kingStartingSquare, targetColor) ||   // king cant start in check
+                isSquareAttacked(queensidePassingSquare, targetColor) ||   // king cant pass through check 
+                isSquareAttacked(queensideTargetSquare, targetColor)      // king cant end in check
+            ) {
+                return true;
+            }
+        }
+
         return false;
     }
     // Generate all legal moves.

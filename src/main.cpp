@@ -15,7 +15,7 @@ constexpr int STARTING_WINDOW_WIDTH = 1000;
 constexpr int STARTING_WINDOW_HEIGHT = 1000;
 // stringview for constexpr
 constexpr std::string_view WINDOW_TITLE = "Chess";
-constexpr float VOLUME_PERCENTAGE = 0.75F;
+constexpr float VOLUME_PERCENTAGE = 75.F;
 constexpr int BOARD_WIDTH = 800;
 constexpr int BOARD_HEIGHT = 800; 
 
@@ -649,6 +649,7 @@ void run1PlayerGUIgame() {
 
     // init engine's current eval of the position to show to player
     int currentEval = 0;
+    SearchStats currentStats{};
 
     // main game loop
     while (true) {
@@ -660,7 +661,7 @@ void run1PlayerGUIgame() {
         // handle engine moves
         if(!game.isFinished() && game.sideToMove() != player1Color) {
             // make engine move
-            const auto [possibleEngineMove, possibleCurrentEval] = engine.bestMove(game);
+            const auto [possibleEngineMove, possibleCurrentEval, possibleCurrentStats] = engine.bestMove(game);
             if(!possibleEngineMove.has_value()) {
                 // game is finished
                 break;
@@ -671,16 +672,17 @@ void run1PlayerGUIgame() {
                 std::cerr << "Engine tried to make move: " << engineMove.to_string(game);
                 assert(false);
             }
+            // This is a good move, we can make it and update the stats
             currentEval = possibleCurrentEval;
+            currentStats = possibleCurrentStats;
 
             board.updateBoardFromGame(game);
+            PIECE_MOVEMENT_SOUND.play();
 
-            // remove any buffered events that are not sf::Event::Closed
-            while (const std::optional<sf::Event> event = window.pollEvent()) {
-                if (event->is<sf::Event::Closed>()) {
-                    window.close();
-                    break;
-                }
+            // remove any buffered events; while the engine is not on its own thread it can slow down the main window,
+            // and its bad UX to accidentally buffer a move when trying to check if the window is still alive
+            while (window.pollEvent()) {
+                
             }
         }
         
@@ -871,15 +873,30 @@ void run1PlayerGUIgame() {
         }
 
         // draw the engine's evaluation of the position
-        constexpr sf::Vector2f evalTextPosition = {500.F, 850.F};
+        constexpr sf::Vector2f evalTextPosition = {100.F, 850.F};
+        constexpr sf::Vector2f statsTextPosition = {400.F, 850.F};
         const int evalTextFontSize = 50;
+        const int statsTextFontSize = 25;
         // load currentEval into string with 2 decimal places
         sf::Text evalText{font};
-        evalText.setString(std::to_string(currentEval * (player1Color == Color::White ? -1 : 1)));
+        evalText.setString(Eval::evalToString(currentEval, player1Color));
         evalText.setPosition(evalTextPosition);
         evalText.setFillColor(sf::Color::White);
         evalText.setCharacterSize(evalTextFontSize);
         window.draw(evalText);
+
+        // load currentStats into string with 2 decimal places
+        sf::Text statsText{font};
+        // Nodes Searched: n
+        // QNodes Searched: q
+        // Positions Searched: n + q
+        statsText.setString("Nodes Searched: " + std::to_string(currentStats.nodes) +
+                            "\nQNodes Searched: " + std::to_string(currentStats.qnodes) +
+                            "\nPositions Searched: " + std::to_string(currentStats.nodes + currentStats.qnodes));
+        statsText.setPosition(statsTextPosition);
+        statsText.setFillColor(sf::Color::White);
+        statsText.setCharacterSize(statsTextFontSize);
+        window.draw(statsText);
 
         // end the current frame
         window.display();

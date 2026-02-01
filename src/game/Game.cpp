@@ -2,6 +2,7 @@
 #include <string>
 
 #include "Game.hpp"
+#include "Piece.hpp"
 #include "Utils.hpp"
 
 Game::Game()
@@ -858,6 +859,18 @@ void Game::generatePseudoLegalKingMoves_(MoveList& out) {
     }
 }
 
+bool Game::isMoveLegal(const Move& move) {
+    MoveList legalMoves;
+    generateLegalMoves(legalMoves);
+
+    for (int i = 0; i < legalMoves.size; i++) {
+        if (legalMoves.data[i] == move) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void Game::generateLegalMoves(MoveList& out) {
     // TODO: eventually make generateLegalMoves const by finding a workaround other than simply undoing moves
     MoveList pseudoMoves;
@@ -867,54 +880,19 @@ void Game::generateLegalMoves(MoveList& out) {
     for(int i = 0; i < pseudoMoves.size; i++) {
         const Move move = pseudoMoves.data[i];
 
-        const Piece sourcePiece = mailbox_[move.sourceSquare()];
-        const Color moveColor = sourcePiece.color();
-        const Color enemyColor = oppositeColor(moveColor);
-        const bool isSourceWhite = moveColor == Color::White;
-
         // save info to pass to undo move
         const UndoInfo undoInfo = getUndoInfo(mailbox_[move.targetSquare()]);
 
         makeMove(move);
 
-        // can't cause king to be in check
-        if(isInCheck(moveColor)) {
+        if(doesMovePutUsInCheck(move)) {
             undoMove(move, undoInfo);
             continue;
-        }
-        
-        // castling legality rules
-        const int kingStartingSquare = isSourceWhite ? Utils::WHITE_KING_STARTING_SQUARE : Utils::BLACK_KING_STARTING_SQUARE;
-
-        if(move.isKingSideCastle()) {
-            const int kingsidePassingSquare = isSourceWhite ? Utils::WHITE_KINGSIDE_PASSING_SQUARE : Utils::BLACK_KINGSIDE_PASSING_SQUARE;
-            const int kingsideTargetSquare = isSourceWhite ? Utils::WHITE_KINGSIDE_TARGET_SQUARE : Utils::BLACK_KINGSIDE_TARGET_SQUARE;
-    
-            if(
-                isSquareAttacked(kingStartingSquare, enemyColor) ||   // king cant start in check
-                isSquareAttacked(kingsidePassingSquare, enemyColor) ||   // king cant pass through check 
-                isSquareAttacked(kingsideTargetSquare, enemyColor)      // king cant end in check
-            ) {
-                undoMove(move, undoInfo);
-                continue;
-            }
-        }
-
-        if(move.isQueenSideCastle()) {
-            const int queensidePassingSquare = isSourceWhite ? Utils::WHITE_QUEENSIDE_PASSING_SQUARE : Utils::BLACK_QUEENSIDE_PASSING_SQUARE;
-            const int queensideTargetSquare = isSourceWhite ? Utils::WHITE_QUEENSIDE_TARGET_SQUARE : Utils::BLACK_QUEENSIDE_TARGET_SQUARE;
-            if(
-                isSquareAttacked(kingStartingSquare, enemyColor) ||   // king cant start in check
-                isSquareAttacked(queensidePassingSquare, enemyColor) ||   // king cant pass through check 
-                isSquareAttacked(queensideTargetSquare, enemyColor)      // king cant end in check
-            ) {
-                undoMove(move, undoInfo);
-                continue;
-            }
         }
 
         // move is legal, allow it
         out.push_back(move);
+
         undoMove(move, undoInfo);
     }
 }
