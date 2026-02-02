@@ -879,7 +879,7 @@ void run1PlayerGUIgame() {
         const int statsTextFontSize = 25;
         // load currentEval into string with 2 decimal places
         sf::Text evalText{font};
-        evalText.setString(Eval::evalToString(currentEval, player1Color));
+        evalText.setString(Eval::evalToString(currentEval, game.sideToMove()));
         evalText.setPosition(evalTextPosition);
         evalText.setFillColor(sf::Color::White);
         evalText.setCharacterSize(evalTextFontSize);
