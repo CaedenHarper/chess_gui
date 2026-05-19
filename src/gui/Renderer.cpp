@@ -15,8 +15,7 @@ void Renderer::render(const RenderState& state) {
     const SearchStats currentStats = state.currentStats;
     const Color sideToMove = state.sideToMove;
 
-    // clear the window
-    window_->clear(sf::Color::Black);
+    clearWindow(sf::Color::Black);
 
     // draw board without heldSqaure iff we are dragging
     board_->draw(*window_, isDragging ? std::optional<int>{heldPiece->heldSquare} : std::nullopt);
@@ -30,11 +29,21 @@ void Renderer::render(const RenderState& state) {
         }
     }
 
-    // draw the engine's evaluation of the position
+    drawEngineEval(currentEval, sideToMove);
+
+    drawEngineStats(currentStats);
+
+    // end the current frame
+    window_->display();
+}
+
+void Renderer::clearWindow(sf::Color backgroundColor) {
+    window_->clear(backgroundColor);
+}
+
+void Renderer::drawEngineEval(int currentEval, Color sideToMove) {
     constexpr sf::Vector2f evalTextPosition = {100.F, 850.F};
-    constexpr sf::Vector2f statsTextPosition = {400.F, 850.F};
     const int evalTextFontSize = 50;
-    const int statsTextFontSize = 25;
     // load currentEval into string with 2 decimal places
     sf::Text evalText{font_};
     evalText.setString(Eval::evalToString(currentEval, sideToMove));
@@ -42,7 +51,11 @@ void Renderer::render(const RenderState& state) {
     evalText.setFillColor(sf::Color::White);
     evalText.setCharacterSize(evalTextFontSize);
     window_->draw(evalText);
+}
 
+void Renderer::drawEngineStats(SearchStats currentStats) {
+    constexpr sf::Vector2f statsTextPosition = {400.F, 850.F};
+    const int statsTextFontSize = 25;
     // load currentStats into string with 2 decimal places
     sf::Text statsText{font_};
     // Nodes Searched: n
@@ -55,7 +68,4 @@ void Renderer::render(const RenderState& state) {
     statsText.setFillColor(sf::Color::White);
     statsText.setCharacterSize(statsTextFontSize);
     window_->draw(statsText);
-
-    // end the current frame
-    window_->display();
 }

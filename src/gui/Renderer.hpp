@@ -17,13 +17,15 @@ struct RenderState {
 
 class Renderer {
 public:
-    Renderer(BoardView* board, sf::RenderWindow* window) : board_{board}, window_{window} {
-
-    };
+    Renderer(BoardView* board, sf::RenderWindow* window) : board_{board}, window_{window} {}
 
     void render(const RenderState& state);
 
 private:
+    void clearWindow(sf::Color backgroundColor);
+    void drawEngineEval(int currentEval, Color sideToMove);
+    void drawEngineStats(SearchStats currentStats);
+
     const BoardView* board_;
     sf::RenderWindow* window_;
     sf::Font font_{"assets/fonts/LiberationSans-Regular.ttf"};
