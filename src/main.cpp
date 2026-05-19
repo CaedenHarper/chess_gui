@@ -848,8 +848,9 @@ void run1PlayerGUIgame() {
             // add check highlight after main loop to override other highlights
             board.at(game.findKingSquare(game.sideToMove())).setHighlight(BoardView::CHECK_HIGHLIGHT);
         }
-
-        renderer.render(heldSquare, isDragging, currentEval, currentStats, dragPosPx, game.sideToMove());
+        
+        const RenderState state{heldSquare, isDragging, currentEval, currentStats, dragPosPx, game.sideToMove()};
+        renderer.render(state);
     }
 }
 

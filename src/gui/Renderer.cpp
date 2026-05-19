@@ -7,7 +7,14 @@
 #include "Renderer.hpp"
 
 
-void Renderer::render(std::optional<int> heldSquare, bool isDragging, int currentEval, SearchStats currentStats, sf::Vector2f dragPosPx, Color sideToMove) {
+void Renderer::render(const RenderState& state) {
+        const std::optional<int> heldSquare = state.heldSquare;
+        const bool isDragging = state.isDragging;
+        const int currentEval = state.currentEval;
+        const SearchStats currentStats = state.currentStats;
+        const sf::Vector2f dragPosPx = state.dragPosPx;
+        const Color sideToMove = state.sideToMove;
+
         // clear the window
         window_->clear(sf::Color::Black);
 

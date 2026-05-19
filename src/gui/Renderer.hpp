@@ -5,13 +5,22 @@
 #include "BoardView.hpp"
 #include "../engine/Engine.hpp"
 
+struct RenderState {
+    std::optional<int> heldSquare;
+    bool isDragging{};
+    int currentEval{};
+    SearchStats currentStats;
+    sf::Vector2f dragPosPx;
+    Color sideToMove{};
+} __attribute__((aligned(64))); // NOLINT[magic numbers] align to 64 bytes
+
 class Renderer {
 public:
     Renderer(BoardView* board, sf::RenderWindow* window) : board_{board}, window_{window} {
 
     };
 
-    void render(std::optional<int> heldSquare, bool isDragging, int currentEval, SearchStats currentStats, sf::Vector2f dragPosPx, Color sideToMove);
+    void render(const RenderState& state);
 
 private:
     const BoardView* board_;
