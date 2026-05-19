@@ -69,8 +69,13 @@ void Renderer::drawBoard(std::optional<HeldPieceState> heldPiece) {
         squareShape.setPosition({xpos, ypos});
         window_->draw(squareShape);
 
-        // skip empty squares or square that is currently held
-        if(squareObject.isEmpty() || (heldPiece && heldPiece->heldSquare == squareIndex)) {
+        // skip empty squares
+        if(squareObject.isEmpty()) {
+            continue;
+        }
+
+        // skip squares with a held piece that is being dragged
+        if(heldPiece && heldPiece->isDragging && heldPiece->heldSquare == squareIndex) {
             continue;
         }
 

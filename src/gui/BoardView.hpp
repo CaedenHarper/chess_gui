@@ -127,11 +127,6 @@ public:
     // Read-only version of at(). Throws if out of range.
     Square at(int squareIndex) const;
 
-    // Draw board to window.
-    void draw(sf::RenderWindow& window) const;
-    // Draw board to window, skipping over heldSquare. If heldSquare does not exist, draws all squares.
-    void draw(sf::RenderWindow& window, std::optional<int> heldSquare) const;
-
     // Update board representation given game.
     void updateBoardFromGame(const Game& game);
 

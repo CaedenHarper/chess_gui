@@ -151,48 +151,6 @@ Square BoardView::at(int squareIndex) const {
     return board_.at(squareIndex);
 }
 
-void BoardView::draw(sf::RenderWindow& window) const {
-    // other overload skips over nothing given std::nullopt
-    draw(window, std::nullopt);
-}
-
-void BoardView::draw(sf::RenderWindow& window, const std::optional<int> heldSquare) const {
-    // draw row by row
-    for(int squareIndex = 0; squareIndex < Utils::NUM_SQUARES; squareIndex++) {
-        // get row and col from index
-        const int row = Utils::getRow(squareIndex);
-        const int col = Utils::getCol(squareIndex);
-        const bool isLight = row%2 == col%2;
-        Square squareObject = board_.at(squareIndex);
-
-        sf::RectangleShape squareShape{{Constants::SQUARE_WIDTH_PX, Constants::SQUARE_HEIGHT_PX}};
-
-        // determine square color
-        sf::Color color;
-        if(squareObject.hasHighlight()) {
-            color = isLight ? squareObject.highlight().lightHighlight() : squareObject.highlight().darkHighlight();
-        } else {
-            color = isLight ? LIGHT_SQUARE_COLOR : DARK_SQUARE_COLOR;
-        }
-        squareShape.setFillColor(color);
-
-        // set position based on row/col
-        const float xpos = Constants::SQUARE_WIDTH_PX * col;
-        const float ypos = Constants::SQUARE_HEIGHT_PX * row;
-        squareShape.setPosition({xpos, ypos});
-        window.draw(squareShape);
-
-        // skip empty squares or square that is currently held
-        if(squareObject.isEmpty() || (heldSquare && heldSquare.value() == squareIndex)) {
-            continue;
-        }
-
-        if (const sf::Sprite* sprite = squareObject.pieceSprite().sprite()) {
-            window.draw(*sprite);
-        }
-    }
-}
-
 void BoardView::clearAllHighlights() {
     for(Square& square : board_) {
         square.clearHighlight();
