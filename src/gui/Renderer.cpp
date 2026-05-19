@@ -5,7 +5,10 @@
 #include "../engine/Engine.hpp"
 #include "InputHandler.hpp"
 
+#include "Constants.hpp"
+
 #include "Renderer.hpp"
+
 
 
 void Renderer::render(const RenderState& state) {
@@ -17,8 +20,7 @@ void Renderer::render(const RenderState& state) {
 
     clearWindow(sf::Color::Black);
 
-    // draw board without heldSqaure iff we are dragging
-    board_->draw(*window_, isDragging ? std::optional<int>{heldPiece->heldSquare} : std::nullopt);
+    drawBoard(heldPiece);
 
     // if holding a piece and we are dragging, we copy sprite to mouse
     if(isDragging) {
@@ -39,6 +41,43 @@ void Renderer::render(const RenderState& state) {
 
 void Renderer::clearWindow(sf::Color backgroundColor) {
     window_->clear(backgroundColor);
+}
+
+void Renderer::drawBoard(std::optional<HeldPieceState> heldPiece) {
+        // draw row by row
+    for(int squareIndex = 0; squareIndex < Utils::NUM_SQUARES; squareIndex++) {
+        // get row and col from index
+        const int row = Utils::getRow(squareIndex);
+        const int col = Utils::getCol(squareIndex);
+        const bool isLight = row%2 == col%2;
+        Square squareObject = board_->at(squareIndex);
+
+        sf::RectangleShape squareShape{{Constants::SQUARE_WIDTH_PX, Constants::SQUARE_HEIGHT_PX}};
+
+        // determine square color
+        sf::Color color;
+        if(squareObject.hasHighlight()) {
+            color = isLight ? squareObject.highlight().lightHighlight() : squareObject.highlight().darkHighlight();
+        } else {
+            color = isLight ? BoardView::LIGHT_SQUARE_COLOR : BoardView::DARK_SQUARE_COLOR;
+        }
+        squareShape.setFillColor(color);
+
+        // set position based on row/col
+        const float xpos = Constants::SQUARE_WIDTH_PX * col;
+        const float ypos = Constants::SQUARE_HEIGHT_PX * row;
+        squareShape.setPosition({xpos, ypos});
+        window_->draw(squareShape);
+
+        // skip empty squares or square that is currently held
+        if(squareObject.isEmpty() || (heldPiece && heldPiece->heldSquare == squareIndex)) {
+            continue;
+        }
+
+        if (const sf::Sprite* sprite = squareObject.pieceSprite().sprite()) {
+            window_->draw(*sprite);
+        }
+    }
 }
 
 void Renderer::drawEngineEval(int currentEval, Color sideToMove) {

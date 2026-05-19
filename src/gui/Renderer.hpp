@@ -23,6 +23,7 @@ public:
 
 private:
     void clearWindow(sf::Color backgroundColor);
+    void drawBoard(std::optional<HeldPieceState> heldPiece);
     void drawEngineEval(int currentEval, Color sideToMove);
     void drawEngineStats(SearchStats currentStats);
 
