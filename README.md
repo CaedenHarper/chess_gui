@@ -52,7 +52,8 @@ ctest --test-dir build-debug --verbose    # debug
 - PGN support
 - Halfmove / fullmove support, in loadFEN and otherwise
 - Incrementally update full board occupancy
-- Greatly refactor main()
+- Investigate struct byte alignments for performance; are they really needed?
+- Investigate noexcept for performance
 
 ## TODOs (testing)
 - Unit tests for Piece, Move, Game

@@ -5,12 +5,13 @@
 #include "BoardView.hpp"
 #include "../engine/Engine.hpp"
 
+#include "InputHandler.hpp"
+
+
 struct RenderState {
-    std::optional<int> heldSquare;
-    bool isDragging{};
+    std::optional<HeldPieceState> heldPiece;
     int currentEval{};
     SearchStats currentStats;
-    sf::Vector2f dragPosPx;
     Color sideToMove{};
 } __attribute__((aligned(64))); // NOLINT[magic numbers] align to 64 bytes
 

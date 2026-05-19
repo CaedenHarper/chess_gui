@@ -35,6 +35,7 @@ add_executable(chess
     src/game/Piece.cpp
     src/game/Utils.cpp
     src/gui/BoardView.cpp
+    src/gui/InputHandler.cpp
     src/gui/Renderer.cpp
     src/engine/Engine.cpp
 )
@@ -53,6 +54,7 @@ add_library(chess_lib
     src/game/Piece.cpp
     src/game/Utils.cpp
     src/gui/BoardView.cpp
+    src/gui/InputHandler.cpp
     src/gui/Renderer.cpp
     src/engine/Engine.cpp
 )

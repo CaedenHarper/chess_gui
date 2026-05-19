@@ -10,6 +10,7 @@
 #include "game/Game.hpp"
 #include "game/Utils.hpp"
 #include "gui/BoardView.hpp"
+#include "gui/InputHandler.hpp"
 #include "gui/Renderer.hpp"
 
 constexpr int STARTING_WINDOW_WIDTH = 1000;
@@ -17,8 +18,8 @@ constexpr int STARTING_WINDOW_HEIGHT = 1000;
 // stringview for constexpr
 constexpr std::string_view WINDOW_TITLE = "Chess";
 constexpr float VOLUME_PERCENTAGE = 75.F;
-constexpr int BOARD_WIDTH = 800;
-constexpr int BOARD_HEIGHT = 800; 
+constexpr int BOARD_WIDTH_PX = 800;
+constexpr int BOARD_HEIGHT_PX = 800; 
 
 /* TODO: implement CLI class and move Game.to_string()
 void runCLIGame() {
@@ -164,7 +165,7 @@ void runGUIBitboardTest() {
                     }
 
                     // only allow other left clicks on the physical board
-                    if(mousePos.x > BOARD_WIDTH || mousePos.y > BOARD_HEIGHT) {
+                    if(mousePos.x > BOARD_WIDTH_PX || mousePos.y > BOARD_HEIGHT_PX) {
                         continue;
                     }
 
@@ -236,7 +237,7 @@ void runGUIBitboardTest() {
                     const sf::Vector2i mousePos = mouseObject->position;
 
                     // only allow right clicks on the physical board
-                    if(mousePos.x > BOARD_WIDTH || mousePos.y > BOARD_HEIGHT) {
+                    if(mousePos.x > BOARD_WIDTH_PX || mousePos.y > BOARD_HEIGHT_PX) {
                         continue;
                     }
 
@@ -261,7 +262,7 @@ void runGUIBitboardTest() {
                     const int sourceSquare = heldSquare.value();
 
                     // only allow left click releases on the physical board
-                    if(mouseObject->position.x > BOARD_WIDTH || mouseObject->position.y > BOARD_HEIGHT) {
+                    if(mouseObject->position.x > BOARD_WIDTH_PX || mouseObject->position.y > BOARD_HEIGHT_PX) {
                         // release piece if we click oob
                         heldSquare.reset();
                         continue;
@@ -446,7 +447,7 @@ void run2PlayerGUIgame() {
                     const sf::Vector2i mousePos = mouseObject->position;
 
                     // only allow left clicks on the physical board
-                    if(mousePos.x > BOARD_WIDTH || mousePos.y > BOARD_HEIGHT) {
+                    if(mousePos.x > BOARD_WIDTH_PX || mousePos.y > BOARD_HEIGHT_PX) {
                         continue;
                     }
 
@@ -518,7 +519,7 @@ void run2PlayerGUIgame() {
                     const sf::Vector2i mousePos = mouseObject->position;
 
                     // only allow right clicks on the physical board
-                    if(mousePos.x > BOARD_WIDTH || mousePos.y > BOARD_HEIGHT) {
+                    if(mousePos.x > BOARD_WIDTH_PX || mousePos.y > BOARD_HEIGHT_PX) {
                         continue;
                     }
 
@@ -543,7 +544,7 @@ void run2PlayerGUIgame() {
                     const int sourceSquare = heldSquare.value();
                     
                     // only allow left click releases on the physical board
-                    if(mouseObject->position.x > BOARD_WIDTH || mouseObject->position.y > BOARD_HEIGHT) {
+                    if(mouseObject->position.x > BOARD_WIDTH_PX || mouseObject->position.y > BOARD_HEIGHT_PX) {
                         // release piece if we click oob
                         heldSquare.reset();
                         continue;
@@ -626,8 +627,9 @@ void run1PlayerGUIgame() {
 
     Engine engine;
 
-    // init renderer
     Renderer renderer{&board, &window};
+
+    InputHandler inputHandler{&board};
 
     // init sounds
     // TODO: potentially throw / recover from file missing
@@ -637,12 +639,6 @@ void run1PlayerGUIgame() {
 
     // TODO: we assume player 1 (non-engine) is always white; create a way to change this
     const Color player1Color = Color::White; 
-
-    // init current held square for making moves
-    std::optional<int> heldSquare;
-    // init helpers for dragging logic
-    bool isDragging = false;
-    sf::Vector2f dragPosPx{0.F, 0.F};
 
     // init engine's current eval of the position to show to player
     int currentEval = 0;
@@ -680,155 +676,14 @@ void run1PlayerGUIgame() {
         
         // handle events
         while (const std::optional<sf::Event> event = window.pollEvent()) {
-            // close the window
             if (event->is<sf::Event::Closed>()) {
                 window.close();
-                break;
-            }
-
-            // keep the window open when checkmate happens
-            if (game.isFinished()) {
                 continue;
             }
 
-            // check mouse clicks
-            if (const auto* mouseObject = event->getIf<sf::Event::MouseButtonPressed>()) {
-                // LEFT CLICK
-                if(mouseObject->button == sf::Mouse::Button::Left) {
-                    // first clear all highlights
-                    board.clearAllHighlights();
-
-                    const sf::Vector2i mousePos = mouseObject->position;
-
-                    // only allow left clicks on the physical board
-                    if(mousePos.x > BOARD_WIDTH || mousePos.y > BOARD_HEIGHT) {
-                        continue;
-                    }
-
-                    int targetSquare = BoardView::getSquareIndexFromCoordinates(mousePos.x, mousePos.y);
-                    
-                    // square does not exist; reset any selected piece and continue
-                    if(!Utils::onBoard(targetSquare)) {
-                        heldSquare.reset();
-                        continue;
-                    }
-
-                    // square does exist
-                    // no currently held piece
-                    if(!heldSquare) {
-                        // no need to do additional processing for clicking on empty square, or wrong player's piece
-                        if(!game.mailbox().at(targetSquare).exists() || game.mailbox().at(targetSquare).color() != game.sideToMove()) {
-                            continue;
-                        }
-
-                        // hold square
-                        heldSquare = targetSquare;
-                        isDragging = true;
-
-                        // highlight selected square if there's a piece there
-                        board.at(targetSquare).setHighlight(BoardView::SELECTED_HIGHLIGHT);
-
-                        // highlight legal moves
-                        MoveList legalMoves;
-                        game.generateLegalMovesFromSquare(targetSquare, legalMoves);
-                        for(int i = 0; i < legalMoves.size; i++) {
-                            const Move move = legalMoves.data[i];
-                            board.at(move.targetSquare()).setHighlight(BoardView::LEGAL_HIGHLIGHT);
-                        }
-
-                        dragPosPx = {static_cast<float>(mousePos.x), static_cast<float>(mousePos.y)};
-
-                        continue;
-                    }
-
-                    // currently held piece exists; click-click move
-                    const int sourceSquare = heldSquare.value();
-                    // if same square, we remove highlight and cancel move
-                    if(sourceSquare == targetSquare) {
-                        heldSquare.reset();
-                        board.clearAllHighlights(BoardView::SELECTED_HIGHLIGHT);
-                        continue;
-                    }
-                    
-                    // Try to make click-click move; if successful, update visual board
-                    const Move potentialMove = Move::fromPieces(sourceSquare, targetSquare, game.mailbox().at(sourceSquare), game.mailbox().at(targetSquare));
-                    if(game.tryMove(potentialMove)) {
-                        board.updateBoardFromGame(game);
-                        PIECE_MOVEMENT_SOUND.play();
-                    }
-                    
-                    heldSquare.reset();
-                    board.clearAllHighlightsExcept(BoardView::RIGHT_CLICK_HIGHLIGHT);
-                }
-                
-                // RIGHT CLICK
-                if(mouseObject->button == sf::Mouse::Button::Right) {
-                    // clear all left click highlights
-                    board.clearAllHighlights(BoardView::LEGAL_HIGHLIGHT);
-                    board.clearAllHighlights(BoardView::SELECTED_HIGHLIGHT);
-
-                    // right click cancels any held square
-                    heldSquare.reset();
-
-                    const sf::Vector2i mousePos = mouseObject->position;
-
-                    // only allow right clicks on the physical board
-                    if(mousePos.x > BOARD_WIDTH || mousePos.y > BOARD_HEIGHT) {
-                        continue;
-                    }
-
-                    const int targetSquare = BoardView::getSquareIndexFromCoordinates(mousePos.x, mousePos.y);
-                    
-                    // swap highlight status of square
-                    if(Utils::onBoard(targetSquare)) {
-                        board.at(targetSquare).toggleHighlight(BoardView::RIGHT_CLICK_HIGHLIGHT);
-                    }
-                }
-            }
-
-            // check mouse movement
-            if (const auto* mouseObject = event->getIf<sf::Event::MouseMoved>()) {
-                dragPosPx = sf::Vector2f{static_cast<float>(mouseObject->position.x), static_cast<float>(mouseObject->position.y)};
-            }
-
-            // check mouse unclicks
-            if (const auto* mouseObject = event->getIf<sf::Event::MouseButtonReleased>()) {
-                // try to make dragged move
-                if (mouseObject->button == sf::Mouse::Button::Left && heldSquare) {
-                    const int sourceSquare = heldSquare.value();
-                    
-                    // only allow left click releases on the physical board
-                    if(mouseObject->position.x > BOARD_WIDTH || mouseObject->position.y > BOARD_HEIGHT) {
-                        // release piece if we click oob
-                        heldSquare.reset();
-                        continue;
-                    }
-
-                    const int targetSquare = BoardView::getSquareIndexFromCoordinates(mouseObject->position.x, mouseObject->position.y);
-                    
-                    // out of bounds
-                    if(!Utils::onBoard(targetSquare)) {
-                        continue;
-                    }
-
-                    // same square means we should try click-click move instead of dragging move
-                    // therefore, we do not reset heldSquare
-                    if(sourceSquare == targetSquare) {
-                        isDragging = false;
-                        continue;
-                    }
-
-                    // move is on board and different square
-                    const Move potentialMove = Move::fromPieces(sourceSquare, targetSquare, game.mailbox().at(sourceSquare), game.mailbox().at(targetSquare));
-                    // if move is legal, try it
-                    if (game.tryMove(potentialMove)) {
-                        board.updateBoardFromGame(game);
-                        PIECE_MOVEMENT_SOUND.play();
-                    }
-
-                    heldSquare.reset();
-                    board.clearAllHighlightsExcept(BoardView::RIGHT_CLICK_HIGHLIGHT);
-                }
+            const InputResult result = inputHandler.handleEvent(event.value(), game);
+            if(result == InputResult::MoveMade) {
+                PIECE_MOVEMENT_SOUND.play();
             }
         }
 
@@ -849,7 +704,7 @@ void run1PlayerGUIgame() {
             board.at(game.findKingSquare(game.sideToMove())).setHighlight(BoardView::CHECK_HIGHLIGHT);
         }
         
-        const RenderState state{heldSquare, isDragging, currentEval, currentStats, dragPosPx, game.sideToMove()};
+        const RenderState state{inputHandler.heldPiece(), currentEval, currentStats, game.sideToMove()};
         renderer.render(state);
     }
 }
