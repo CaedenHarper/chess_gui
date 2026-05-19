@@ -18,8 +18,6 @@ constexpr int STARTING_WINDOW_HEIGHT = 1000;
 // stringview for constexpr
 constexpr std::string_view WINDOW_TITLE = "Chess";
 constexpr float VOLUME_PERCENTAGE = 75.F;
-constexpr int BOARD_WIDTH_PX = 800;
-constexpr int BOARD_HEIGHT_PX = 800; 
 
 /* TODO: implement CLI class and move Game.to_string()
 void runCLIGame() {
@@ -51,6 +49,7 @@ void runCLIGame() {
     }
 } */
 
+/* TODO: rewrite to work with new inputHandler / renderer classes
 void runGUIBitboardTest() {
     constexpr int BITBOARD_BUTTONS_X_START = 820;
     constexpr int BITBOARD_BUTTONS_X_END = 980;
@@ -613,6 +612,8 @@ void run2PlayerGUIgame() {
         window.display();
     }
 }
+
+*/
 
 void run1PlayerGUIgame() {
     Game game;

@@ -90,15 +90,6 @@ private:
 // Manages graphical representation of the board.
 class BoardView{
 public:
-    // Width of the board in pixels.
-    static constexpr int BOARD_WIDTH = 800;
-    // Height of the board in pixels.
-    static constexpr int BOARD_HEIGHT = 800;
-    // Width of a square in pixels.
-    static constexpr float SQUARE_WIDTH = BOARD_WIDTH/8.F;
-    // Height of a square in pixels.
-    static constexpr float SQUARE_HEIGHT = BOARD_HEIGHT/8.F;
-
     // Normal dark square color. Dark brown, rgb(179, 136, 98).
     static constexpr sf::Color DARK_SQUARE_COLOR{179, 136, 98};
     // Normal light square color. Beige, rgb(238, 217, 179).

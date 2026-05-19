@@ -9,6 +9,9 @@
 #include "BoardView.hpp"
 #include "../game/Utils.hpp"
 
+#include "Constants.hpp"
+
+
 const sf::Texture& TextureCache::get(const PieceType type, const Color color) {
     static std::map<std::string, sf::Texture> cache;
 
@@ -135,8 +138,8 @@ void Square::clearHighlight(Highlight highlight) {
 }
 
 int BoardView::getSquareIndexFromCoordinates(int xPos, int yPos) {
-    const int row = static_cast<int>(yPos / SQUARE_WIDTH);
-    const int col = static_cast<int>(xPos / SQUARE_HEIGHT);
+    const int row = static_cast<int>(yPos / Constants::SQUARE_WIDTH_PX);
+    const int col = static_cast<int>(xPos / Constants::SQUARE_HEIGHT_PX);
     return Utils::getSquareIndex(col, row);
 }
 
@@ -162,7 +165,7 @@ void BoardView::draw(sf::RenderWindow& window, const std::optional<int> heldSqua
         const bool isLight = row%2 == col%2;
         Square squareObject = board_.at(squareIndex);
 
-        sf::RectangleShape squareShape{{SQUARE_WIDTH, SQUARE_HEIGHT}};
+        sf::RectangleShape squareShape{{Constants::SQUARE_WIDTH_PX, Constants::SQUARE_HEIGHT_PX}};
 
         // determine square color
         sf::Color color;
@@ -174,8 +177,8 @@ void BoardView::draw(sf::RenderWindow& window, const std::optional<int> heldSqua
         squareShape.setFillColor(color);
 
         // set position based on row/col
-        const float xpos = SQUARE_WIDTH * col;
-        const float ypos = SQUARE_HEIGHT * row;
+        const float xpos = Constants::SQUARE_WIDTH_PX * col;
+        const float ypos = Constants::SQUARE_HEIGHT_PX * row;
         squareShape.setPosition({xpos, ypos});
         window.draw(squareShape);
 
@@ -223,11 +226,11 @@ void BoardView::updateBoardFromGame(const Game& game) {
         const int row = Utils::getRow(squareIndex);
         const int col = Utils::getCol(squareIndex);
 
-        const float xPos = SQUARE_WIDTH * col;
-        const float yPos = SQUARE_WIDTH * row;
+        const float xPos = Constants::SQUARE_WIDTH_PX * col;
+        const float yPos = Constants::SQUARE_WIDTH_PX * row;
 
-        constexpr float SPRITE_CENTER_X_OFFSET = SQUARE_WIDTH * 0.5F;
-        constexpr float SPRITE_CENTER_Y_OFFSET = SQUARE_HEIGHT * 0.5F;
+        constexpr float SPRITE_CENTER_X_OFFSET = Constants::SQUARE_WIDTH_PX * 0.5F;
+        constexpr float SPRITE_CENTER_Y_OFFSET = Constants::SQUARE_HEIGHT_PX * 0.5F;
 
         Square& square = board_.at(squareIndex);
         const Piece piece = game.pieceAtSquareForGui(squareIndex);
@@ -235,7 +238,7 @@ void BoardView::updateBoardFromGame(const Game& game) {
         square.pieceSprite() = PieceSprite{piece};
         // fit to center of square
         square.pieceSprite().centerOrigin();
-        square.pieceSprite().fitToSquare(SQUARE_WIDTH * piecePercentageInSquare);
+        square.pieceSprite().fitToSquare(Constants::SQUARE_WIDTH_PX * piecePercentageInSquare);
 
         square.pieceSprite().updateSpritePosition(xPos + SPRITE_CENTER_X_OFFSET, yPos + SPRITE_CENTER_Y_OFFSET);
     }
