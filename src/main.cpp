@@ -9,7 +9,8 @@
 #include "engine/Engine.hpp"
 #include "game/Game.hpp"
 #include "game/Utils.hpp"
-#include "gui/Board.hpp"
+#include "gui/BoardView.hpp"
+#include "gui/Renderer.hpp"
 
 constexpr int STARTING_WINDOW_WIDTH = 1000;
 constexpr int STARTING_WINDOW_HEIGHT = 1000;
@@ -19,35 +20,35 @@ constexpr float VOLUME_PERCENTAGE = 75.F;
 constexpr int BOARD_WIDTH = 800;
 constexpr int BOARD_HEIGHT = 800; 
 
-// TODO: implement CLI class and move Game.to_string()
-// void runCLIGame() {
-//     // init game
-//     Game game;
-//     game.loadFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR");
+/* TODO: implement CLI class and move Game.to_string()
+void runCLIGame() {
+    // init game
+    Game game;
+    game.loadFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR");
 
-//     while(!game.isFinished()) {
-//         // Print info to player
-//         std::cout << game.to_string() << "\n" << (game.currentTurn() == Color::White ? "White" : "Black") << "'s turn\nMove: ";
-//         // read move from input
-//         std::string moveS;
-//         std::getline(std::cin, moveS);
+    while(!game.isFinished()) {
+        // Print info to player
+        std::cout << game.to_string() << "\n" << (game.currentTurn() == Color::White ? "White" : "Black") << "'s turn\nMove: ";
+        // read move from input
+        std::string moveS;
+        std::getline(std::cin, moveS);
 
-//         std::optional<Move> possibleMove = game.parseMove(moveS);
-//         if(!possibleMove) {
-//             // invalid move
-//             std::cout << "Invalid move. Try again.\n";
-//             continue;
-//         }
-//         const Move move = possibleMove.value();
-//         std::cout << "Parsed move: " << move.to_string(game) << "\n";
+        std::optional<Move> possibleMove = game.parseMove(moveS);
+        if(!possibleMove) {
+            // invalid move
+            std::cout << "Invalid move. Try again.\n";
+            continue;
+        }
+        const Move move = possibleMove.value();
+        std::cout << "Parsed move: " << move.to_string(game) << "\n";
 
-//         if(!game.tryMove(move)) {
-//             std::cout << "Move is not legal. Try again.\n";
-//             continue;
-//         }
-//         std::cout << "\n";
-//     }
-// }
+        if(!game.tryMove(move)) {
+            std::cout << "Move is not legal. Try again.\n";
+            continue;
+        }
+        std::cout << "\n";
+    }
+} */
 
 void runGUIBitboardTest() {
     constexpr int BITBOARD_BUTTONS_X_START = 820;
@@ -98,7 +99,7 @@ void runGUIBitboardTest() {
     game.loadFEN(std::string{Utils::STARTING_FEN});
 
     // init board
-    Board board;
+    BoardView board;
     board.updateBoardFromGame(game);
 
     // init window
@@ -167,7 +168,7 @@ void runGUIBitboardTest() {
                         continue;
                     }
 
-                    int targetSquare = Board::getSquareIndexFromCoordinates(mousePos.x, mousePos.y);
+                    int targetSquare = BoardView::getSquareIndexFromCoordinates(mousePos.x, mousePos.y);
                     
                     // square does not exist; reset any selected piece and continue
                     if(!Utils::onBoard(targetSquare)) {
@@ -188,14 +189,14 @@ void runGUIBitboardTest() {
                         isDragging = true;
 
                         // highlight selected square if there's a piece there
-                        board.at(targetSquare).setHighlight(Board::SELECTED_HIGHLIGHT);
+                        board.at(targetSquare).setHighlight(BoardView::SELECTED_HIGHLIGHT);
 
                         // highlight legal moves
                         MoveList legalMoves;
                         game.generateLegalMovesFromSquare(targetSquare, legalMoves);
                         for(int i = 0; i < legalMoves.size; i++) {
                             const Move move = legalMoves.data[i];
-                            board.at(move.targetSquare()).setHighlight(Board::LEGAL_HIGHLIGHT);
+                            board.at(move.targetSquare()).setHighlight(BoardView::LEGAL_HIGHLIGHT);
                         }
 
                         dragPosPx = {static_cast<float>(mousePos.x), static_cast<float>(mousePos.y)};
@@ -208,7 +209,7 @@ void runGUIBitboardTest() {
                     // if same square, we remove highlight and cancel move
                     if(sourceSquare == targetSquare) {
                         heldSquare.reset();
-                        board.clearAllHighlights(Board::SELECTED_HIGHLIGHT);
+                        board.clearAllHighlights(BoardView::SELECTED_HIGHLIGHT);
                         continue;
                     }
                     
@@ -220,14 +221,14 @@ void runGUIBitboardTest() {
                     }
 
                     heldSquare.reset();
-                    board.clearAllHighlightsExcept(Board::RIGHT_CLICK_HIGHLIGHT);
+                    board.clearAllHighlightsExcept(BoardView::RIGHT_CLICK_HIGHLIGHT);
                 }
                 
                 // RIGHT CLICK
                 if(mouseObject->button == sf::Mouse::Button::Right) {
                     // clear all left click highlights
-                    board.clearAllHighlights(Board::LEGAL_HIGHLIGHT);
-                    board.clearAllHighlights(Board::SELECTED_HIGHLIGHT);
+                    board.clearAllHighlights(BoardView::LEGAL_HIGHLIGHT);
+                    board.clearAllHighlights(BoardView::SELECTED_HIGHLIGHT);
 
                     // right click cancels any held square
                     heldSquare.reset();
@@ -239,11 +240,11 @@ void runGUIBitboardTest() {
                         continue;
                     }
 
-                    const int targetSquare = Board::getSquareIndexFromCoordinates(mousePos.x, mousePos.y);
+                    const int targetSquare = BoardView::getSquareIndexFromCoordinates(mousePos.x, mousePos.y);
                     
                     // swap highlight status of square
                     if(Utils::onBoard(targetSquare)) {
-                        board.at(targetSquare).toggleHighlight(Board::RIGHT_CLICK_HIGHLIGHT);
+                        board.at(targetSquare).toggleHighlight(BoardView::RIGHT_CLICK_HIGHLIGHT);
                     }
                 }
             }
@@ -266,7 +267,7 @@ void runGUIBitboardTest() {
                         continue;
                     }
 
-                    const int targetSquare = Board::getSquareIndexFromCoordinates(mouseObject->position.x, mouseObject->position.y);
+                    const int targetSquare = BoardView::getSquareIndexFromCoordinates(mouseObject->position.x, mouseObject->position.y);
                     
                     // out of bounds
                     if(!Utils::onBoard(targetSquare)) {
@@ -290,7 +291,7 @@ void runGUIBitboardTest() {
 
                     heldSquare.reset();
                     // only dont undo right click highlights
-                    board.clearAllHighlightsExcept(Board::RIGHT_CLICK_HIGHLIGHT);
+                    board.clearAllHighlightsExcept(BoardView::RIGHT_CLICK_HIGHLIGHT);
                 }
             }
         }
@@ -301,12 +302,12 @@ void runGUIBitboardTest() {
         // TODO: replace check highlight with sprite
         if(game.isInCheck(game.sideToMove())) {
             // add check highlight after main loop to override other highlights
-            board.at(game.findKingSquare(game.sideToMove())).setHighlight(Board::CHECK_HIGHLIGHT);
+            board.at(game.findKingSquare(game.sideToMove())).setHighlight(BoardView::CHECK_HIGHLIGHT);
         }
 
         // highlight squares based on the chosen bitboard
-        board.clearAllHighlights(Board::RIGHT_CLICK_HIGHLIGHT);
-        board.clearAllHighlights(Board::CYAN_HIGHLIGHT);
+        board.clearAllHighlights(BoardView::RIGHT_CLICK_HIGHLIGHT);
+        board.clearAllHighlights(BoardView::CYAN_HIGHLIGHT);
         if(chosenBitboard.has_value()) {
             const Piece bitboardPiece = bitboardNumberToPiece(static_cast<bitboardNumber>(chosenBitboard.value()));
             const Bitboard bitboard = game.pieceToBitboard(bitboardPiece);
@@ -317,7 +318,7 @@ void runGUIBitboardTest() {
             // paint board based on allPieces
             while(!allPieces.empty()) {
                 const int pieceLocation = allPieces.popLsb();
-                board.at(pieceLocation).setHighlight(Board::CYAN_HIGHLIGHT);
+                board.at(pieceLocation).setHighlight(BoardView::CYAN_HIGHLIGHT);
             }
 
             // highlight attack bitboards by building all attacks from bitboard
@@ -331,13 +332,13 @@ void runGUIBitboardTest() {
             // // then, paint board based on allAttacks
             // while(!allAttacks.empty()) {
             //     const int attackLocation = allAttacks.popLsb();
-            //     board.at(attackLocation).setHighlight(Board::CYAN_HIGHLIGHT);
+            //     board.at(attackLocation).setHighlight(BoardView::CYAN_HIGHLIGHT);
             // }
 
             for(int square = 0; square < Utils::NUM_SQUARES; square++) {
                 // highlight chosen bitboard after so red is on top of cyan
                 if(bitboard.containsSquare(square)) {
-                    board.at(square).setHighlight(Board::RIGHT_CLICK_HIGHLIGHT);
+                    board.at(square).setHighlight(BoardView::RIGHT_CLICK_HIGHLIGHT);
                 }
             }
         }
@@ -407,7 +408,7 @@ void run2PlayerGUIgame() {
     game.loadFEN(std::string{Utils::STARTING_FEN});
 
     // init board
-    Board board;
+    BoardView board;
     board.updateBoardFromGame(game);
 
     // init window
@@ -449,7 +450,7 @@ void run2PlayerGUIgame() {
                         continue;
                     }
 
-                    int targetSquare = Board::getSquareIndexFromCoordinates(mousePos.x, mousePos.y);
+                    int targetSquare = BoardView::getSquareIndexFromCoordinates(mousePos.x, mousePos.y);
                     
                     // square does not exist; reset any selected piece and continue
                     if(!Utils::onBoard(targetSquare)) {
@@ -470,14 +471,14 @@ void run2PlayerGUIgame() {
                         isDragging = true;
 
                         // highlight selected square if there's a piece there
-                        board.at(targetSquare).setHighlight(Board::SELECTED_HIGHLIGHT);
+                        board.at(targetSquare).setHighlight(BoardView::SELECTED_HIGHLIGHT);
 
                         // highlight legal moves
                         MoveList legalMoves;
                         game.generateLegalMovesFromSquare(targetSquare, legalMoves);
                         for(int i = 0; i < legalMoves.size; i++) {
                             const Move move = legalMoves.data[i];
-                            board.at(move.targetSquare()).setHighlight(Board::LEGAL_HIGHLIGHT);
+                            board.at(move.targetSquare()).setHighlight(BoardView::LEGAL_HIGHLIGHT);
                         }
 
                         dragPosPx = {static_cast<float>(mousePos.x), static_cast<float>(mousePos.y)};
@@ -490,7 +491,7 @@ void run2PlayerGUIgame() {
                     // if same square, we remove highlight and cancel move
                     if(sourceSquare == targetSquare) {
                         heldSquare.reset();
-                        board.clearAllHighlights(Board::SELECTED_HIGHLIGHT);
+                        board.clearAllHighlights(BoardView::SELECTED_HIGHLIGHT);
                         continue;
                     }
                     
@@ -502,14 +503,14 @@ void run2PlayerGUIgame() {
                     }
                     
                     heldSquare.reset();
-                    board.clearAllHighlightsExcept(Board::RIGHT_CLICK_HIGHLIGHT);
+                    board.clearAllHighlightsExcept(BoardView::RIGHT_CLICK_HIGHLIGHT);
                 }
                 
                 // RIGHT CLICK
                 if(mouseObject->button == sf::Mouse::Button::Right) {
                     // clear all left click highlights
-                    board.clearAllHighlights(Board::LEGAL_HIGHLIGHT);
-                    board.clearAllHighlights(Board::SELECTED_HIGHLIGHT);
+                    board.clearAllHighlights(BoardView::LEGAL_HIGHLIGHT);
+                    board.clearAllHighlights(BoardView::SELECTED_HIGHLIGHT);
 
                     // right click cancels any held square
                     heldSquare.reset();
@@ -521,11 +522,11 @@ void run2PlayerGUIgame() {
                         continue;
                     }
 
-                    const int targetSquare = Board::getSquareIndexFromCoordinates(mousePos.x, mousePos.y);
+                    const int targetSquare = BoardView::getSquareIndexFromCoordinates(mousePos.x, mousePos.y);
                     
                     // swap highlight status of square
                     if(Utils::onBoard(targetSquare)) {
-                        board.at(targetSquare).toggleHighlight(Board::RIGHT_CLICK_HIGHLIGHT);
+                        board.at(targetSquare).toggleHighlight(BoardView::RIGHT_CLICK_HIGHLIGHT);
                     }
                 }
             }
@@ -548,7 +549,7 @@ void run2PlayerGUIgame() {
                         continue;
                     }
 
-                    const int targetSquare = Board::getSquareIndexFromCoordinates(mouseObject->position.x, mouseObject->position.y);
+                    const int targetSquare = BoardView::getSquareIndexFromCoordinates(mouseObject->position.x, mouseObject->position.y);
                     
                     // out of bounds
                     if(!Utils::onBoard(targetSquare)) {
@@ -571,7 +572,7 @@ void run2PlayerGUIgame() {
                     }
 
                     heldSquare.reset();
-                    board.clearAllHighlightsExcept(Board::RIGHT_CLICK_HIGHLIGHT);
+                    board.clearAllHighlightsExcept(BoardView::RIGHT_CLICK_HIGHLIGHT);
                 }
             }
         }
@@ -579,17 +580,17 @@ void run2PlayerGUIgame() {
         // highlight attacked squares
         // for(int i = 0; i < Utils::NUM_SQUARES; i++) {
         //     if(game.isSquareAttacked(i, Color::White)) {
-        //         board.at(i).setHighlight(Board::CYAN_HIGHLIGHT);
+        //         board.at(i).setHighlight(BoardView::CYAN_HIGHLIGHT);
         //     }
         //     if(game.isSquareAttacked(i, Color::Black)) {
-        //         board.at(i).setHighlight(Board::CYAN_HIGHLIGHT);
+        //         board.at(i).setHighlight(BoardView::CYAN_HIGHLIGHT);
         //     }
         // }
 
         // TODO: replace check highlight with sprite
         if(game.isInCheck(game.sideToMove())) {
             // add check highlight after main loop to override other highlights
-            board.at(game.findKingSquare(game.sideToMove())).setHighlight(Board::CHECK_HIGHLIGHT);
+            board.at(game.findKingSquare(game.sideToMove())).setHighlight(BoardView::CHECK_HIGHLIGHT);
         }
 
         // clear the window
@@ -613,30 +614,26 @@ void run2PlayerGUIgame() {
 }
 
 void run1PlayerGUIgame() {
-    // init game
     Game game;
-    game.loadFEN(std::string{Utils::STARTING_FEN});
+    BoardView board;
 
-    // init board
-    Board board;
+    // Sync game and board to starting position
+    game.loadFEN(std::string{Utils::STARTING_FEN});
     board.updateBoardFromGame(game);
 
-    // init window
     sf::RenderWindow window{sf::VideoMode{{STARTING_WINDOW_WIDTH, STARTING_WINDOW_HEIGHT}}, std::string{WINDOW_TITLE}};
-    // enable vsync
     window.setVerticalSyncEnabled(true);
 
-    // init engine
     Engine engine;
+
+    // init renderer
+    Renderer renderer{&board, &window};
 
     // init sounds
     // TODO: potentially throw / recover from file missing
     const sf::SoundBuffer PIECE_MOVEMENT_BUFFER{"assets/sounds/piece_movement.wav"};
     sf::Sound PIECE_MOVEMENT_SOUND{PIECE_MOVEMENT_BUFFER};
     PIECE_MOVEMENT_SOUND.setVolume(VOLUME_PERCENTAGE);
-
-    // init font
-    const sf::Font font{"assets/fonts/LiberationSans-Regular.ttf"};
 
     // TODO: we assume player 1 (non-engine) is always white; create a way to change this
     const Color player1Color = Color::White; 
@@ -652,12 +649,7 @@ void run1PlayerGUIgame() {
     SearchStats currentStats{};
 
     // main game loop
-    while (true) {
-        // if window is ever closed, we're done with the game
-        if(!window.isOpen()) {
-            break;
-        }
-
+    while (window.isOpen()) {
         // handle engine moves
         if(!game.isFinished() && game.sideToMove() != player1Color) {
             // make engine move
@@ -672,7 +664,7 @@ void run1PlayerGUIgame() {
                 std::cerr << "Engine tried to make move: " << engineMove.to_string(game);
                 assert(false);
             }
-            // This is a good move, we can make it and update the stats
+            // This is a valid move, we can make it and update the stats
             currentEval = possibleCurrentEval;
             currentStats = possibleCurrentStats;
 
@@ -713,7 +705,7 @@ void run1PlayerGUIgame() {
                         continue;
                     }
 
-                    int targetSquare = Board::getSquareIndexFromCoordinates(mousePos.x, mousePos.y);
+                    int targetSquare = BoardView::getSquareIndexFromCoordinates(mousePos.x, mousePos.y);
                     
                     // square does not exist; reset any selected piece and continue
                     if(!Utils::onBoard(targetSquare)) {
@@ -734,14 +726,14 @@ void run1PlayerGUIgame() {
                         isDragging = true;
 
                         // highlight selected square if there's a piece there
-                        board.at(targetSquare).setHighlight(Board::SELECTED_HIGHLIGHT);
+                        board.at(targetSquare).setHighlight(BoardView::SELECTED_HIGHLIGHT);
 
                         // highlight legal moves
                         MoveList legalMoves;
                         game.generateLegalMovesFromSquare(targetSquare, legalMoves);
                         for(int i = 0; i < legalMoves.size; i++) {
                             const Move move = legalMoves.data[i];
-                            board.at(move.targetSquare()).setHighlight(Board::LEGAL_HIGHLIGHT);
+                            board.at(move.targetSquare()).setHighlight(BoardView::LEGAL_HIGHLIGHT);
                         }
 
                         dragPosPx = {static_cast<float>(mousePos.x), static_cast<float>(mousePos.y)};
@@ -754,7 +746,7 @@ void run1PlayerGUIgame() {
                     // if same square, we remove highlight and cancel move
                     if(sourceSquare == targetSquare) {
                         heldSquare.reset();
-                        board.clearAllHighlights(Board::SELECTED_HIGHLIGHT);
+                        board.clearAllHighlights(BoardView::SELECTED_HIGHLIGHT);
                         continue;
                     }
                     
@@ -766,14 +758,14 @@ void run1PlayerGUIgame() {
                     }
                     
                     heldSquare.reset();
-                    board.clearAllHighlightsExcept(Board::RIGHT_CLICK_HIGHLIGHT);
+                    board.clearAllHighlightsExcept(BoardView::RIGHT_CLICK_HIGHLIGHT);
                 }
                 
                 // RIGHT CLICK
                 if(mouseObject->button == sf::Mouse::Button::Right) {
                     // clear all left click highlights
-                    board.clearAllHighlights(Board::LEGAL_HIGHLIGHT);
-                    board.clearAllHighlights(Board::SELECTED_HIGHLIGHT);
+                    board.clearAllHighlights(BoardView::LEGAL_HIGHLIGHT);
+                    board.clearAllHighlights(BoardView::SELECTED_HIGHLIGHT);
 
                     // right click cancels any held square
                     heldSquare.reset();
@@ -785,11 +777,11 @@ void run1PlayerGUIgame() {
                         continue;
                     }
 
-                    const int targetSquare = Board::getSquareIndexFromCoordinates(mousePos.x, mousePos.y);
+                    const int targetSquare = BoardView::getSquareIndexFromCoordinates(mousePos.x, mousePos.y);
                     
                     // swap highlight status of square
                     if(Utils::onBoard(targetSquare)) {
-                        board.at(targetSquare).toggleHighlight(Board::RIGHT_CLICK_HIGHLIGHT);
+                        board.at(targetSquare).toggleHighlight(BoardView::RIGHT_CLICK_HIGHLIGHT);
                     }
                 }
             }
@@ -812,7 +804,7 @@ void run1PlayerGUIgame() {
                         continue;
                     }
 
-                    const int targetSquare = Board::getSquareIndexFromCoordinates(mouseObject->position.x, mouseObject->position.y);
+                    const int targetSquare = BoardView::getSquareIndexFromCoordinates(mouseObject->position.x, mouseObject->position.y);
                     
                     // out of bounds
                     if(!Utils::onBoard(targetSquare)) {
@@ -835,7 +827,7 @@ void run1PlayerGUIgame() {
                     }
 
                     heldSquare.reset();
-                    board.clearAllHighlightsExcept(Board::RIGHT_CLICK_HIGHLIGHT);
+                    board.clearAllHighlightsExcept(BoardView::RIGHT_CLICK_HIGHLIGHT);
                 }
             }
         }
@@ -843,63 +835,21 @@ void run1PlayerGUIgame() {
         // highlight attacked squares
         // for(int i = 0; i < Utils::NUM_SQUARES; i++) {
         //     if(game.isSquareAttacked(i, Color::White)) {
-        //         board.at(i).setHighlight(Board::CYAN_HIGHLIGHT);
+        //         board.at(i).setHighlight(BoardView::CYAN_HIGHLIGHT);
         //     }
         //     if(game.isSquareAttacked(i, Color::Black)) {
-        //         board.at(i).setHighlight(Board::CYAN_HIGHLIGHT);
+        //         board.at(i).setHighlight(BoardView::CYAN_HIGHLIGHT);
         //     }
         // }
 
         // TODO: replace check highlight with sprite
-        board.clearAllHighlights(Board::CHECK_HIGHLIGHT);
+        board.clearAllHighlights(BoardView::CHECK_HIGHLIGHT);
         if(game.isInCheck(game.sideToMove())) {
             // add check highlight after main loop to override other highlights
-            board.at(game.findKingSquare(game.sideToMove())).setHighlight(Board::CHECK_HIGHLIGHT);
+            board.at(game.findKingSquare(game.sideToMove())).setHighlight(BoardView::CHECK_HIGHLIGHT);
         }
 
-        // clear the window
-        window.clear(sf::Color::Black);
-
-        // draw board without heldSqaure iff we are dragging
-        board.draw(window, isDragging ? heldSquare : std::nullopt);
-
-        // if heldSquare and we are dragging, we copy sprite to mouse
-        if(heldSquare && isDragging) {
-            if (const sf::Sprite* sprite = board.at(*heldSquare).pieceSprite().sprite()) {
-                sf::Sprite dragSprite = *sprite;
-                dragSprite.setPosition(dragPosPx);
-                window.draw(dragSprite);
-            }
-        }
-
-        // draw the engine's evaluation of the position
-        constexpr sf::Vector2f evalTextPosition = {100.F, 850.F};
-        constexpr sf::Vector2f statsTextPosition = {400.F, 850.F};
-        const int evalTextFontSize = 50;
-        const int statsTextFontSize = 25;
-        // load currentEval into string with 2 decimal places
-        sf::Text evalText{font};
-        evalText.setString(Eval::evalToString(currentEval, game.sideToMove()));
-        evalText.setPosition(evalTextPosition);
-        evalText.setFillColor(sf::Color::White);
-        evalText.setCharacterSize(evalTextFontSize);
-        window.draw(evalText);
-
-        // load currentStats into string with 2 decimal places
-        sf::Text statsText{font};
-        // Nodes Searched: n
-        // QNodes Searched: q
-        // Positions Searched: n + q
-        statsText.setString("Nodes Searched: " + std::to_string(currentStats.nodes) +
-                            "\nQNodes Searched: " + std::to_string(currentStats.qnodes) +
-                            "\nPositions Searched: " + std::to_string(currentStats.nodes + currentStats.qnodes));
-        statsText.setPosition(statsTextPosition);
-        statsText.setFillColor(sf::Color::White);
-        statsText.setCharacterSize(statsTextFontSize);
-        window.draw(statsText);
-
-        // end the current frame
-        window.display();
+        renderer.render(heldSquare, isDragging, currentEval, currentStats, dragPosPx, game.sideToMove());
     }
 }
 

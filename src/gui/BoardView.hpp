@@ -88,7 +88,7 @@ private:
 };
 
 // Manages graphical representation of the board.
-class Board{
+class BoardView{
 public:
     // Width of the board in pixels.
     static constexpr int BOARD_WIDTH = 800;
@@ -130,9 +130,11 @@ public:
     static constexpr Highlight CYAN_HIGHLIGHT{LIGHT_CYAN_SQUARE_COLOR, DARK_CYAN_SQUARE_COLOR};
 
     // Construct an empty board. I.e., a board with all empty squares.
-    Board() = default;
+    BoardView() = default;
     // Retrieve square at a given board square. Throws if out of range.
     Square& at(int squareIndex);
+    // Read-only version of at(). Throws if out of range.
+    Square at(int squareIndex) const;
 
     // Draw board to window.
     void draw(sf::RenderWindow& window) const;

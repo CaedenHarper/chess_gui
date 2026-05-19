@@ -6,7 +6,7 @@
 
 #include <SFML/Graphics.hpp>
 
-#include "Board.hpp"
+#include "BoardView.hpp"
 #include "../game/Utils.hpp"
 
 const sf::Texture& TextureCache::get(const PieceType type, const Color color) {
@@ -134,22 +134,26 @@ void Square::clearHighlight(Highlight highlight) {
     }
 }
 
-int Board::getSquareIndexFromCoordinates(int xPos, int yPos) {
+int BoardView::getSquareIndexFromCoordinates(int xPos, int yPos) {
     const int row = static_cast<int>(yPos / SQUARE_WIDTH);
     const int col = static_cast<int>(xPos / SQUARE_HEIGHT);
     return Utils::getSquareIndex(col, row);
 }
 
-Square& Board::at(int squareIndex) {
+Square& BoardView::at(int squareIndex) {
     return board_.at(squareIndex);
 }
 
-void Board::draw(sf::RenderWindow& window) const {
+Square BoardView::at(int squareIndex) const {
+    return board_.at(squareIndex);
+}
+
+void BoardView::draw(sf::RenderWindow& window) const {
     // other overload skips over nothing given std::nullopt
     draw(window, std::nullopt);
 }
 
-void Board::draw(sf::RenderWindow& window, const std::optional<int> heldSquare) const {
+void BoardView::draw(sf::RenderWindow& window, const std::optional<int> heldSquare) const {
     // draw row by row
     for(int squareIndex = 0; squareIndex < Utils::NUM_SQUARES; squareIndex++) {
         // get row and col from index
@@ -186,19 +190,19 @@ void Board::draw(sf::RenderWindow& window, const std::optional<int> heldSquare) 
     }
 }
 
-void Board::clearAllHighlights() {
+void BoardView::clearAllHighlights() {
     for(Square& square : board_) {
         square.clearHighlight();
     }
 }
 
-void Board::clearAllHighlights(const Highlight highlightToClear) {
+void BoardView::clearAllHighlights(const Highlight highlightToClear) {
     for(Square& square : board_) {
         square.clearHighlight(highlightToClear);
     }
 }
 
-void Board::clearAllHighlightsExcept(const Highlight highlightToSkip) {
+void BoardView::clearAllHighlightsExcept(const Highlight highlightToSkip) {
     for(Square& square : board_) {
         if(square.hasHighlight() && square.highlight() == highlightToSkip) {
             // skip if input matches
@@ -210,7 +214,7 @@ void Board::clearAllHighlightsExcept(const Highlight highlightToSkip) {
     }
 }
 
-void Board::updateBoardFromGame(const Game& game) {
+void BoardView::updateBoardFromGame(const Game& game) {
     // Square takes up 97% of the square
     constexpr float piecePercentageInSquare = 0.97F;
 
