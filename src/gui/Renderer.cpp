@@ -11,11 +11,11 @@
 #include "Renderer.hpp"
 #include "TextureCache.hpp"
 
-void Renderer::render(const Game& game, const RenderState& state) {
+void Renderer::render(Game& game, const RenderState& state) {
     clearWindow(sf::Color::Black);
 
     drawSquares();
-    drawHighlights(state);
+    drawHighlights(game, state);
     drawPieces(game, state.heldPiece);
     drawDraggedPiece(game, state.heldPiece);
     drawEngineEval(state.currentEval, game.sideToMove());
@@ -34,13 +34,13 @@ void Renderer::drawSquares() {
     }
 }
 
-void Renderer::drawPieces(const Game& game, std::optional<HeldPieceState> heldPiece) {
+void Renderer::drawPieces(Game& game, std::optional<HeldPieceState> heldPiece) {
     for(int square = 0; square < Utils::NUM_SQUARES; square++) {
         drawPieceOnSquare(game, square, heldPiece);
     }
 }
 
-void Renderer::drawDraggedPiece(const Game& game, std::optional<HeldPieceState> heldPiece) {
+void Renderer::drawDraggedPiece(Game& game, std::optional<HeldPieceState> heldPiece) {
     if(!heldPiece) {
         return;
     }
@@ -85,7 +85,7 @@ void Renderer::drawEngineStats(SearchStats currentStats) {
     window_->draw(statsText);
 }
 
-void Renderer::drawPieceOnSquare(const Game& game, int square, std::optional<HeldPieceState> heldPiece) {
+void Renderer::drawPieceOnSquare(Game& game, int square, std::optional<HeldPieceState> heldPiece) {
     if(game.isSquareEmpty(square)) {
         return;
     }
@@ -119,10 +119,10 @@ void Renderer::drawSquare(int square, sf::Color color) {
     window_->draw(squareShape);
 }
 
-void Renderer::drawHighlights(RenderState state) {
+void Renderer::drawHighlights(Game& game, RenderState state) {
     drawSelectedSquareHighlight(state.heldPiece);
-    drawLegalMoveHighlights();
-    drawCheckHighlights();
+    drawLegalMoveHighlights(game, state.heldPiece);
+    drawCheckHighlights(game);
     drawRedHighlights(state.redHighlightSquares);
 }
 
@@ -134,12 +134,26 @@ void Renderer::drawSelectedSquareHighlight(std::optional<HeldPieceState> heldPie
     highlightSquare(heldPiece->heldSquare, RenderUtils::SELECTED_HIGHLIGHT);
 }
 
-void Renderer::drawLegalMoveHighlights() {
+void Renderer::drawLegalMoveHighlights(Game& game, std::optional<HeldPieceState> heldPiece) {
+    if(!heldPiece) {
+        return;
+    }
 
+    MoveList legalMoves;
+    game.generateLegalMovesFromSquare(heldPiece->heldSquare, legalMoves);
+    for(int i = 0; i < legalMoves.size; i++) {
+        const Move move = legalMoves.data[i];
+        highlightSquare(move.targetSquare(), RenderUtils::LEGAL_HIGHLIGHT);
+    }
 }
 
-void Renderer::drawCheckHighlights() {
+void Renderer::drawCheckHighlights(Game& game) {
+    if(!game.isInCheck(game.sideToMove())) {
+        return;
+    }
 
+    const int kingSquare = game.findKingSquare(game.sideToMove());
+    highlightSquare(kingSquare, RenderUtils::CHECK_HIGHLIGHT);
 }
 
 void Renderer::drawRedHighlights(std::array<bool, Utils::NUM_SQUARES> redHighlightSquares) {
