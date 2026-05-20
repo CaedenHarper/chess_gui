@@ -123,7 +123,7 @@ void Renderer::drawHighlights(RenderState state) {
     drawSelectedSquareHighlight(state.heldPiece);
     drawLegalMoveHighlights();
     drawCheckHighlights();
-    drawRedHighlights(state.redHighlightSquare);
+    drawRedHighlights(state.redHighlightSquares);
 }
 
 void Renderer::drawSelectedSquareHighlight(std::optional<HeldPieceState> heldPiece) {
@@ -142,12 +142,14 @@ void Renderer::drawCheckHighlights() {
 
 }
 
-void Renderer::drawRedHighlights(std::optional<int> redHighlightSquare) {
-    if(!redHighlightSquare) {
-        return;
-    }
+void Renderer::drawRedHighlights(std::array<bool, Utils::NUM_SQUARES> redHighlightSquares) {
+    for(int square = 0; square < Utils::NUM_SQUARES; square++) {
+        if(!redHighlightSquares.at(square)) {
+            continue;
+        }
 
-    highlightSquare(*redHighlightSquare, RenderUtils::RIGHT_CLICK_HIGHLIGHT);
+        highlightSquare(square, RenderUtils::RIGHT_CLICK_HIGHLIGHT);
+    }
 }
 
 void Renderer::highlightSquare(int square, Highlight highlight) {

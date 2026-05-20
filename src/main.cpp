@@ -643,7 +643,7 @@ void run1PlayerGUIgame() {
     SearchStats currentStats{};
 
     // init highlighted squares which are passed to renderer
-    std::optional<int> redHighlightSquare;
+    std::array<bool, Utils::NUM_SQUARES> redHighlightSquares{};
 
     // main game loop
     while (window.isOpen()) {
@@ -691,12 +691,17 @@ void run1PlayerGUIgame() {
                     PIECE_MOVEMENT_SOUND.play();
                     break;
                 case InputResult::Type::RedHighlight:
-                    redHighlightSquare = result.square();
+                    if(!result.square()) {
+                        assert(false);
+                        break;
+                    }
+
+                    redHighlightSquares.at(*result.square()) = !redHighlightSquares.at(*result.square());
                     break;
             }
         }
         
-        const RenderState state{inputHandler.heldPiece(), currentEval, currentStats, redHighlightSquare};
+        const RenderState state{inputHandler.heldPiece(), currentEval, currentStats, redHighlightSquares};
         renderer.render(game, state);
     }
 }
