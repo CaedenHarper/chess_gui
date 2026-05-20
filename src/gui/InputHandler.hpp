@@ -5,13 +5,49 @@
 #include <SFML/Graphics.hpp>
 
 #include "../game/Game.hpp"
-#include "BoardView.hpp"
 
 #include <optional>
 
-enum class InputResult : std::int8_t {
-    None,
-    MoveMade
+class InputResult {
+public:
+    enum class Type : std::int8_t {
+        None,
+        InvalidMove,
+        MoveMade,
+        RedHighlight
+    };
+
+    static InputResult none() {
+        return InputResult{Type::None, std::nullopt};
+    }
+
+    static InputResult invalidMove() {
+        return InputResult{Type::InvalidMove, std::nullopt};
+    }
+
+    static InputResult moveMade() {
+        return InputResult{Type::MoveMade, std::nullopt};
+    }
+
+    static InputResult redHighlight(int square) {
+        return InputResult{Type::RedHighlight, square};
+    }
+
+    Type type() const {
+        return type_;
+    }
+
+    std::optional<int> square() const {
+        return square_;
+    }
+
+private:
+    // Only allow the valid states above
+    InputResult(Type type, std::optional<int> square)
+        : type_{type}, square_{square} {}
+
+    Type type_ = Type::None;
+    std::optional<int> square_ = std::nullopt;
 };
 
 struct HeldPieceState {
@@ -22,9 +58,7 @@ struct HeldPieceState {
 
 class InputHandler {
 public:
-    explicit InputHandler(BoardView* board) : board_{board} {
-
-    }
+    InputHandler() = default;
 
     InputResult handleEvent(const sf::Event& event, Game& game);
 
@@ -40,5 +74,4 @@ private:
     InputResult rightClickEvent(const sf::Event::MouseButtonPressed& event);
     
     std::optional<HeldPieceState> heldPiece_;
-    BoardView* board_;
 };

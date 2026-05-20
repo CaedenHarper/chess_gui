@@ -9,7 +9,6 @@
 #include "engine/Engine.hpp"
 #include "game/Game.hpp"
 #include "game/Utils.hpp"
-#include "gui/BoardView.hpp"
 #include "gui/InputHandler.hpp"
 #include "gui/Renderer.hpp"
 
@@ -617,20 +616,18 @@ void run2PlayerGUIgame() {
 
 void run1PlayerGUIgame() {
     Game game;
-    BoardView board;
 
     // Sync game and board to starting position
     game.loadFEN(std::string{Utils::STARTING_FEN});
-    board.updateBoardFromGame(game);
 
     sf::RenderWindow window{sf::VideoMode{{STARTING_WINDOW_WIDTH, STARTING_WINDOW_HEIGHT}}, std::string{WINDOW_TITLE}};
     window.setVerticalSyncEnabled(true);
 
     Engine engine;
 
-    Renderer renderer{&board, &window};
+    Renderer renderer{&window};
 
-    InputHandler inputHandler{&board};
+    InputHandler inputHandler;
 
     // init sounds
     // TODO: potentially throw / recover from file missing
@@ -644,6 +641,9 @@ void run1PlayerGUIgame() {
     // init engine's current eval of the position to show to player
     int currentEval = 0;
     SearchStats currentStats{};
+
+    // init highlighted squares which are passed to renderer
+    std::array<bool, Utils::NUM_SQUARES> redHighlightSquares{};
 
     // main game loop
     while (window.isOpen()) {
@@ -665,7 +665,6 @@ void run1PlayerGUIgame() {
             currentEval = possibleCurrentEval;
             currentStats = possibleCurrentStats;
 
-            board.updateBoardFromGame(game);
             PIECE_MOVEMENT_SOUND.play();
 
             // remove any buffered events; while the engine is not on its own thread it can slow down the main window,
@@ -677,36 +676,33 @@ void run1PlayerGUIgame() {
         
         // handle events
         while (const std::optional<sf::Event> event = window.pollEvent()) {
+            // Window closing event is special and should be handled here, not in InputHandler
             if (event->is<sf::Event::Closed>()) {
                 window.close();
                 continue;
             }
 
             const InputResult result = inputHandler.handleEvent(event.value(), game);
-            if(result == InputResult::MoveMade) {
-                PIECE_MOVEMENT_SOUND.play();
+            switch(result.type()) {
+                case InputResult::Type::None:
+                case InputResult::Type::InvalidMove: // TODO: consider an invalid move sound
+                    break;
+                case InputResult::Type::MoveMade:
+                    PIECE_MOVEMENT_SOUND.play();
+                    break;
+                case InputResult::Type::RedHighlight:
+                    if(!result.square()) {
+                        assert(false);
+                        break;
+                    }
+
+                    redHighlightSquares.at(*result.square()) = !redHighlightSquares.at(*result.square());
+                    break;
             }
         }
-
-        // highlight attacked squares
-        // for(int i = 0; i < Utils::NUM_SQUARES; i++) {
-        //     if(game.isSquareAttacked(i, Color::White)) {
-        //         board.at(i).setHighlight(BoardView::CYAN_HIGHLIGHT);
-        //     }
-        //     if(game.isSquareAttacked(i, Color::Black)) {
-        //         board.at(i).setHighlight(BoardView::CYAN_HIGHLIGHT);
-        //     }
-        // }
-
-        // TODO: replace check highlight with sprite
-        board.clearAllHighlights(BoardView::CHECK_HIGHLIGHT);
-        if(game.isInCheck(game.sideToMove())) {
-            // add check highlight after main loop to override other highlights
-            board.at(game.findKingSquare(game.sideToMove())).setHighlight(BoardView::CHECK_HIGHLIGHT);
-        }
         
-        const RenderState state{inputHandler.heldPiece(), currentEval, currentStats, game.sideToMove()};
-        renderer.render(state);
+        const RenderState state{inputHandler.heldPiece(), currentEval, currentStats, redHighlightSquares};
+        renderer.render(game, state);
     }
 }
 

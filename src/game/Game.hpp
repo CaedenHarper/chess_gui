@@ -176,6 +176,10 @@ public:
     }
     // If a given square is attacked by the attacking color.
     bool isSquareAttacked(int targetSquare, Color attackingColor) const;
+    // If a given square is empty.
+    constexpr bool isSquareEmpty(int targetSquare) const {
+        return !bbBlackPieces_.containsSquare(targetSquare) && !bbWhitePieces_.containsSquare(targetSquare);
+    }
     // Retrieve king square for a given color. Does not exist if king is not on board.
     constexpr int findKingSquare(const Color& colorToFind) const noexcept {
         Bitboard bbKing = colorToFind == Color::White ? bbWhiteKing_ : bbBlackKing_;
