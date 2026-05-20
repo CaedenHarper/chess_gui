@@ -65,7 +65,7 @@ InputResult InputHandler::mouseUnclickEvent(const sf::Event::MouseButtonReleased
     // therefore, we do not reset heldSquare
     if(sourceSquare == targetSquare) {
         heldPiece_->isDragging = false;
-        return InputResult::selectedSquare(sourceSquare);
+        return InputResult::none();
     }
 
     // move is on board and different square
@@ -106,7 +106,7 @@ InputResult InputHandler::leftClickEvent(const sf::Event::MouseButtonPressed& ev
         // hold square
         heldPiece_ = HeldPieceState{targetSquare, {static_cast<float>(mousePos.x), static_cast<float>(mousePos.y)}, true};
 
-        return InputResult::selectedSquare(targetSquare);
+        return InputResult::none();
     }
 
     // currently held piece exists; click-click move

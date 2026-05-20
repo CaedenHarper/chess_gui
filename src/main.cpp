@@ -644,7 +644,6 @@ void run1PlayerGUIgame() {
 
     // init highlighted squares which are passed to renderer
     std::optional<int> redHighlightSquare;
-    std::optional<int> selectedSquare;
 
     // main game loop
     while (window.isOpen()) {
@@ -694,13 +693,10 @@ void run1PlayerGUIgame() {
                 case InputResult::Type::RedHighlight:
                     redHighlightSquare = result.square();
                     break;
-                case InputResult::Type::SelectedSquare:
-                    selectedSquare = result.square();
-                    break;
             }
         }
         
-        const RenderState state{inputHandler.heldPiece(), currentEval, currentStats, redHighlightSquare, selectedSquare};
+        const RenderState state{inputHandler.heldPiece(), currentEval, currentStats, redHighlightSquare};
         renderer.render(game, state);
     }
 }

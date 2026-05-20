@@ -120,18 +120,18 @@ void Renderer::drawSquare(int square, sf::Color color) {
 }
 
 void Renderer::drawHighlights(RenderState state) {
-    drawSelectedSquareHighlights(state.selectedSquare);
+    drawSelectedSquareHighlight(state.heldPiece);
     drawLegalMoveHighlights();
     drawCheckHighlights();
     drawRedHighlights(state.redHighlightSquare);
 }
 
-void Renderer::drawSelectedSquareHighlights(std::optional<int> selectedSquare) {
-    if(!selectedSquare) {
+void Renderer::drawSelectedSquareHighlight(std::optional<HeldPieceState> heldPiece) {
+    if(!heldPiece) {
         return;
     }
     
-    highlightSquare(*selectedSquare, RenderUtils::SELECTED_HIGHLIGHT);
+    highlightSquare(heldPiece->heldSquare, RenderUtils::SELECTED_HIGHLIGHT);
 }
 
 void Renderer::drawLegalMoveHighlights() {

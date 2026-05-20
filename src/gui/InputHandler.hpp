@@ -14,8 +14,7 @@ public:
         None,
         InvalidMove,
         MoveMade,
-        RedHighlight,
-        SelectedSquare
+        RedHighlight
     };
 
     static InputResult none() {
@@ -32,10 +31,6 @@ public:
 
     static InputResult redHighlight(int square) {
         return InputResult{Type::RedHighlight, square};
-    }
-
-    static InputResult selectedSquare(int square) {
-        return InputResult{Type::SelectedSquare, square};
     }
 
     Type type() const {

@@ -15,8 +15,7 @@ struct RenderState {
     SearchStats currentStats;
 
     std::optional<int> redHighlightSquare;
-    std::optional<int> selectedSquare;
-} __attribute__((aligned(128))); // NOLINT[magic numbers] align to 64 bytes
+} __attribute__((aligned(64))); // NOLINT[magic numbers] align to 64 bytes
 
 class Renderer {
 public:
@@ -37,7 +36,7 @@ private:
     void drawSquare(int square, sf::Color color);
 
     void drawHighlights(RenderState state);
-    void drawSelectedSquareHighlights(std::optional<int> selectedSquare);
+    void drawSelectedSquareHighlight(std::optional<HeldPieceState> heldPiece);
     void drawLegalMoveHighlights();
     void drawCheckHighlights();
     void drawRedHighlights(std::optional<int> redHighlightSquare);
