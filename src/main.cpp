@@ -645,6 +645,10 @@ void run1PlayerGUIgame() {
     int currentEval = 0;
     SearchStats currentStats{};
 
+    // init highlighted squares which are passed to renderer
+    std::optional<int> redHighlightSquare;
+    std::optional<int> selectedSquare;
+
     // main game loop
     while (window.isOpen()) {
         // handle engine moves
@@ -677,36 +681,32 @@ void run1PlayerGUIgame() {
         
         // handle events
         while (const std::optional<sf::Event> event = window.pollEvent()) {
+            // Window closing event is special and should be handled here, not in InputHandler
             if (event->is<sf::Event::Closed>()) {
                 window.close();
                 continue;
             }
 
             const InputResult result = inputHandler.handleEvent(event.value(), game);
-            if(result == InputResult::MoveMade) {
-                PIECE_MOVEMENT_SOUND.play();
+            switch(result.type()) {
+                case InputResult::Type::None:
+                case InputResult::Type::InvalidMove: // TODO: consider an invalid move sound
+                    break;
+                case InputResult::Type::MoveMade:
+                    board.updateBoardFromGame(game);
+                    PIECE_MOVEMENT_SOUND.play();
+                    break;
+                case InputResult::Type::RedHighlight:
+                    redHighlightSquare = result.square();
+                    break;
+                case InputResult::Type::SelectedSquare:
+                    selectedSquare = result.square();
+                    break;
             }
         }
-
-        // highlight attacked squares
-        // for(int i = 0; i < Utils::NUM_SQUARES; i++) {
-        //     if(game.isSquareAttacked(i, Color::White)) {
-        //         board.at(i).setHighlight(BoardView::CYAN_HIGHLIGHT);
-        //     }
-        //     if(game.isSquareAttacked(i, Color::Black)) {
-        //         board.at(i).setHighlight(BoardView::CYAN_HIGHLIGHT);
-        //     }
-        // }
-
-        // TODO: replace check highlight with sprite
-        board.clearAllHighlights(BoardView::CHECK_HIGHLIGHT);
-        if(game.isInCheck(game.sideToMove())) {
-            // add check highlight after main loop to override other highlights
-            board.at(game.findKingSquare(game.sideToMove())).setHighlight(BoardView::CHECK_HIGHLIGHT);
-        }
         
-        const RenderState state{inputHandler.heldPiece(), currentEval, currentStats, game.sideToMove()};
-        renderer.render(state);
+        const RenderState state{inputHandler.heldPiece(), currentEval, currentStats, redHighlightSquare, selectedSquare};
+        renderer.render(game, state);
     }
 }
 

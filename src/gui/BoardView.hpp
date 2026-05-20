@@ -3,6 +3,7 @@
 #include <SFML/Graphics.hpp>
 
 #include "../game/Game.hpp"
+#include "Highlight.hpp"
 
 // Cache which maintains and retrieves textures for Pieces.
 class TextureCache {
@@ -40,22 +41,6 @@ private:
     std::optional<sf::Sprite> sprite_;
 };
 
-class Highlight {
-public:
-    // Construct a Highlight.
-    constexpr Highlight(sf::Color light, sf::Color dark): lightHighlight_{light}, darkHighlight_{dark} {};
-    // Compare a Highlight to another. Two highlights are equal if both of their colors are the same.
-    bool operator==(Highlight other) const { return lightHighlight_ == other.lightHighlight_ && darkHighlight_ == other.darkHighlight_; };
-    sf::Color lightHighlight() const { return lightHighlight_; };
-    sf::Color darkHighlight() const { return darkHighlight_; };
-
-private:
-    // Color for the light squares.
-    sf::Color lightHighlight_;
-    // Color for the dark squares.
-    sf::Color darkHighlight_;
-};
-
 class Square {
 public:
     // Construct a square, which always has a PieceSprite, and sometimes a Highlight.
@@ -90,36 +75,6 @@ private:
 // Manages graphical representation of the board.
 class BoardView{
 public:
-    // Normal dark square color. Dark brown, rgb(179, 136, 98).
-    static constexpr sf::Color DARK_SQUARE_COLOR{179, 136, 98};
-    // Normal light square color. Beige, rgb(238, 217, 179).
-    static constexpr sf::Color LIGHT_SQUARE_COLOR{238, 217, 179};
-    // Right click dark square color. Darker red, rgb(211, 107, 80).
-    static constexpr sf::Color DARK_HIGHLIGHT_SQUARE_COLOR{211, 107, 80};
-    // Right click light square color. Lighter red, rgb(236, 125, 106).
-    static constexpr sf::Color LIGHT_HIGHLIGHT_SQUARE_COLOR{236, 125, 106};
-    static constexpr Highlight RIGHT_CLICK_HIGHLIGHT{LIGHT_HIGHLIGHT_SQUARE_COLOR, DARK_HIGHLIGHT_SQUARE_COLOR};
-    // Legal dark square color. Darker green, rgb(68, 151, 48).
-    static constexpr sf::Color DARK_LEGAL_SQUARE_COLOR{68, 151, 48};
-    // Legal light square color. Lighter green, rgb(91, 177, 70).
-    static constexpr sf::Color LIGHT_LEGAL_SQUARE_COLOR{91, 177, 70};
-    static constexpr Highlight LEGAL_HIGHLIGHT{LIGHT_LEGAL_SQUARE_COLOR, DARK_LEGAL_SQUARE_COLOR};
-    // Selected move dark square color. Darker yellow, rgb(200, 221, 80).
-    static constexpr sf::Color DARK_SELECTED_SQUARE_COLOR{200, 221, 80};
-    // Selected move light square color. Lighter yellow, rgb(237, 253, 142).
-    static constexpr sf::Color LIGHT_SELECTED_SQUARE_COLOR{237, 253, 142};
-    static constexpr Highlight SELECTED_HIGHLIGHT{LIGHT_SELECTED_SQUARE_COLOR, DARK_SELECTED_SQUARE_COLOR};
-    // Check move dark square color. Darker orange, rgb(233, 114, 60).
-    static constexpr sf::Color DARK_CHECK_SQUARE_COLOR{233, 114, 60};
-    // Check move light square color. Lighter orange, rgb(224, 139, 100).
-    static constexpr sf::Color LIGHT_CHECK_SQUARE_COLOR{224, 139, 100};
-    static constexpr Highlight CHECK_HIGHLIGHT{LIGHT_CHECK_SQUARE_COLOR, DARK_CHECK_SQUARE_COLOR};
-    // Cyan dark square color. Darker cyan, rgb(33, 180, 206).
-    static constexpr sf::Color DARK_CYAN_SQUARE_COLOR{33, 180, 206};
-    // Cyan light square color. Lighter cyan, rgb(99, 208, 228).
-    static constexpr sf::Color LIGHT_CYAN_SQUARE_COLOR{99, 208, 228};
-    static constexpr Highlight CYAN_HIGHLIGHT{LIGHT_CYAN_SQUARE_COLOR, DARK_CYAN_SQUARE_COLOR};
-
     // Construct an empty board. I.e., a board with all empty squares.
     BoardView() = default;
     // Retrieve square at a given board square. Throws if out of range.
