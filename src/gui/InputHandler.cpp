@@ -1,5 +1,4 @@
-#include "Constants.hpp"
-#include "BoardView.hpp"
+#include "RenderUtils.hpp"
 #include "InputHandler.hpp"
 
 InputResult InputHandler::handleEvent(const sf::Event& event, Game& game) {
@@ -42,13 +41,13 @@ InputResult InputHandler::mouseMovementEvent(const sf::Event::MouseMoved& event)
 
 InputResult InputHandler::mouseUnclickEvent(const sf::Event::MouseButtonReleased& event, Game& game) {    
     // only allow left click releases on the physical board
-    if(event.position.x > Constants::BOARD_WIDTH_PX || event.position.y > Constants::BOARD_HEIGHT_PX) {
+    if(event.position.x > RenderUtils::BOARD_WIDTH_PX || event.position.y > RenderUtils::BOARD_HEIGHT_PX) {
         // release piece if we click oob
         heldPiece_.reset();
         return InputResult::none();
     }
 
-    const int targetSquare = BoardView::getSquareIndexFromCoordinates(event.position.x, event.position.y);
+    const int targetSquare = RenderUtils::getSquareIndexFromCoordinates(event.position.x, event.position.y);
     
     // out of bounds
     if(!Utils::onBoard(targetSquare)) {
@@ -85,11 +84,11 @@ InputResult InputHandler::leftClickEvent(const sf::Event::MouseButtonPressed& ev
     const sf::Vector2i mousePos = event.position;
 
     // only allow left clicks on the physical board
-    if(mousePos.x > Constants::BOARD_WIDTH_PX || mousePos.y > Constants::BOARD_HEIGHT_PX) {
+    if(mousePos.x > RenderUtils::BOARD_WIDTH_PX || mousePos.y > RenderUtils::BOARD_HEIGHT_PX) {
         return InputResult::none();
     }
 
-    const int targetSquare = BoardView::getSquareIndexFromCoordinates(mousePos.x, mousePos.y);
+    const int targetSquare = RenderUtils::getSquareIndexFromCoordinates(mousePos.x, mousePos.y);
     
     // target square does not exist; reset any selected piece
     if(!Utils::onBoard(targetSquare)) {
@@ -135,12 +134,12 @@ InputResult InputHandler::rightClickEvent(const sf::Event::MouseButtonPressed& e
 
     // only allow right clicks on the physical board
     const sf::Vector2i mousePos = event.position;
-    if(mousePos.x > Constants::BOARD_WIDTH_PX || mousePos.y > Constants::BOARD_HEIGHT_PX) {
+    if(mousePos.x > RenderUtils::BOARD_WIDTH_PX || mousePos.y > RenderUtils::BOARD_HEIGHT_PX) {
         return InputResult::none();
     }
 
     // swap highlight status of square
-    const int targetSquare = BoardView::getSquareIndexFromCoordinates(mousePos.x, mousePos.y);
+    const int targetSquare = RenderUtils::getSquareIndexFromCoordinates(mousePos.x, mousePos.y);
     if(Utils::onBoard(targetSquare)) {
         return InputResult::redHighlight(targetSquare);
     }

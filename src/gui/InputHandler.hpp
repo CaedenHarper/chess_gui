@@ -5,7 +5,6 @@
 #include <SFML/Graphics.hpp>
 
 #include "../game/Game.hpp"
-#include "BoardView.hpp"
 
 #include <optional>
 
@@ -64,9 +63,7 @@ struct HeldPieceState {
 
 class InputHandler {
 public:
-    explicit InputHandler(BoardView* board) : board_{board} {
-
-    }
+    InputHandler() = default;
 
     InputResult handleEvent(const sf::Event& event, Game& game);
 
@@ -82,5 +79,4 @@ private:
     InputResult rightClickEvent(const sf::Event::MouseButtonPressed& event);
     
     std::optional<HeldPieceState> heldPiece_;
-    BoardView* board_;
 };

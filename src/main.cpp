@@ -9,7 +9,6 @@
 #include "engine/Engine.hpp"
 #include "game/Game.hpp"
 #include "game/Utils.hpp"
-#include "gui/BoardView.hpp"
 #include "gui/InputHandler.hpp"
 #include "gui/Renderer.hpp"
 
@@ -617,20 +616,18 @@ void run2PlayerGUIgame() {
 
 void run1PlayerGUIgame() {
     Game game;
-    BoardView board;
 
     // Sync game and board to starting position
     game.loadFEN(std::string{Utils::STARTING_FEN});
-    board.updateBoardFromGame(game);
 
     sf::RenderWindow window{sf::VideoMode{{STARTING_WINDOW_WIDTH, STARTING_WINDOW_HEIGHT}}, std::string{WINDOW_TITLE}};
     window.setVerticalSyncEnabled(true);
 
     Engine engine;
 
-    Renderer renderer{&board, &window};
+    Renderer renderer{&window};
 
-    InputHandler inputHandler{&board};
+    InputHandler inputHandler;
 
     // init sounds
     // TODO: potentially throw / recover from file missing
@@ -669,7 +666,6 @@ void run1PlayerGUIgame() {
             currentEval = possibleCurrentEval;
             currentStats = possibleCurrentStats;
 
-            board.updateBoardFromGame(game);
             PIECE_MOVEMENT_SOUND.play();
 
             // remove any buffered events; while the engine is not on its own thread it can slow down the main window,
@@ -693,7 +689,6 @@ void run1PlayerGUIgame() {
                 case InputResult::Type::InvalidMove: // TODO: consider an invalid move sound
                     break;
                 case InputResult::Type::MoveMade:
-                    board.updateBoardFromGame(game);
                     PIECE_MOVEMENT_SOUND.play();
                     break;
                 case InputResult::Type::RedHighlight:

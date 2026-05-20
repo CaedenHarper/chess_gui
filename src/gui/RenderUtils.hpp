@@ -3,14 +3,16 @@
 #include <SFML/Graphics.hpp>
 
 #include "Highlight.hpp"
+#include "../game/Utils.hpp"
 
-namespace Constants {
+namespace RenderUtils {
+    // -- CONSTANTS --
     inline constexpr int BOARD_WIDTH_PX = 800;
     inline constexpr int BOARD_HEIGHT_PX = 800;
     inline constexpr float SQUARE_WIDTH_PX = BOARD_WIDTH_PX/8.F;
     inline constexpr float SQUARE_HEIGHT_PX = BOARD_HEIGHT_PX/8.F;
+    inline constexpr float SPRITE_SCALE_FACTOR = 0.97F;
 
-    // -- Colors + Highlights --
     // Normal dark square color. Dark brown, rgb(179, 136, 98).
     inline constexpr sf::Color DARK_SQUARE_COLOR{179, 136, 98};
     // Normal light square color. Beige, rgb(238, 217, 179).
@@ -40,4 +42,22 @@ namespace Constants {
     // Cyan light square color. Lighter cyan, rgb(99, 208, 228).
     inline constexpr sf::Color LIGHT_CYAN_SQUARE_COLOR{99, 208, 228};
     inline constexpr Highlight CYAN_HIGHLIGHT{LIGHT_CYAN_SQUARE_COLOR, DARK_CYAN_SQUARE_COLOR};
-} // namespace Constants
+
+    
+    // -- HELPER FUNCTIONS --
+    constexpr int getSquareIndexFromCoordinates(int xPos, int yPos) {
+        const int row = static_cast<int>(yPos / SQUARE_HEIGHT_PX);
+        const int col = static_cast<int>(xPos / SQUARE_WIDTH_PX);
+        return Utils::getSquareIndex(col, row);
+    }
+
+    constexpr sf::Vector2f squareCenterPx(const int squareIndex) {
+        const int row = Utils::getRow(squareIndex);
+        const int col = Utils::getCol(squareIndex);
+
+        const float xPos = (SQUARE_WIDTH_PX * col) + (SQUARE_WIDTH_PX * 0.5F);
+        const float yPos = (SQUARE_HEIGHT_PX * row) + (SQUARE_HEIGHT_PX * 0.5F);
+
+        return {xPos, yPos};
+    }
+} // namespace RenderUtils

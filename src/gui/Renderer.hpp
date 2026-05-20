@@ -2,7 +2,6 @@
 
 #include <SFML/Graphics.hpp>
 
-#include "BoardView.hpp"
 #include "../engine/Engine.hpp"
 
 #include "InputHandler.hpp"
@@ -20,18 +19,18 @@ struct RenderState {
 
 class Renderer {
 public:
-    Renderer(BoardView* board, sf::RenderWindow* window) : board_{board}, window_{window} {}
+    explicit Renderer(sf::RenderWindow* window) : window_{window} {}
 
     void render(const Game& game, const RenderState& state);
 
 private:
     void clearWindow(sf::Color backgroundColor);
-    void drawBoard(std::optional<HeldPieceState> heldPiece);
-    void drawDraggedPiece(std::optional<HeldPieceState> heldPiece);
+    void drawBoard(const Game& game, std::optional<HeldPieceState> heldPiece);
+    void drawDraggedPiece(const Game& game, std::optional<HeldPieceState> heldPiece);
     void drawEngineEval(int currentEval, Color sideToMove);
     void drawEngineStats(SearchStats currentStats);
+    void drawPieceOnSquare(const Game& game, int squareIndex, std::optional<HeldPieceState> heldPiece);
     void drawSquare(int squareIndex);
-    void drawSquare(int squareIndex, std::optional<Highlight> highlight);
 
     void drawHighlights(RenderState state);
     void drawSelectedSquareHighlights(std::optional<int> selectedSquare);
@@ -39,7 +38,8 @@ private:
     void drawCheckHighlights();
     void drawRedHighlights(std::optional<int> redHighlightSquare);
 
-    const BoardView* board_;
+    static sf::Sprite makePieceSprite(Piece piece);
+
     sf::RenderWindow* window_;
     sf::Font font_{"assets/fonts/LiberationSans-Regular.ttf"};
 };
