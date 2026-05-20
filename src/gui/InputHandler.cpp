@@ -130,7 +130,10 @@ InputResult InputHandler::leftClickEvent(const sf::Event::MouseButtonPressed& ev
 
 InputResult InputHandler::rightClickEvent(const sf::Event::MouseButtonPressed& event) {
     // right click cancels any held square
-    heldPiece_.reset();
+    if(heldPiece_) {
+        heldPiece_.reset();
+        return InputResult::none();
+    }
 
     // only allow right clicks on the physical board
     const sf::Vector2i mousePos = event.position;
@@ -140,9 +143,9 @@ InputResult InputHandler::rightClickEvent(const sf::Event::MouseButtonPressed& e
 
     // swap highlight status of square
     const int targetSquare = RenderUtils::getSquareIndexFromCoordinates(mousePos.x, mousePos.y);
-    if(Utils::onBoard(targetSquare)) {
-        return InputResult::redHighlight(targetSquare);
+    if(!Utils::onBoard(targetSquare)) {
+        return InputResult::none();
     }
 
-    return InputResult::none();
+    return InputResult::redHighlight(targetSquare);
 }
