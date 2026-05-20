@@ -4,6 +4,7 @@
 
 #include "../engine/Engine.hpp"
 
+#include "Highlight.hpp"
 #include "InputHandler.hpp"
 
 
@@ -25,20 +26,25 @@ public:
 
 private:
     void clearWindow(sf::Color backgroundColor);
-    void drawBoard(const Game& game, std::optional<HeldPieceState> heldPiece);
+    void drawSquares();
+    void drawPieces(const Game& game, std::optional<HeldPieceState> heldPiece);
     void drawDraggedPiece(const Game& game, std::optional<HeldPieceState> heldPiece);
     void drawEngineEval(int currentEval, Color sideToMove);
     void drawEngineStats(SearchStats currentStats);
-    void drawPieceOnSquare(const Game& game, int squareIndex, std::optional<HeldPieceState> heldPiece);
-    void drawSquare(int squareIndex);
+
+    void drawPieceOnSquare(const Game& game, int square, std::optional<HeldPieceState> heldPiece);
+    void drawSquare(int square);
+    void drawSquare(int square, sf::Color color);
 
     void drawHighlights(RenderState state);
     void drawSelectedSquareHighlights(std::optional<int> selectedSquare);
     void drawLegalMoveHighlights();
     void drawCheckHighlights();
     void drawRedHighlights(std::optional<int> redHighlightSquare);
+    void highlightSquare(int square, Highlight highlight);
 
     static sf::Sprite makePieceSprite(Piece piece);
+    static sf::RectangleShape makeSquareShape(int square, sf::Color color);
 
     sf::RenderWindow* window_;
     sf::Font font_{"assets/fonts/LiberationSans-Regular.ttf"};

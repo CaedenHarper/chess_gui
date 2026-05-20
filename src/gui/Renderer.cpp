@@ -1,5 +1,6 @@
 #include <SFML/Audio.hpp>
 #include <SFML/Graphics.hpp>
+#include <SFML/Graphics/RectangleShape.hpp>
 #include <optional>
 
 #include "../engine/Engine.hpp"
@@ -13,17 +14,13 @@
 void Renderer::render(const Game& game, const RenderState& state) {
     clearWindow(sf::Color::Black);
 
-    drawBoard(game, state.heldPiece);
-
+    drawSquares();
     drawHighlights(state);
-
+    drawPieces(game, state.heldPiece);
     drawDraggedPiece(game, state.heldPiece);
-
     drawEngineEval(state.currentEval, game.sideToMove());
-
     drawEngineStats(state.currentStats);
 
-    // end the current frame
     window_->display();
 }
 
@@ -31,11 +28,15 @@ void Renderer::clearWindow(sf::Color backgroundColor) {
     window_->clear(backgroundColor);
 }
 
-void Renderer::drawBoard(const Game& game, std::optional<HeldPieceState> heldPiece) {
-        // draw row by row
-    for(int squareIndex = 0; squareIndex < Utils::NUM_SQUARES; squareIndex++) {
-        drawSquare(squareIndex);
-        drawPieceOnSquare(game, squareIndex, heldPiece);
+void Renderer::drawSquares() {
+    for(int square = 0; square < Utils::NUM_SQUARES; square++) {
+        drawSquare(square);
+    }
+}
+
+void Renderer::drawPieces(const Game& game, std::optional<HeldPieceState> heldPiece) {
+    for(int square = 0; square < Utils::NUM_SQUARES; square++) {
+        drawPieceOnSquare(game, square, heldPiece);
     }
 }
 
@@ -84,17 +85,17 @@ void Renderer::drawEngineStats(SearchStats currentStats) {
     window_->draw(statsText);
 }
 
-void Renderer::drawPieceOnSquare(const Game& game, int squareIndex, std::optional<HeldPieceState> heldPiece) {
-    if(game.isSquareEmpty(squareIndex)) {
+void Renderer::drawPieceOnSquare(const Game& game, int square, std::optional<HeldPieceState> heldPiece) {
+    if(game.isSquareEmpty(square)) {
         return;
     }
 
     // skip squares with a held piece that is being dragged
-    if(heldPiece && heldPiece->isDragging && heldPiece->heldSquare == squareIndex) {
+    if(heldPiece && heldPiece->isDragging && heldPiece->heldSquare == square) {
         return;
     }
 
-    const Piece piece = game.pieceAtSquareForGui(squareIndex);
+    const Piece piece = game.pieceAtSquareForGui(square);
 
     if (!piece.exists()) {
         assert(false); // should never happen; we've already verified it's not empty
@@ -102,24 +103,19 @@ void Renderer::drawPieceOnSquare(const Game& game, int squareIndex, std::optiona
     }
 
     sf::Sprite sprite = makePieceSprite(piece);
-    sprite.setPosition(RenderUtils::squareCenterPx(squareIndex));
+    sprite.setPosition(RenderUtils::squareCenterPx(square));
 
     window_->draw(sprite);
 }
 
-void Renderer::drawSquare(int squareIndex) {
-    const int row = Utils::getRow(squareIndex);
-    const int col = Utils::getCol(squareIndex);
+// Overload for normal squares without specific colors.
+void Renderer::drawSquare(int square) {
+    const sf::Color color = RenderUtils::isSquareLight(square) ? RenderUtils::LIGHT_SQUARE_COLOR : RenderUtils::DARK_SQUARE_COLOR;
+    drawSquare(square, color);
+}
 
-    sf::RectangleShape squareShape{{RenderUtils::SQUARE_WIDTH_PX, RenderUtils::SQUARE_HEIGHT_PX}};
-
-    const bool isLight = row%2 == col%2;
-    squareShape.setFillColor(isLight ? RenderUtils::LIGHT_SQUARE_COLOR : RenderUtils::DARK_SQUARE_COLOR);
-
-    // set position based on row/col
-    const float xpos = RenderUtils::SQUARE_WIDTH_PX * col;
-    const float ypos = RenderUtils::SQUARE_HEIGHT_PX * row;
-    squareShape.setPosition({xpos, ypos});
+void Renderer::drawSquare(int square, sf::Color color) {
+    const sf::RectangleShape squareShape = makeSquareShape(square, color);
     window_->draw(squareShape);
 }
 
@@ -135,9 +131,7 @@ void Renderer::drawSelectedSquareHighlights(std::optional<int> selectedSquare) {
         return;
     }
     
-    const int row = Utils::getRow(*selectedSquare);
-    const int col = Utils::getCol(*selectedSquare);
-    
+    highlightSquare(*selectedSquare, RenderUtils::SELECTED_HIGHLIGHT);
 }
 
 void Renderer::drawLegalMoveHighlights() {
@@ -149,7 +143,16 @@ void Renderer::drawCheckHighlights() {
 }
 
 void Renderer::drawRedHighlights(std::optional<int> redHighlightSquare) {
+    if(!redHighlightSquare) {
+        return;
+    }
 
+    highlightSquare(*redHighlightSquare, RenderUtils::RIGHT_CLICK_HIGHLIGHT);
+}
+
+void Renderer::highlightSquare(int square, Highlight highlight) {
+    const sf::Color color = RenderUtils::isSquareLight(square) ? highlight.lightHighlight() : highlight.darkHighlight();
+    drawSquare(square, color);
 }
 
 sf::Sprite Renderer::makePieceSprite(const Piece piece) {
@@ -172,4 +175,18 @@ sf::Sprite Renderer::makePieceSprite(const Piece piece) {
     sprite.setScale({scale, scale});
 
     return sprite;
+}
+
+sf::RectangleShape Renderer::makeSquareShape(int square, sf::Color color) {
+    const int row = Utils::getRow(square);
+    const int col = Utils::getCol(square);
+
+    sf::RectangleShape squareShape{{RenderUtils::SQUARE_WIDTH_PX, RenderUtils::SQUARE_HEIGHT_PX}};
+    squareShape.setFillColor(color);
+
+    const float xpos = RenderUtils::SQUARE_WIDTH_PX * col;
+    const float ypos = RenderUtils::SQUARE_HEIGHT_PX * row;
+    squareShape.setPosition({xpos, ypos});
+
+    return squareShape;
 }

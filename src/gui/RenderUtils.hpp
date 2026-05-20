@@ -60,4 +60,15 @@ namespace RenderUtils {
 
         return {xPos, yPos};
     }
+
+    constexpr bool isSquareLight(int row, int col) {
+        return row%2 == col%2;
+    }
+
+    constexpr bool isSquareLight(int squareIndex) {
+        const int row = Utils::getRow(squareIndex);
+        const int col = Utils::getCol(squareIndex);
+
+        return isSquareLight(row, col);
+    }
 } // namespace RenderUtils
