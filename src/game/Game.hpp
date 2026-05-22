@@ -72,9 +72,57 @@ class Game {
 public:
     // Construct a new game with an empty board. Current turn defaults to white.
     Game();
+    
+    // TODO: Rewrite copyInto() into a copy constructor.
+    // Disallow default copy / move constructors
+    Game(const Game&) = delete;
+    Game& operator=(const Game&) = delete;
+    Game(Game&&) = delete;
+    Game& operator=(Game&&) = delete;
+    ~Game() = default;
+
     // Update the board given a FEN.
     void loadFEN(const std::string& FEN);
 
+    // Copy Game into another Game object.
+    void copyInto(Game& out) const {
+        assert(&out != this);
+
+        out.mailbox_ = mailbox_;
+        out.sideToMove_ = sideToMove_;
+        out.castlingRights_ = castlingRights_;
+        out.enPassantSquare_ = enPassantSquare_;
+
+        out.bbWhitePawns_ = bbWhitePawns_;
+        out.bbWhiteKnights_ = bbWhiteKnights_;
+        out.bbWhiteBishops_ = bbWhiteBishops_;
+        out.bbWhiteRooks_ = bbWhiteRooks_;
+        out.bbWhiteQueens_ = bbWhiteQueens_;
+        out.bbWhiteKing_ = bbWhiteKing_;
+
+        out.bbBlackPawns_ = bbBlackPawns_;
+        out.bbBlackKnights_ = bbBlackKnights_;
+        out.bbBlackBishops_ = bbBlackBishops_;
+        out.bbBlackRooks_ = bbBlackRooks_;
+        out.bbBlackQueens_ = bbBlackQueens_;
+        out.bbBlackKing_ = bbBlackKing_;
+
+        out.bbWhitePieces_ = bbWhitePieces_;
+        out.bbBlackPieces_ = bbBlackPieces_;
+
+        out.attackBitboards_ = attackBitboards_;
+
+        // refresh lookup tables
+        out.piecePackedToBB_.fill(nullptr);
+        out.initPieceToBBTable_();
+
+        out.colorToOccupancyBitboard_ = {
+            nullptr,
+            &out.bbWhitePieces_,
+            &out.bbBlackPieces_,
+            nullptr
+        };
+    }
     // Retrieve mailbox.
     constexpr std::array<Piece, Utils::NUM_SQUARES> mailbox() const noexcept { return mailbox_; }
     // Retrieve the color of the current player's turn.

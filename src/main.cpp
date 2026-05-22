@@ -1,7 +1,9 @@
 #include <SFML/System/Vector2.hpp>
 #include <iostream>
+#include <mutex>
 #include <optional>
 #include <string>
+#include <thread>
 
 #include <SFML/Audio.hpp>
 #include <SFML/Graphics.hpp>
@@ -645,32 +647,85 @@ void run1PlayerGUIgame() {
     // init highlighted squares which are passed to renderer
     std::array<bool, Utils::NUM_SQUARES> redHighlightSquares{};
 
+    // Engine thread managers
+    std::thread engineThread;
+    std::mutex engineMutex;
+    Game engineGameCopy;
+
+    bool engineThinking = false;
+    bool engineResultReady = false;
+    SearchResult engineResult;
+
     // main game loop
     while (window.isOpen()) {
-        // handle engine moves
-        if(!game.isFinished() && game.sideToMove() != player1Color) {
-            // make engine move
-            const auto [possibleEngineMove, possibleCurrentEval, possibleCurrentStats] = engine.bestMove(game);
-            if(!possibleEngineMove.has_value()) {
-                // game is finished
-                break;
-            }
-            const Move engineMove = possibleEngineMove.value();
-            // try to make move and post error message if move could not be made
-            if(!game.tryMove(engineMove)) {
-                std::cerr << "Engine tried to make move: " << engineMove.to_string(game);
-                assert(false);
-            }
-            // This is a valid move, we can make it and update the stats
-            currentEval = possibleCurrentEval;
-            currentStats = possibleCurrentStats;
+        const bool isEngineTurn = !game.isFinished() && game.sideToMove() != player1Color;
+        const bool isPlayerTurn = !game.isFinished() && game.sideToMove() == player1Color;
 
-            PIECE_MOVEMENT_SOUND.play();
+        // Start search
+        if (isEngineTurn && !engineThinking) {
+            game.copyInto(engineGameCopy);
 
-            // remove any buffered events; while the engine is not on its own thread it can slow down the main window,
-            // and its bad UX to accidentally buffer a move when trying to check if the window is still alive
-            while (window.pollEvent()) {
+            engineThinking = true;
+            engineResultReady = false;
+
+            engineThread = std::thread(
+                [&engine,
+                &engineMutex,
+                &engineResult,
+                &engineResultReady,
+                &engineGameCopy]() mutable {
+                    const auto result = engine.bestMove(engineGameCopy);
+
+                    // Lock to share result
+                    {
+                        const std::scoped_lock lock(engineMutex);
+                        engineResult = result;
+                        engineResultReady = true;
+                    }
+                }
+            );
+        }
+
+        if (isEngineTurn && engineThinking) {
+            bool ready = false;
+            SearchResult result{};
+
+            {
+                const std::scoped_lock lock(engineMutex);
+
+                if (engineResultReady) {
+                    ready = true;
+                    result = engineResult;
+                    engineResultReady = false;
+                }
+            }
+
+            if (ready) {
+                if (engineThread.joinable()) {
+                    engineThread.join();
+                }
                 
+                const auto [possibleEngineMove, possibleCurrentEval, possibleCurrentStats] = result;
+
+                if(!possibleEngineMove) {
+                    // game is finished
+                    break;
+                }
+                const Move engineMove = possibleEngineMove.value();
+                // try to make move and post error message if move could not be made
+                if(!game.tryMove(engineMove)) {
+                    std::cerr << "Engine tried to make move: " << engineMove.to_string(game);
+                    assert(false);
+                }
+                // This is a valid move, we can make it and update the stats
+                currentEval = possibleCurrentEval;
+                currentStats = possibleCurrentStats;
+
+                PIECE_MOVEMENT_SOUND.play();
+
+                // Move made; done thinking
+                engineThinking = false;
+                engineResultReady = false;
             }
         }
         
@@ -679,6 +734,10 @@ void run1PlayerGUIgame() {
             // Window closing event is special and should be handled here, not in InputHandler
             if (event->is<sf::Event::Closed>()) {
                 window.close();
+                continue;
+            }
+
+            if(!isPlayerTurn) {
                 continue;
             }
 
