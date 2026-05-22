@@ -55,10 +55,31 @@ public:
         pieceMovementSound_.setVolume(AppUtils::VOLUME_PERCENTAGE);
     }
 
+    Application(const Application&) = delete;
+    Application& operator=(const Application&) = delete;
+    Application(Application&&) = delete;
+    Application& operator=(Application&&) = delete;
+
+    ~Application() {
+        // Make sure engine thread is finished before deleting
+        if (engineThread_.thread.joinable()) {
+            engineThread_.thread.join();
+        }
+    }
+    
     void run();
 
 private:
+    void handleEngineTurn();
     void handleEvents();
+    void render();
+
+    void startEngineSearch();
+    std::optional<SearchResult> tryTakeEngineResult();
+    void applyEngineResult(const SearchResult& result);
+
+    bool isEngineTurn();
+    bool isPlayerTurn();
 
     Game game_;
     sf::RenderWindow window_;

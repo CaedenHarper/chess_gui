@@ -16,85 +16,28 @@
 
 
 void Application::run() {
-    // main game loop
     while (window_.isOpen()) {
-        const bool isEngineTurn = !game_.isFinished() && game_.sideToMove() != playerColor_;
-
-        // Start search
-        if (isEngineTurn && !engineThread_.thinking) {
-            assert(!engineThread_.thread.joinable());
-
-            game_.copyInto(engineThread_.gameCopy);
-
-            engineThread_.thinking = true;
-            engineThread_.resultReady = false;
-
-            engineThread_.thread = std::thread(
-                [this]() mutable {
-                    const auto result = engine_.bestMove(engineThread_.gameCopy);
-
-                    {
-                        const std::scoped_lock lock(engineThread_.mutex);
-                        engineThread_.result = result;
-                        engineThread_.resultReady = true;
-                    }
-                }
-            );
-        }
-
-        if (isEngineTurn && engineThread_.thinking) {
-            bool ready = false;
-            SearchResult result{};
-
-            {
-                const std::scoped_lock lock(engineThread_.mutex);
-
-                if (engineThread_.resultReady) {
-                    ready = true;
-                    result = engineThread_.result;
-                    engineThread_.resultReady = false;
-                }
-            }
-
-            if (ready) {
-                if (engineThread_.thread.joinable()) {
-                    engineThread_.thread.join();
-                }
-                
-                const auto [possibleEngineMove, possibleCurrentEval, possibleCurrentStats] = result;
-
-                if(!possibleEngineMove) {
-                    // game is finished
-                    break;
-                }
-                const Move engineMove = possibleEngineMove.value();
-                // try to make move and post error message if move could not be made
-                if(!game_.tryMove(engineMove)) {
-                    std::cerr << "Engine tried to make move: " << engineMove.to_string(game_);
-                    assert(false);
-                }
-                // This is a valid move, we can make it and update the stats
-                currentEval = possibleCurrentEval;
-                currentStats = possibleCurrentStats;
-
-                pieceMovementSound_.play();
-
-                // Move made; done thinking
-                engineThread_.thinking = false;
-                engineThread_.resultReady = false;
-            }
-        }
-        
+        handleEngineTurn();
         handleEvents();
-        
-        const RenderState state{inputHandler_.heldPiece(), currentEval, currentStats, redHighlightSquares};
-        renderer_.render(game_, state);
+        render();
+    }
+}
+
+void Application::handleEngineTurn() {
+    if(!isEngineTurn()) {
+        return;
+    }
+    
+    if (!engineThread_.thinking) {
+        startEngineSearch();
+    }
+
+    if (auto result = tryTakeEngineResult()) {
+        applyEngineResult(*result);
     }
 }
 
 void Application::handleEvents() {
-    const bool isPlayerTurn = !game_.isFinished() && game_.sideToMove() == playerColor_;
-
     while (const std::optional<sf::Event> event = window_.pollEvent()) {
         // Window closing event is special and should be handled here, not in InputHandler
         if (event->is<sf::Event::Closed>()) {
@@ -103,7 +46,7 @@ void Application::handleEvents() {
         }
 
         // Skip any chess inputs if it's not the player's turn
-        if(!isPlayerTurn) {
+        if(!isPlayerTurn()) {
             continue;
         }
 
@@ -125,4 +68,94 @@ void Application::handleEvents() {
                 break;
         }
     }
+}
+
+void Application::render() {
+    const RenderState state{
+        inputHandler_.heldPiece(),
+        currentEval,
+        currentStats,
+        redHighlightSquares
+    };
+    renderer_.render(game_, state);
+}
+
+void Application::startEngineSearch() {
+    assert(!engineThread_.thread.joinable());
+
+    game_.copyInto(engineThread_.gameCopy);
+
+    engineThread_.thinking = true;
+    engineThread_.resultReady = false;
+
+    engineThread_.thread = std::thread(
+        [this]() mutable {
+            const auto result = engine_.bestMove(engineThread_.gameCopy);
+
+            {
+                const std::scoped_lock lock(engineThread_.mutex);
+                engineThread_.result = result;
+                engineThread_.resultReady = true;
+            }
+        }
+    );
+}
+
+std::optional<SearchResult> Application::tryTakeEngineResult() {
+    if (!engineThread_.thinking) {
+        return std::nullopt;
+    }
+
+    std::optional<SearchResult> result;
+
+    {
+        const std::scoped_lock lock(engineThread_.mutex);
+
+        if (!engineThread_.resultReady) {
+            return std::nullopt;
+        }
+
+        result = engineThread_.result;
+        engineThread_.resultReady = false;
+    }
+
+    if (engineThread_.thread.joinable()) {
+        engineThread_.thread.join();
+    }
+
+    engineThread_.thinking = false;
+
+    return result;
+}
+
+void Application::applyEngineResult(const SearchResult& result) {
+    const auto [possibleEngineMove, possibleCurrentEval, possibleCurrentStats] = result;
+
+    if (!possibleEngineMove) {
+        // No legal move. Ideally mark/show game over, not just return.
+        // game_.finish();
+        return;
+    }
+
+    const Move engineMove = *possibleEngineMove;
+
+    if (!game_.tryMove(engineMove)) {
+        std::cerr << "Engine tried to make move: "
+                  << engineMove.to_string(game_);
+        assert(false);
+        return;
+    }
+
+    currentEval = possibleCurrentEval;
+    currentStats = possibleCurrentStats;
+
+    pieceMovementSound_.play();
+}
+
+bool Application::isEngineTurn() {
+    return !game_.isFinished() && game_.sideToMove() != playerColor_;
+}
+
+bool Application::isPlayerTurn() {
+    return !game_.isFinished() && game_.sideToMove() == playerColor_;
 }
