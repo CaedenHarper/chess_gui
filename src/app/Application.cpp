@@ -2,7 +2,6 @@
 #include <iostream>
 #include <mutex>
 #include <optional>
-#include <string>
 #include <thread>
 
 #include <SFML/Audio.hpp>
@@ -10,87 +9,56 @@
 
 #include "../engine/Engine.hpp"
 #include "../game/Game.hpp"
-#include "../game/Utils.hpp"
 #include "../gui/InputHandler.hpp"
 #include "../gui/Renderer.hpp"
-#include "AppUtils.hpp"
 
 #include "Application.hpp"
 
 
 void Application::run() {
-    // init sounds
-    // TODO: potentially throw / recover from file missing
-    const sf::SoundBuffer PIECE_MOVEMENT_BUFFER{std::string{AppUtils::PIECE_MOVEMENT_SOUND_FILE}};
-    sf::Sound PIECE_MOVEMENT_SOUND{PIECE_MOVEMENT_BUFFER};
-    PIECE_MOVEMENT_SOUND.setVolume(AppUtils::VOLUME_PERCENTAGE);
-
-    // TODO: we assume player 1 (non-engine) is always white; create a way to change this
-    const Color player1Color = Color::White; 
-
-    // init engine's current eval of the position to show to player
-    int currentEval = 0;
-    SearchStats currentStats{};
-
-    // init highlighted squares which are passed to renderer
-    std::array<bool, Utils::NUM_SQUARES> redHighlightSquares{};
-
-    // Engine thread managers
-    std::thread engineThread;
-    std::mutex engineMutex;
-    Game engineGameCopy;
-
-    bool engineThinking = false;
-    bool engineResultReady = false;
-    SearchResult engineResult;
-
     // main game loop
     while (window_.isOpen()) {
-        const bool isEngineTurn = !game_.isFinished() && game_.sideToMove() != player1Color;
-        const bool isPlayerTurn = !game_.isFinished() && game_.sideToMove() == player1Color;
+        const bool isEngineTurn = !game_.isFinished() && game_.sideToMove() != playerColor_;
 
         // Start search
-        if (isEngineTurn && !engineThinking) {
-            game_.copyInto(engineGameCopy);
+        if (isEngineTurn && !engineThread_.thinking) {
+            assert(!engineThread_.thread.joinable());
 
-            engineThinking = true;
-            engineResultReady = false;
+            game_.copyInto(engineThread_.gameCopy);
 
-            engineThread = std::thread(
-                [this,
-                &engineMutex,
-                &engineResult,
-                &engineResultReady,
-                &engineGameCopy]() mutable {
-                    const auto result = engine_.bestMove(engineGameCopy);
+            engineThread_.thinking = true;
+            engineThread_.resultReady = false;
 
-                    // Lock to share result
+            engineThread_.thread = std::thread(
+                [this]() mutable {
+                    const auto result = engine_.bestMove(engineThread_.gameCopy);
+
                     {
-                        const std::scoped_lock lock(engineMutex);
-                        engineResult = result;
-                        engineResultReady = true;
+                        const std::scoped_lock lock(engineThread_.mutex);
+                        engineThread_.result = result;
+                        engineThread_.resultReady = true;
                     }
                 }
             );
         }
 
-        if (isEngineTurn && engineThinking) {
+        if (isEngineTurn && engineThread_.thinking) {
             bool ready = false;
             SearchResult result{};
 
             {
-                const std::scoped_lock lock(engineMutex);
+                const std::scoped_lock lock(engineThread_.mutex);
 
-                if (engineResultReady) {
+                if (engineThread_.resultReady) {
                     ready = true;
-                    result = engineResult;
-                    engineResultReady = false;
+                    result = engineThread_.result;
+                    engineThread_.resultReady = false;
                 }
             }
 
             if (ready) {
-                if (engineThread.joinable()) {
-                    engineThread.join();
+                if (engineThread_.thread.joinable()) {
+                    engineThread_.thread.join();
                 }
                 
                 const auto [possibleEngineMove, possibleCurrentEval, possibleCurrentStats] = result;
@@ -109,47 +77,52 @@ void Application::run() {
                 currentEval = possibleCurrentEval;
                 currentStats = possibleCurrentStats;
 
-                PIECE_MOVEMENT_SOUND.play();
+                pieceMovementSound_.play();
 
                 // Move made; done thinking
-                engineThinking = false;
-                engineResultReady = false;
+                engineThread_.thinking = false;
+                engineThread_.resultReady = false;
             }
         }
         
-        // handle events
-        while (const std::optional<sf::Event> event = window_.pollEvent()) {
-            // Window closing event is special and should be handled here, not in InputHandler
-            if (event->is<sf::Event::Closed>()) {
-                window_.close();
-                continue;
-            }
-
-            // Skip any chess inputs if it's not the player's turn
-            if(!isPlayerTurn) {
-                continue;
-            }
-
-            const InputResult result = inputHandler_.handleEvent(event.value(), game_);
-            switch(result.type()) {
-                case InputResult::Type::None:
-                case InputResult::Type::InvalidMove: // TODO: consider an invalid move sound
-                    break;
-                case InputResult::Type::MoveMade:
-                    PIECE_MOVEMENT_SOUND.play();
-                    break;
-                case InputResult::Type::RedHighlight:
-                    if(!result.square()) {
-                        assert(false);
-                        break;
-                    }
-
-                    redHighlightSquares.at(*result.square()) = !redHighlightSquares.at(*result.square());
-                    break;
-            }
-        }
+        handleEvents();
         
         const RenderState state{inputHandler_.heldPiece(), currentEval, currentStats, redHighlightSquares};
         renderer_.render(game_, state);
+    }
+}
+
+void Application::handleEvents() {
+    const bool isPlayerTurn = !game_.isFinished() && game_.sideToMove() == playerColor_;
+
+    while (const std::optional<sf::Event> event = window_.pollEvent()) {
+        // Window closing event is special and should be handled here, not in InputHandler
+        if (event->is<sf::Event::Closed>()) {
+            window_.close();
+            continue;
+        }
+
+        // Skip any chess inputs if it's not the player's turn
+        if(!isPlayerTurn) {
+            continue;
+        }
+
+        const InputResult result = inputHandler_.handleEvent(event.value(), game_);
+        switch(result.type()) {
+            case InputResult::Type::None:
+            case InputResult::Type::InvalidMove: // TODO: consider an invalid move sound
+                break;
+            case InputResult::Type::MoveMade:
+                pieceMovementSound_.play();
+                break;
+            case InputResult::Type::RedHighlight:
+                if(!result.square()) {
+                    assert(false);
+                    break;
+                }
+
+                redHighlightSquares.at(*result.square()) = !redHighlightSquares.at(*result.square());
+                break;
+        }
     }
 }

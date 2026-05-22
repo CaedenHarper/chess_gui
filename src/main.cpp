@@ -1,6 +1,7 @@
 #include "app/Application.hpp"
 
 int main() {
-    Application app;
+    const Color playerColor = Color::White;
+    Application app{playerColor};
     app.run();
 }
