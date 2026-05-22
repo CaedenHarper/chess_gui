@@ -1,0 +1,16 @@
+#pragma once
+
+#include <SFML/Graphics.hpp>
+
+#include <string_view>
+
+namespace AppUtils{
+    // -- CONSTANTS --
+    constexpr int STARTING_WINDOW_WIDTH = 1000;
+    constexpr int STARTING_WINDOW_HEIGHT = 1000;
+    // stringview for constexpr
+    constexpr std::string_view WINDOW_TITLE = "Chess";
+
+    constexpr float VOLUME_PERCENTAGE = 75.F;
+    constexpr std::string_view PIECE_MOVEMENT_SOUND_FILE = "assets/sounds/piece_movement.wav";
+} // namespace AppUtils

@@ -70,3 +70,33 @@
 //     }
 //     return parseLongNotation_(firstPart, secondPart);
 // }
+
+/* TODO: implement CLI class and move Game.to_string()
+void runCLIGame() {
+    // init game
+    Game game;
+    game.loadFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR");
+
+    while(!game.isFinished()) {
+        // Print info to player
+        std::cout << game.to_string() << "\n" << (game.currentTurn() == Color::White ? "White" : "Black") << "'s turn\nMove: ";
+        // read move from input
+        std::string moveS;
+        std::getline(std::cin, moveS);
+
+        std::optional<Move> possibleMove = game.parseMove(moveS);
+        if(!possibleMove) {
+            // invalid move
+            std::cout << "Invalid move. Try again.\n";
+            continue;
+        }
+        const Move move = possibleMove.value();
+        std::cout << "Parsed move: " << move.to_string(game) << "\n";
+
+        if(!game.tryMove(move)) {
+            std::cout << "Move is not legal. Try again.\n";
+            continue;
+        }
+        std::cout << "\n";
+    }
+} */
