@@ -5,7 +5,8 @@
 #include <optional>
 
 SearchResult Engine::bestMove(Game& game) {
-    return search(game, 6);
+    const int depth = 6;
+    return search(game, depth);
 }
 
 int Engine::quiesce(Game& game, int alpha, int beta, int ply) { // NOLINT(misc-no-recursion)
