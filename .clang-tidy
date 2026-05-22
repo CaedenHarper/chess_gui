@@ -14,6 +14,7 @@ Checks:
   - '-altera-unroll-loops'                                        # Performance boost not really needed, may be worth investigating some day
   - '-google-readability-todo'                                    # No need for specific bug tracking in this project
   - '-fuchsia-default-arguments-calls'                            # This project allows default argument calls
+  - '-fuchsia-default-arguments-declarations'                     # Some default argument declarations are okay in this project
   - '-misc-use-internal-linkage'                                  # Not really necessary for this project
   - '-fuchsia-overloaded-operator'                                # Operator overloading is fine and makes sense in some parts of this project
   - '-misc-non-private-member-variables-in-classes'               # Private member variables is fine for this program; may re-evaluate in the future

@@ -40,34 +40,42 @@ void Application::handleEngineTurn() {
 
 void Application::handleEvents() {
     while (const std::optional<sf::Event> event = window_.pollEvent()) {
-        // Window closing event is special and should be handled here, not in InputHandler
-        if (event->is<sf::Event::Closed>()) {
-            window_.close();
+        if(!event) {
             continue;
         }
 
-        // Skip any chess inputs if it's not the player's turn
-        if(!isPlayerTurn()) {
-            continue;
-        }
+        handleEvent(*event);
+    }
+}
 
-        const InputResult result = inputHandler_.handleEvent(event.value(), game_);
-        switch(result.type()) {
-            case InputResult::Type::None:
-            case InputResult::Type::InvalidMove: // TODO: consider an invalid move sound
-                break;
-            case InputResult::Type::MoveMade:
-                pieceMovementSound_.play();
-                break;
-            case InputResult::Type::RedHighlight:
-                if(!result.square()) {
-                    assert(false);
-                    break;
-                }
+void Application::handleEvent(sf::Event event) {
+    // Window closing event is special and should be handled here, not in InputHandler
+    if (event.is<sf::Event::Closed>()) {
+        window_.close();
+        return;
+    }
 
-                redHighlightSquares.at(*result.square()) = !redHighlightSquares.at(*result.square());
+    const InputMode mode{isPlayerTurn() ? InputMode::FullGameplay : InputMode::BoardAnnotationsOnly};
+    const InputResult result = inputHandler_.handleEvent(event, game_, mode);
+    switch(result.type()) {
+        case InputResult::Type::None:
+        case InputResult::Type::InvalidMove: // TODO: consider an invalid move sound
+            break;
+        case InputResult::Type::MoveMade:
+            pieceMovementSound_.play();
+            break;
+        case InputResult::Type::RedHighlight:
+            if(!result.square()) {
+                assert(false);
                 break;
-        }
+            }
+
+            redHighlightSquares.at(*result.square()) = !redHighlightSquares.at(*result.square());
+            break;
+    }
+    
+    if(result.clearRedHighlights()) {
+        redHighlightSquares.fill(false);
     }
 }
 

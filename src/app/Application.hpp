@@ -72,6 +72,7 @@ public:
 private:
     void handleEngineTurn();
     void handleEvents();
+    void handleEvent(sf::Event event);
     void render();
 
     void startEngineSearch();
