@@ -30,6 +30,7 @@ void Application::handleEngineTurn() {
     
     if (!engineThread_.thinking) {
         startEngineSearch();
+        return;
     }
 
     if (auto result = tryTakeEngineResult()) {
