@@ -37,7 +37,7 @@ add_executable(chess
     src/game/Utils.cpp
     src/gui/TextureCache.cpp
     src/gui/InputHandler.cpp
-    src/gui/Renderer.cpp
+    src/gui/GameRenderer.cpp
     src/engine/Engine.cpp
 )
 
@@ -57,7 +57,7 @@ add_library(chess_lib
     src/game/Utils.cpp
     src/gui/TextureCache.cpp
     src/gui/InputHandler.cpp
-    src/gui/Renderer.cpp
+    src/gui/GameRenderer.cpp
     src/engine/Engine.cpp
 )
 target_include_directories(chess_lib PUBLIC include)

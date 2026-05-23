@@ -9,8 +9,10 @@
 
 #include "../engine/Engine.hpp"
 #include "../game/Game.hpp"
+#include "../gui/GameRenderer.hpp"
+
 #include "../gui/InputHandler.hpp"
-#include "../gui/Renderer.hpp"
+
 
 #include "Application.hpp"
 

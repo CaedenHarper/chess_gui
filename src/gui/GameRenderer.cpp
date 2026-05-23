@@ -10,10 +10,10 @@
 
 #include "RenderUtils.hpp"
 
-#include "Renderer.hpp"
+#include "GameRenderer.hpp"
 #include "TextureCache.hpp"
 
-void Renderer::render(Game& game, const RenderState& state) {
+void GameRenderer::render(Game& game, const RenderState& state) {
     clearWindow(sf::Color::Black);
 
     // We take playerColor == displayColor here
@@ -28,23 +28,23 @@ void Renderer::render(Game& game, const RenderState& state) {
     window_->display();
 }
 
-void Renderer::clearWindow(sf::Color backgroundColor) {
+void GameRenderer::clearWindow(sf::Color backgroundColor) {
     window_->clear(backgroundColor);
 }
 
-void Renderer::drawSquares(Color displayColor) {
+void GameRenderer::drawSquares(Color displayColor) {
     for(int square = 0; square < Utils::NUM_SQUARES; square++) {
         drawSquare(square, displayColor);
     }
 }
 
-void Renderer::drawPieces(Game& game, std::optional<HeldPieceState> heldPiece, Color displayColor) {
+void GameRenderer::drawPieces(Game& game, std::optional<HeldPieceState> heldPiece, Color displayColor) {
     for(int square = 0; square < Utils::NUM_SQUARES; square++) {
         drawPieceOnSquare(game, square, heldPiece, displayColor);
     }
 }
 
-void Renderer::drawDraggedPiece(Game& game, std::optional<HeldPieceState> heldPiece) {
+void GameRenderer::drawDraggedPiece(Game& game, std::optional<HeldPieceState> heldPiece) {
     if(!heldPiece) {
         return;
     }
@@ -58,7 +58,7 @@ void Renderer::drawDraggedPiece(Game& game, std::optional<HeldPieceState> heldPi
     window_->draw(dragSprite);
 }
 
-void Renderer::drawEngineEval(int currentEval, Color playerColor) {
+void GameRenderer::drawEngineEval(int currentEval, Color playerColor) {
     constexpr sf::Vector2f evalTextPosition = {20.F, 800.F};
     const int evalTextFontSize = 50;
 
@@ -71,7 +71,7 @@ void Renderer::drawEngineEval(int currentEval, Color playerColor) {
     drawText("Eval: " + Eval::evalToString(whiteRelativeEval), evalTextPosition, evalTextFontSize);
 }
 
-void Renderer::drawEngineStats(SearchStats currentStats) {
+void GameRenderer::drawEngineStats(SearchStats currentStats) {
     constexpr sf::Vector2f statsTextPosition = {20.F, 875.F};
     const int statsTextFontSize = 25;
 
@@ -83,7 +83,7 @@ void Renderer::drawEngineStats(SearchStats currentStats) {
                         "\nPositions Searched: " + std::to_string(currentStats.nodes + currentStats.qnodes), statsTextPosition, statsTextFontSize);
 }
 
-void Renderer::drawEngineTimer(sf::Time elapsed, bool thinking) {
+void GameRenderer::drawEngineTimer(sf::Time elapsed, bool thinking) {
     constexpr sf::Vector2f engineTimerPosition = {350.F, 800.F};
     constexpr int engineTextFontSize = 50;
 
@@ -101,7 +101,7 @@ void Renderer::drawEngineTimer(sf::Time elapsed, bool thinking) {
     drawText(out.str(), engineTimerPosition, engineTextFontSize);
 }
 
-void Renderer::drawText(const std::string& str, const sf::Vector2f& position, int size) {
+void GameRenderer::drawText(const std::string& str, const sf::Vector2f& position, int size) {
     sf::Text text{font_};
 
     text.setString(str);
@@ -112,7 +112,7 @@ void Renderer::drawText(const std::string& str, const sf::Vector2f& position, in
     window_->draw(text);
 }
 
-void Renderer::drawPieceOnSquare(Game& game, int square, std::optional<HeldPieceState> heldPiece, Color displayColor) {
+void GameRenderer::drawPieceOnSquare(Game& game, int square, std::optional<HeldPieceState> heldPiece, Color displayColor) {
     if(game.isSquareEmpty(square)) {
         return;
     }
@@ -136,24 +136,24 @@ void Renderer::drawPieceOnSquare(Game& game, int square, std::optional<HeldPiece
 }
 
 // Overload for normal squares without specific colors.
-void Renderer::drawSquare(int square, Color displayColor) {
+void GameRenderer::drawSquare(int square, Color displayColor) {
     const sf::Color color = RenderUtils::isSquareLight(square) ? RenderUtils::LIGHT_SQUARE_COLOR : RenderUtils::DARK_SQUARE_COLOR;
     drawSquare(square, color, displayColor);
 }
 
-void Renderer::drawSquare(int square, sf::Color color, Color displayColor) {
+void GameRenderer::drawSquare(int square, sf::Color color, Color displayColor) {
     const sf::RectangleShape squareShape = makeSquareShape(RenderUtils::getSquareFromDisplayPerspective(square, displayColor), color);
     window_->draw(squareShape);
 }
 
-void Renderer::drawHighlights(Game& game, RenderState state, Color displayColor) {
+void GameRenderer::drawHighlights(Game& game, RenderState state, Color displayColor) {
     drawSelectedSquareHighlight(state.heldPiece, displayColor);
     drawLegalMoveHighlights(game, state.heldPiece, displayColor);
     drawCheckHighlights(game, displayColor);
     drawRedHighlights(state.redHighlightSquares, displayColor);
 }
 
-void Renderer::drawSelectedSquareHighlight(std::optional<HeldPieceState> heldPiece, Color displayColor) {
+void GameRenderer::drawSelectedSquareHighlight(std::optional<HeldPieceState> heldPiece, Color displayColor) {
     if(!heldPiece) {
         return;
     }
@@ -161,7 +161,7 @@ void Renderer::drawSelectedSquareHighlight(std::optional<HeldPieceState> heldPie
     highlightSquare(heldPiece->heldSquare, RenderUtils::SELECTED_HIGHLIGHT, displayColor);
 }
 
-void Renderer::drawLegalMoveHighlights(Game& game, std::optional<HeldPieceState> heldPiece, Color displayColor) {
+void GameRenderer::drawLegalMoveHighlights(Game& game, std::optional<HeldPieceState> heldPiece, Color displayColor) {
     if(!heldPiece) {
         return;
     }
@@ -174,7 +174,7 @@ void Renderer::drawLegalMoveHighlights(Game& game, std::optional<HeldPieceState>
     }
 }
 
-void Renderer::drawCheckHighlights(Game& game, Color displayColor) {
+void GameRenderer::drawCheckHighlights(Game& game, Color displayColor) {
     if(!game.isInCheck(game.sideToMove())) {
         return;
     }
@@ -183,7 +183,7 @@ void Renderer::drawCheckHighlights(Game& game, Color displayColor) {
     highlightSquare(kingSquare, RenderUtils::CHECK_HIGHLIGHT, displayColor);
 }
 
-void Renderer::drawRedHighlights(std::array<bool, Utils::NUM_SQUARES> redHighlightSquares, Color displayColor) {
+void GameRenderer::drawRedHighlights(std::array<bool, Utils::NUM_SQUARES> redHighlightSquares, Color displayColor) {
     for(int square = 0; square < Utils::NUM_SQUARES; square++) {
         if(!redHighlightSquares.at(square)) {
             continue;
@@ -193,12 +193,12 @@ void Renderer::drawRedHighlights(std::array<bool, Utils::NUM_SQUARES> redHighlig
     }
 }
 
-void Renderer::highlightSquare(int square, Highlight highlight, Color displayColor) {
+void GameRenderer::highlightSquare(int square, Highlight highlight, Color displayColor) {
     const sf::Color color = RenderUtils::isSquareLight(square) ? highlight.lightHighlight() : highlight.darkHighlight();
     drawSquare(square, color, displayColor);
 }
 
-sf::Sprite Renderer::makePieceSprite(const Piece piece) {
+sf::Sprite GameRenderer::makePieceSprite(const Piece piece) {
     sf::Sprite sprite{TextureCache::get(piece.type(), piece.color())};
 
     const sf::FloatRect bounds = sprite.getLocalBounds();
@@ -220,7 +220,7 @@ sf::Sprite Renderer::makePieceSprite(const Piece piece) {
     return sprite;
 }
 
-sf::RectangleShape Renderer::makeSquareShape(int square, sf::Color color) {
+sf::RectangleShape GameRenderer::makeSquareShape(int square, sf::Color color) {
     const int row = Utils::getRow(square);
     const int col = Utils::getCol(square);
 

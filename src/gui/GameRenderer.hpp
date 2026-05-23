@@ -24,9 +24,9 @@ struct RenderState {
 // NOTE: all Game& should be const Game& and should not be expected to modify Game.
 //     However, they require generateLegalMoves...() which is not yet const qualified, due to a design decision in Game which has not yet been fixed.
 //     TODO: Once this is fixed, this should be updated.
-class Renderer {
+class GameRenderer {
 public:
-    explicit Renderer(sf::RenderWindow* window) : window_{window} {}
+    explicit GameRenderer(sf::RenderWindow* window) : window_{window} {}
 
     void render(Game& game, const RenderState& state);
 

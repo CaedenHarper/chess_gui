@@ -9,7 +9,7 @@
 
 #include "../game/Game.hpp"
 #include "../engine/Engine.hpp"
-#include "../gui/Renderer.hpp"
+#include "../gui/GameRenderer.hpp"
 
 #include "AppUtils.hpp"
 
@@ -90,7 +90,7 @@ private:
     sf::RenderWindow window_;
     Engine engine_;
     EngineThreadState engineThread_;
-    Renderer renderer_;
+    GameRenderer renderer_;
     InputHandler inputHandler_;
 
     Color playerColor_;
