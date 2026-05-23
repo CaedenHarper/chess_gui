@@ -32,24 +32,24 @@ public:
 
 private:
     void clearWindow(sf::Color backgroundColor);
-    void drawSquares();
-    void drawPieces(Game& game, std::optional<HeldPieceState> heldPiece);
+    void drawSquares(Color displayColor);
+    void drawPieces(Game& game, std::optional<HeldPieceState> heldPiece, Color displayColor);
     void drawDraggedPiece(Game& game, std::optional<HeldPieceState> heldPiece);
     void drawEngineEval(int currentEval, Color playerColor);
     void drawEngineStats(SearchStats currentStats);
     void drawEngineTimer(sf::Time elapsed, bool thinking);
 
-    void drawPieceOnSquare(Game& game, int square, std::optional<HeldPieceState> heldPiece);
-    void drawSquare(int square);
-    void drawSquare(int square, sf::Color color);
+    void drawPieceOnSquare(Game& game, int square, std::optional<HeldPieceState> heldPiece, Color displayColor);
+    void drawSquare(int square, Color displayColor);
+    void drawSquare(int square, sf::Color color, Color displayColor);
     void drawText(const std::string& str, const sf::Vector2f& position, int size);
 
-    void drawHighlights(Game& game, RenderState state);
-    void drawSelectedSquareHighlight(std::optional<HeldPieceState> heldPiece);
-    void drawLegalMoveHighlights(Game& game, std::optional<HeldPieceState> heldPiece);
-    void drawCheckHighlights(Game& game);
-    void drawRedHighlights(std::array<bool, Utils::NUM_SQUARES> redHighlightSquares);
-    void highlightSquare(int square, Highlight highlight);
+    void drawHighlights(Game& game, RenderState state, Color displayColor);
+    void drawSelectedSquareHighlight(std::optional<HeldPieceState> heldPiece, Color displayColor);
+    void drawLegalMoveHighlights(Game& game, std::optional<HeldPieceState> heldPiece, Color displayColor);
+    void drawCheckHighlights(Game& game, Color displayColor);
+    void drawRedHighlights(std::array<bool, Utils::NUM_SQUARES> redHighlightSquares, Color displayColor);
+    void highlightSquare(int square, Highlight highlight, Color displayColor);
 
     static sf::Sprite makePieceSprite(Piece piece);
     static sf::RectangleShape makeSquareShape(int square, sf::Color color);

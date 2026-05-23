@@ -71,18 +71,18 @@ class InputHandler {
 public:
     InputHandler() = default;
 
-    InputResult handleEvent(const sf::Event& event, Game& game, Color playerColor, InputMode mode);
+    InputResult handleEvent(const sf::Event& event, Game& game, Color playerColor, Color displayColor, InputMode mode);
 
     const std::optional<HeldPieceState>& heldPiece() const {
         return heldPiece_;
     }
 
 private:
-    InputResult mouseClickEvent(const sf::Event::MouseButtonPressed& event, Game& game, Color playerColor, InputMode mode);
+    InputResult mouseClickEvent(const sf::Event::MouseButtonPressed& event, Game& game, Color playerColor, Color displayColor, InputMode mode);
     InputResult mouseMovementEvent(const sf::Event::MouseMoved& event);
-    InputResult mouseUnclickEvent(const sf::Event::MouseButtonReleased& event, Game& game, InputMode mode);
-    InputResult leftClickEvent(const sf::Event::MouseButtonPressed& event, Game& game, Color playerColor, InputMode mode);
-    InputResult rightClickEvent(const sf::Event::MouseButtonPressed& event);
+    InputResult mouseUnclickEvent(const sf::Event::MouseButtonReleased& event, Game& game, Color displayColor, InputMode mode);
+    InputResult leftClickEvent(const sf::Event::MouseButtonPressed& event, Game& game, Color playerColor, Color displayColor, InputMode mode);
+    InputResult rightClickEvent(const sf::Event::MouseButtonPressed& event, Color displayColor);
     
     std::optional<HeldPieceState> heldPiece_;
 };
