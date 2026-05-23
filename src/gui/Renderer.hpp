@@ -9,13 +9,15 @@
 
 
 struct RenderState {
+    Color playerColor{};
+
     std::optional<HeldPieceState> heldPiece;
 
     int currentEval{};
     SearchStats currentStats;
 
     std::array<bool, Utils::NUM_SQUARES> redHighlightSquares{};
-} __attribute__((aligned(128))); // NOLINT[magic numbers] align to 64 bytes
+} __attribute__((aligned(128))); // NOLINT[magic numbers] align to 128 bytes
 
 // NOTE: all Game& should be const Game& and should not be expected to modify Game.
 //     However, they require generateLegalMoves...() which is not yet const qualified, due to a design decision in Game which has not yet been fixed.
@@ -31,7 +33,7 @@ private:
     void drawSquares();
     void drawPieces(Game& game, std::optional<HeldPieceState> heldPiece);
     void drawDraggedPiece(Game& game, std::optional<HeldPieceState> heldPiece);
-    void drawEngineEval(int currentEval, Color sideToMove);
+    void drawEngineEval(int currentEval, Color playerColor);
     void drawEngineStats(SearchStats currentStats);
 
     void drawPieceOnSquare(Game& game, int square, std::optional<HeldPieceState> heldPiece);

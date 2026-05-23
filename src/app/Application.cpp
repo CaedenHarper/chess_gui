@@ -81,6 +81,7 @@ void Application::handleEvent(sf::Event event) {
 
 void Application::render() {
     const RenderState state{
+        playerColor_,
         inputHandler_.heldPiece(),
         currentEval,
         currentStats,

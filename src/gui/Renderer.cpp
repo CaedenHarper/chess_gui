@@ -18,7 +18,7 @@ void Renderer::render(Game& game, const RenderState& state) {
     drawHighlights(game, state);
     drawPieces(game, state.heldPiece);
     drawDraggedPiece(game, state.heldPiece);
-    drawEngineEval(state.currentEval, game.sideToMove());
+    drawEngineEval(state.currentEval, state.playerColor);
     drawEngineStats(state.currentStats);
 
     window_->display();
@@ -54,13 +54,19 @@ void Renderer::drawDraggedPiece(Game& game, std::optional<HeldPieceState> heldPi
     window_->draw(dragSprite);
 }
 
-void Renderer::drawEngineEval(int currentEval, Color sideToMove) {
+void Renderer::drawEngineEval(int currentEval, Color playerColor) {
     constexpr sf::Vector2f evalTextPosition = {100.F, 850.F};
     const int evalTextFontSize = 50;
 
-    // load currentEval into string with 2 decimal places
+    int whiteRelativeEval = currentEval;
+
+    if (playerColor == Color::White) { // engine color == black, so flip sign
+        whiteRelativeEval = -whiteRelativeEval;
+    }
+
+    // load eval into string with 2 decimal places
     sf::Text evalText{font_};
-    evalText.setString(Eval::evalToString(currentEval, sideToMove));
+    evalText.setString(Eval::evalToString(whiteRelativeEval));
     evalText.setPosition(evalTextPosition);
     evalText.setFillColor(sf::Color::White);
     evalText.setCharacterSize(evalTextFontSize);
