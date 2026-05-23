@@ -13,7 +13,7 @@
 #include "GameRenderer.hpp"
 #include "TextureCache.hpp"
 
-void GameRenderer::render(Game& game, const RenderState& state) {
+void GameRenderer::render(Game& game, const GameRenderState& state) {
     clearWindow(sf::Color::Black);
 
     // We take playerColor == displayColor here
@@ -146,7 +146,7 @@ void GameRenderer::drawSquare(int square, sf::Color color, Color displayColor) {
     window_->draw(squareShape);
 }
 
-void GameRenderer::drawHighlights(Game& game, RenderState state, Color displayColor) {
+void GameRenderer::drawHighlights(Game& game, GameRenderState state, Color displayColor) {
     drawSelectedSquareHighlight(state.heldPiece, displayColor);
     drawLegalMoveHighlights(game, state.heldPiece, displayColor);
     drawCheckHighlights(game, displayColor);

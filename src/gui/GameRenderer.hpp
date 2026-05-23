@@ -8,7 +8,7 @@
 #include "InputHandler.hpp"
 
 
-struct RenderState {
+struct GameRenderState {
     Color playerColor{};
 
     std::optional<HeldPieceState> heldPiece;
@@ -28,7 +28,7 @@ class GameRenderer {
 public:
     explicit GameRenderer(sf::RenderWindow* window) : window_{window} {}
 
-    void render(Game& game, const RenderState& state);
+    void render(Game& game, const GameRenderState& state);
 
 private:
     void clearWindow(sf::Color backgroundColor);
@@ -44,7 +44,7 @@ private:
     void drawSquare(int square, sf::Color color, Color displayColor);
     void drawText(const std::string& str, const sf::Vector2f& position, int size);
 
-    void drawHighlights(Game& game, RenderState state, Color displayColor);
+    void drawHighlights(Game& game, GameRenderState state, Color displayColor);
     void drawSelectedSquareHighlight(std::optional<HeldPieceState> heldPiece, Color displayColor);
     void drawLegalMoveHighlights(Game& game, std::optional<HeldPieceState> heldPiece, Color displayColor);
     void drawCheckHighlights(Game& game, Color displayColor);
