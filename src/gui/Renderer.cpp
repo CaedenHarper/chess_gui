@@ -16,9 +16,10 @@
 void Renderer::render(Game& game, const RenderState& state) {
     clearWindow(sf::Color::Black);
 
-    drawSquares();
-    drawHighlights(game, state);
-    drawPieces(game, state.heldPiece);
+    // We take playerColor == displayColor here
+    drawSquares(state.playerColor);
+    drawHighlights(game, state, state.playerColor);
+    drawPieces(game, state.heldPiece, state.playerColor);
     drawDraggedPiece(game, state.heldPiece);
     drawEngineEval(state.currentEval, state.playerColor);
     drawEngineStats(state.currentStats);
@@ -31,15 +32,15 @@ void Renderer::clearWindow(sf::Color backgroundColor) {
     window_->clear(backgroundColor);
 }
 
-void Renderer::drawSquares() {
+void Renderer::drawSquares(Color displayColor) {
     for(int square = 0; square < Utils::NUM_SQUARES; square++) {
-        drawSquare(square);
+        drawSquare(square, displayColor);
     }
 }
 
-void Renderer::drawPieces(Game& game, std::optional<HeldPieceState> heldPiece) {
+void Renderer::drawPieces(Game& game, std::optional<HeldPieceState> heldPiece, Color displayColor) {
     for(int square = 0; square < Utils::NUM_SQUARES; square++) {
-        drawPieceOnSquare(game, square, heldPiece);
+        drawPieceOnSquare(game, square, heldPiece, displayColor);
     }
 }
 
@@ -111,7 +112,7 @@ void Renderer::drawText(const std::string& str, const sf::Vector2f& position, in
     window_->draw(text);
 }
 
-void Renderer::drawPieceOnSquare(Game& game, int square, std::optional<HeldPieceState> heldPiece) {
+void Renderer::drawPieceOnSquare(Game& game, int square, std::optional<HeldPieceState> heldPiece, Color displayColor) {
     if(game.isSquareEmpty(square)) {
         return;
     }
@@ -124,43 +125,43 @@ void Renderer::drawPieceOnSquare(Game& game, int square, std::optional<HeldPiece
     const Piece piece = game.pieceAtSquareForGui(square);
 
     if (!piece.exists()) {
-        assert(false); // should never happen; we've already verified it's not empty
+        assert(false);
         return;
     }
 
     sf::Sprite sprite = makePieceSprite(piece);
-    sprite.setPosition(RenderUtils::squareCenterPx(square));
+    sprite.setPosition(RenderUtils::squareCenterPx(getSquareFromDisplayPerspective(square, displayColor)));
 
     window_->draw(sprite);
 }
 
 // Overload for normal squares without specific colors.
-void Renderer::drawSquare(int square) {
+void Renderer::drawSquare(int square, Color displayColor) {
     const sf::Color color = RenderUtils::isSquareLight(square) ? RenderUtils::LIGHT_SQUARE_COLOR : RenderUtils::DARK_SQUARE_COLOR;
-    drawSquare(square, color);
+    drawSquare(square, color, displayColor);
 }
 
-void Renderer::drawSquare(int square, sf::Color color) {
-    const sf::RectangleShape squareShape = makeSquareShape(square, color);
+void Renderer::drawSquare(int square, sf::Color color, Color displayColor) {
+    const sf::RectangleShape squareShape = makeSquareShape(getSquareFromDisplayPerspective(square, displayColor), color);
     window_->draw(squareShape);
 }
 
-void Renderer::drawHighlights(Game& game, RenderState state) {
-    drawSelectedSquareHighlight(state.heldPiece);
-    drawLegalMoveHighlights(game, state.heldPiece);
-    drawCheckHighlights(game);
-    drawRedHighlights(state.redHighlightSquares);
+void Renderer::drawHighlights(Game& game, RenderState state, Color displayColor) {
+    drawSelectedSquareHighlight(state.heldPiece, displayColor);
+    drawLegalMoveHighlights(game, state.heldPiece, displayColor);
+    drawCheckHighlights(game, displayColor);
+    drawRedHighlights(state.redHighlightSquares, displayColor);
 }
 
-void Renderer::drawSelectedSquareHighlight(std::optional<HeldPieceState> heldPiece) {
+void Renderer::drawSelectedSquareHighlight(std::optional<HeldPieceState> heldPiece, Color displayColor) {
     if(!heldPiece) {
         return;
     }
     
-    highlightSquare(heldPiece->heldSquare, RenderUtils::SELECTED_HIGHLIGHT);
+    highlightSquare(heldPiece->heldSquare, RenderUtils::SELECTED_HIGHLIGHT, displayColor);
 }
 
-void Renderer::drawLegalMoveHighlights(Game& game, std::optional<HeldPieceState> heldPiece) {
+void Renderer::drawLegalMoveHighlights(Game& game, std::optional<HeldPieceState> heldPiece, Color displayColor) {
     if(!heldPiece) {
         return;
     }
@@ -169,32 +170,32 @@ void Renderer::drawLegalMoveHighlights(Game& game, std::optional<HeldPieceState>
     game.generateLegalMovesFromSquare(heldPiece->heldSquare, legalMoves);
     for(int i = 0; i < legalMoves.size; i++) {
         const Move move = legalMoves.data[i];
-        highlightSquare(move.targetSquare(), RenderUtils::LEGAL_HIGHLIGHT);
+        highlightSquare(move.targetSquare(), RenderUtils::LEGAL_HIGHLIGHT, displayColor);
     }
 }
 
-void Renderer::drawCheckHighlights(Game& game) {
+void Renderer::drawCheckHighlights(Game& game, Color displayColor) {
     if(!game.isInCheck(game.sideToMove())) {
         return;
     }
 
     const int kingSquare = game.findKingSquare(game.sideToMove());
-    highlightSquare(kingSquare, RenderUtils::CHECK_HIGHLIGHT);
+    highlightSquare(kingSquare, RenderUtils::CHECK_HIGHLIGHT, displayColor);
 }
 
-void Renderer::drawRedHighlights(std::array<bool, Utils::NUM_SQUARES> redHighlightSquares) {
+void Renderer::drawRedHighlights(std::array<bool, Utils::NUM_SQUARES> redHighlightSquares, Color displayColor) {
     for(int square = 0; square < Utils::NUM_SQUARES; square++) {
         if(!redHighlightSquares.at(square)) {
             continue;
         }
 
-        highlightSquare(square, RenderUtils::RIGHT_CLICK_HIGHLIGHT);
+        highlightSquare(square, RenderUtils::RIGHT_CLICK_HIGHLIGHT, displayColor);
     }
 }
 
-void Renderer::highlightSquare(int square, Highlight highlight) {
+void Renderer::highlightSquare(int square, Highlight highlight, Color displayColor) {
     const sf::Color color = RenderUtils::isSquareLight(square) ? highlight.lightHighlight() : highlight.darkHighlight();
-    drawSquare(square, color);
+    drawSquare(square, color, displayColor);
 }
 
 sf::Sprite Renderer::makePieceSprite(const Piece piece) {
@@ -231,4 +232,13 @@ sf::RectangleShape Renderer::makeSquareShape(int square, sf::Color color) {
     squareShape.setPosition({xpos, ypos});
 
     return squareShape;
+}
+
+int Renderer::getSquareFromDisplayPerspective(int square, Color displayColor) {
+    if(displayColor == Color::White) {
+        return square;
+    }
+
+    // displayColor == Black; flip 180 degrees
+    return (Utils::NUM_SQUARES - 1) - square;
 }
