@@ -23,6 +23,9 @@ struct EngineThreadState {
     bool resultReady = false;
     SearchResult result{};
 
+    sf::Clock searchClock;
+    sf::Time lastSearchDuration = sf::Time::Zero;
+
     ~EngineThreadState() {
         if (thread.joinable()) {
             thread.join();
@@ -49,8 +52,8 @@ public:
     pieceMovementSoundBuffer_{std::string{AppUtils::PIECE_MOVEMENT_SOUND_FILE}}, 
     pieceMovementSound_{pieceMovementSoundBuffer_} {
         game_.loadFEN(std::string{Utils::STARTING_FEN});
-
-        window_.setVerticalSyncEnabled(true);
+        
+        window_.setFramerateLimit(AppUtils::MAX_FPS);
 
         pieceMovementSound_.setVolume(AppUtils::VOLUME_PERCENTAGE);
     }
@@ -81,6 +84,7 @@ private:
 
     bool isEngineTurn();
     bool isPlayerTurn();
+    sf::Time engineSearchTime() const;
 
     Game game_;
     sf::RenderWindow window_;

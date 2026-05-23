@@ -104,21 +104,17 @@ namespace Eval {
     }
 
 
-    inline std::string evalToString(const int eval, const Color color) noexcept {
-        // we assume MAX_PLY (or max depth we recurse) is 256
-        if(isMate(eval)) {
-            const int pliesToMate = CHECKMATE - abs(eval);
-            // round plies to full moves
-            int movesToMate = (pliesToMate + 1) / 2;
-            // black is negative
-            movesToMate = color == Color::White ? movesToMate: -movesToMate;
+    inline std::string evalToString(const int eval) noexcept {
+        if (isMate(eval)) {
+            const int pliesToMate = CHECKMATE - std::abs(eval);
+            const int movesToMate = (pliesToMate + 1) / 2;
 
-            // #{moves} for white, #-moves for black
-            return "#" + std::to_string(movesToMate);
+            return eval > 0
+                ? "#" + std::to_string(movesToMate)
+                : "#-" + std::to_string(movesToMate);
         }
 
-        // not mate, we can return as-is, negative for black
-        return std::to_string(eval * (color == Color::White ? 1 : -1));
+        return std::to_string(eval);
     }
 }; // namespace Eval
 
