@@ -55,7 +55,7 @@ void Renderer::drawDraggedPiece(Game& game, std::optional<HeldPieceState> heldPi
 }
 
 void Renderer::drawEngineEval(int currentEval, Color playerColor) {
-    constexpr sf::Vector2f evalTextPosition = {100.F, 850.F};
+    constexpr sf::Vector2f evalTextPosition = {20.F, 800.F};
     const int evalTextFontSize = 50;
 
     int whiteRelativeEval = currentEval;
@@ -66,7 +66,7 @@ void Renderer::drawEngineEval(int currentEval, Color playerColor) {
 
     // load eval into string with 2 decimal places
     sf::Text evalText{font_};
-    evalText.setString(Eval::evalToString(whiteRelativeEval));
+    evalText.setString("Eval: " + Eval::evalToString(whiteRelativeEval));
     evalText.setPosition(evalTextPosition);
     evalText.setFillColor(sf::Color::White);
     evalText.setCharacterSize(evalTextFontSize);
@@ -74,7 +74,7 @@ void Renderer::drawEngineEval(int currentEval, Color playerColor) {
 }
 
 void Renderer::drawEngineStats(SearchStats currentStats) {
-    constexpr sf::Vector2f statsTextPosition = {400.F, 850.F};
+    constexpr sf::Vector2f statsTextPosition = {20.F, 875.F};
     const int statsTextFontSize = 25;
 
     // load currentStats into string with 2 decimal places
