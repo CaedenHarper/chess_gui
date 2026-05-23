@@ -85,6 +85,8 @@ void Application::render() {
         inputHandler_.heldPiece(),
         currentEval,
         currentStats,
+        engineSearchTime(),
+        engineThread_.thinking,
         redHighlightSquares
     };
     renderer_.render(game_, state);
@@ -97,6 +99,7 @@ void Application::startEngineSearch() {
 
     engineThread_.thinking = true;
     engineThread_.resultReady = false;
+    engineThread_.searchClock.restart();
 
     engineThread_.thread = std::thread(
         [this]() mutable {
@@ -134,6 +137,7 @@ std::optional<SearchResult> Application::tryTakeEngineResult() {
     }
 
     engineThread_.thinking = false;
+    engineThread_.lastSearchDuration = engineThread_.searchClock.getElapsedTime();
 
     return result;
 }
@@ -168,4 +172,12 @@ bool Application::isEngineTurn() {
 
 bool Application::isPlayerTurn() {
     return !game_.isFinished() && game_.sideToMove() == playerColor_;
+}
+
+sf::Time Application::engineSearchTime() const {
+    if (engineThread_.thinking) {
+        return engineThread_.searchClock.getElapsedTime();
+    }
+
+    return engineThread_.lastSearchDuration;
 }

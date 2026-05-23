@@ -1,7 +1,9 @@
 #include <SFML/Audio.hpp>
 #include <SFML/Graphics.hpp>
 #include <SFML/Graphics/RectangleShape.hpp>
+#include <SFML/System/Vector2.hpp>
 #include <optional>
+#include <sstream>
 
 #include "../engine/Engine.hpp"
 #include "InputHandler.hpp"
@@ -20,6 +22,7 @@ void Renderer::render(Game& game, const RenderState& state) {
     drawDraggedPiece(game, state.heldPiece);
     drawEngineEval(state.currentEval, state.playerColor);
     drawEngineStats(state.currentStats);
+    drawEngineTimer(state.engineSearchTime, state.engineThinking);
 
     window_->display();
 }
@@ -64,31 +67,48 @@ void Renderer::drawEngineEval(int currentEval, Color playerColor) {
         whiteRelativeEval = -whiteRelativeEval;
     }
 
-    // load eval into string with 2 decimal places
-    sf::Text evalText{font_};
-    evalText.setString("Eval: " + Eval::evalToString(whiteRelativeEval));
-    evalText.setPosition(evalTextPosition);
-    evalText.setFillColor(sf::Color::White);
-    evalText.setCharacterSize(evalTextFontSize);
-    window_->draw(evalText);
+    drawText("Eval: " + Eval::evalToString(whiteRelativeEval), evalTextPosition, evalTextFontSize);
 }
 
 void Renderer::drawEngineStats(SearchStats currentStats) {
     constexpr sf::Vector2f statsTextPosition = {20.F, 875.F};
     const int statsTextFontSize = 25;
 
-    // load currentStats into string with 2 decimal places
-    sf::Text statsText{font_};
     // Nodes Searched: n
     // QNodes Searched: q
     // Positions Searched: n + q
-    statsText.setString("Nodes Searched: " + std::to_string(currentStats.nodes) +
+    drawText("Nodes Searched: " + std::to_string(currentStats.nodes) +
                         "\nQNodes Searched: " + std::to_string(currentStats.qnodes) +
-                        "\nPositions Searched: " + std::to_string(currentStats.nodes + currentStats.qnodes));
-    statsText.setPosition(statsTextPosition);
-    statsText.setFillColor(sf::Color::White);
-    statsText.setCharacterSize(statsTextFontSize);
-    window_->draw(statsText);
+                        "\nPositions Searched: " + std::to_string(currentStats.nodes + currentStats.qnodes), statsTextPosition, statsTextFontSize);
+}
+
+void Renderer::drawEngineTimer(sf::Time elapsed, bool thinking) {
+    constexpr sf::Vector2f engineTimerPosition = {350.F, 800.F};
+    constexpr int engineTextFontSize = 50;
+
+    const float seconds = elapsed.asSeconds();
+
+    std::ostringstream out;
+    out << std::fixed << std::setprecision(2);
+
+    if (thinking) {
+        out << "Thinking: " << seconds << "s";
+    } else {
+        out << "Last move: " << seconds << "s";
+    }
+
+    drawText(out.str(), engineTimerPosition, engineTextFontSize);
+}
+
+void Renderer::drawText(const std::string& str, const sf::Vector2f& position, int size) {
+    sf::Text text{font_};
+
+    text.setString(str);
+    text.setPosition(position);
+    text.setFillColor(sf::Color::White);
+    text.setCharacterSize(size);
+
+    window_->draw(text);
 }
 
 void Renderer::drawPieceOnSquare(Game& game, int square, std::optional<HeldPieceState> heldPiece) {
