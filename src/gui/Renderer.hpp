@@ -53,7 +53,6 @@ private:
 
     static sf::Sprite makePieceSprite(Piece piece);
     static sf::RectangleShape makeSquareShape(int square, sf::Color color);
-    static int getSquareFromDisplayPerspective(int square, Color displayColor);
 
     sf::RenderWindow* window_;
     sf::Font font_{"assets/fonts/LiberationSans-Regular.ttf"};

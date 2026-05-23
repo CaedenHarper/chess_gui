@@ -3,7 +3,10 @@
 #include <SFML/Graphics.hpp>
 
 #include "Highlight.hpp"
+#include "../game/Piece.hpp"
+
 #include "../game/Utils.hpp"
+
 
 namespace RenderUtils {
     // -- CONSTANTS --
@@ -45,10 +48,19 @@ namespace RenderUtils {
 
     
     // -- HELPER FUNCTIONS --
-    constexpr int getSquareIndexFromCoordinates(int xPos, int yPos) {
+    constexpr int getSquareFromDisplayPerspective(int square, Color displayColor) {
+        if(displayColor == Color::White) {
+            return square;
+        }
+
+        // displayColor == Black; flip 180 degrees
+        return (Utils::NUM_SQUARES - 1) - square;
+    }
+
+    constexpr int getSquareIndexFromCoordinates(int xPos, int yPos, Color displayColor) {
         const int row = static_cast<int>(yPos / SQUARE_HEIGHT_PX);
         const int col = static_cast<int>(xPos / SQUARE_WIDTH_PX);
-        return Utils::getSquareIndex(col, row);
+        return getSquareFromDisplayPerspective(Utils::getSquareIndex(col, row), displayColor);
     }
 
     constexpr sf::Vector2f squareCenterPx(const int squareIndex) {

@@ -56,7 +56,7 @@ void Application::handleEvent(sf::Event event) {
     }
 
     const InputMode mode{isPlayerTurn() ? InputMode::FullGameplay : InputMode::BoardAnnotationsOnly};
-    const InputResult result = inputHandler_.handleEvent(event, game_, playerColor_, mode);
+    const InputResult result = inputHandler_.handleEvent(event, game_, playerColor_, playerColor_, mode); // take playercolor == displaycolor
     switch(result.type()) {
         case InputResult::Type::None:
         case InputResult::Type::InvalidMove: // TODO: consider an invalid move sound

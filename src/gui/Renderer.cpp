@@ -130,7 +130,7 @@ void Renderer::drawPieceOnSquare(Game& game, int square, std::optional<HeldPiece
     }
 
     sf::Sprite sprite = makePieceSprite(piece);
-    sprite.setPosition(RenderUtils::squareCenterPx(getSquareFromDisplayPerspective(square, displayColor)));
+    sprite.setPosition(RenderUtils::squareCenterPx(RenderUtils::getSquareFromDisplayPerspective(square, displayColor)));
 
     window_->draw(sprite);
 }
@@ -142,7 +142,7 @@ void Renderer::drawSquare(int square, Color displayColor) {
 }
 
 void Renderer::drawSquare(int square, sf::Color color, Color displayColor) {
-    const sf::RectangleShape squareShape = makeSquareShape(getSquareFromDisplayPerspective(square, displayColor), color);
+    const sf::RectangleShape squareShape = makeSquareShape(RenderUtils::getSquareFromDisplayPerspective(square, displayColor), color);
     window_->draw(squareShape);
 }
 
@@ -232,13 +232,4 @@ sf::RectangleShape Renderer::makeSquareShape(int square, sf::Color color) {
     squareShape.setPosition({xpos, ypos});
 
     return squareShape;
-}
-
-int Renderer::getSquareFromDisplayPerspective(int square, Color displayColor) {
-    if(displayColor == Color::White) {
-        return square;
-    }
-
-    // displayColor == Black; flip 180 degrees
-    return (Utils::NUM_SQUARES - 1) - square;
 }

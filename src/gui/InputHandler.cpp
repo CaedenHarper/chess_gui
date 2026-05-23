@@ -1,13 +1,13 @@
 #include "RenderUtils.hpp"
 #include "InputHandler.hpp"
 
-InputResult InputHandler::handleEvent(const sf::Event& event, Game& game, Color playerColor, InputMode mode) {
+InputResult InputHandler::handleEvent(const sf::Event& event, Game& game, Color playerColor, Color displayColor, InputMode mode) {
     if(mode == InputMode::Disabled) {
         return InputResult::none();
     }
 
     if(const auto* mouseClicked = event.getIf<sf::Event::MouseButtonPressed>()) {
-        return mouseClickEvent(*mouseClicked, game, playerColor, mode);
+        return mouseClickEvent(*mouseClicked, game, playerColor, displayColor, mode);
     }
 
     if(const auto* mouseMoved = event.getIf<sf::Event::MouseMoved>()) {
@@ -15,19 +15,19 @@ InputResult InputHandler::handleEvent(const sf::Event& event, Game& game, Color 
     }
 
     if(const auto* mouseUnclicked = event.getIf<sf::Event::MouseButtonReleased>()) {
-        return mouseUnclickEvent(*mouseUnclicked, game, mode);
+        return mouseUnclickEvent(*mouseUnclicked, game, displayColor, mode);
     }
 
     return InputResult::none();
 }
 
-InputResult InputHandler::mouseClickEvent(const sf::Event::MouseButtonPressed& event, Game& game, Color playerColor, InputMode mode) {
+InputResult InputHandler::mouseClickEvent(const sf::Event::MouseButtonPressed& event, Game& game, Color playerColor, Color displayColor, InputMode mode) {
         if(event.button == sf::Mouse::Button::Right) {
-            return rightClickEvent(event);
+            return rightClickEvent(event, displayColor);
         }
 
         if(event.button == sf::Mouse::Button::Left) {
-            return leftClickEvent(event, game, playerColor, mode);
+            return leftClickEvent(event, game, playerColor, displayColor, mode);
         }
 
         return InputResult::none();
@@ -43,7 +43,7 @@ InputResult InputHandler::mouseMovementEvent(const sf::Event::MouseMoved& event)
     return InputResult::none();
 }
 
-InputResult InputHandler::mouseUnclickEvent(const sf::Event::MouseButtonReleased& event, Game& game, InputMode mode) {    
+InputResult InputHandler::mouseUnclickEvent(const sf::Event::MouseButtonReleased& event, Game& game, Color displayColor, InputMode mode) {    
     // only allow left click releases on the physical board
     if(event.position.x > RenderUtils::BOARD_WIDTH_PX || event.position.y > RenderUtils::BOARD_HEIGHT_PX) {
         // release piece if we click oob
@@ -51,7 +51,7 @@ InputResult InputHandler::mouseUnclickEvent(const sf::Event::MouseButtonReleased
         return InputResult::none();
     }
 
-    const int targetSquare = RenderUtils::getSquareIndexFromCoordinates(event.position.x, event.position.y);
+    const int targetSquare = RenderUtils::getSquareIndexFromCoordinates(event.position.x, event.position.y, displayColor);
     
     // out of bounds
     if(!Utils::onBoard(targetSquare)) {
@@ -90,7 +90,7 @@ InputResult InputHandler::mouseUnclickEvent(const sf::Event::MouseButtonReleased
     return InputResult::invalidMove();
 }
 
-InputResult InputHandler::leftClickEvent(const sf::Event::MouseButtonPressed& event, Game& game, Color playerColor, InputMode mode) {
+InputResult InputHandler::leftClickEvent(const sf::Event::MouseButtonPressed& event, Game& game, Color playerColor, Color displayColor, InputMode mode) {
     const sf::Vector2i mousePos = event.position;
 
     // only allow left clicks on the physical board
@@ -98,7 +98,7 @@ InputResult InputHandler::leftClickEvent(const sf::Event::MouseButtonPressed& ev
         return InputResult::none(true);
     }
 
-    const int targetSquare = RenderUtils::getSquareIndexFromCoordinates(mousePos.x, mousePos.y);
+    const int targetSquare = RenderUtils::getSquareIndexFromCoordinates(mousePos.x, mousePos.y, displayColor);
     
     // target square does not exist; reset any selected piece
     if(!Utils::onBoard(targetSquare)) {
@@ -144,7 +144,7 @@ InputResult InputHandler::leftClickEvent(const sf::Event::MouseButtonPressed& ev
     return InputResult::invalidMove();
 }
 
-InputResult InputHandler::rightClickEvent(const sf::Event::MouseButtonPressed& event) {
+InputResult InputHandler::rightClickEvent(const sf::Event::MouseButtonPressed& event, Color displayColor) {
     // right click cancels any held square
     if(heldPiece_) {
         heldPiece_.reset();
@@ -158,7 +158,7 @@ InputResult InputHandler::rightClickEvent(const sf::Event::MouseButtonPressed& e
     }
 
     // swap highlight status of square
-    const int targetSquare = RenderUtils::getSquareIndexFromCoordinates(mousePos.x, mousePos.y);
+    const int targetSquare = RenderUtils::getSquareIndexFromCoordinates(mousePos.x, mousePos.y, displayColor);
     if(!Utils::onBoard(targetSquare)) {
         return InputResult::none();
     }
