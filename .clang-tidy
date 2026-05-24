@@ -1,3 +1,4 @@
+---
 Checks:
   # --- Will almost certainly never change ---
   - '*'                                                   # Start by allowing everything
@@ -30,3 +31,4 @@ Checks:
   - '-hicpp-signed-bitwise'                       # This is a fine rule but my environment won't respect IgnorePositiveIntegerLiterals: true
 
 WarningsAsErrors: 'modernize-*'  # VSCode shows this as deprecated; enabling error makes them more visible in the IDE
+...

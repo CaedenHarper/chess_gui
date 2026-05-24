@@ -4,7 +4,8 @@
 
 class MainMenuRenderer {
 public:
-    explicit MainMenuRenderer(sf::RenderWindow* window) : window_{window} {}
+    explicit MainMenuRenderer(sf::RenderWindow* window) : window_{window} {
+    }
 
     void render();
 

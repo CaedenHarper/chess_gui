@@ -19,9 +19,9 @@
 //     const int targetRow = targetRowC - '0';
 
 //     // all files and ranks should be in range 0 - 7
-//     if(sourceCol < 0 || sourceCol > 7 
+//     if(sourceCol < 0 || sourceCol > 7
 //     || sourceRow < 0 || sourceRow > 7
-//     || targetCol < 0 || targetCol > 7 
+//     || targetCol < 0 || targetCol > 7
 //     || targetRow < 0 || targetRow > 7) {
 //         // TODO: debug statement
 //         std::cerr << "parseLongNotation: one file or rank is out of bounds\n";
@@ -31,12 +31,13 @@
 //     // rank 1 starts at at index 0, whereas Game handles the board starting from the top left (rank 8 being 0)
 //     // therefore, we need to reflect it across the middle of the board with (8 - rank)
 //     const int sourceSquare = getSquareIndex(sourceCol, 8 - sourceRow);
-//     const int targetSquare = getSquareIndex(targetCol, 8 - targetRow); 
+//     const int targetSquare = getSquareIndex(targetCol, 8 - targetRow);
 
 //     return Move::fromPieces(sourceSquare, targetSquare, board_.at(sourceSquare), board_.at(targetSquare));
 // }
 
-// std::optional<Move> Game::parseAlgebraicNotation_(const std::string& move) const { // NOLINT(readability-convert-member-functions-to-static) undo when finished
+// std::optional<Move> Game::parseAlgebraicNotation_(const std::string& move) const { //
+// NOLINT(readability-convert-member-functions-to-static) undo when finished
 //     std::cerr << "parseAlgebraicNotation: Not yet implemented! " << move;
 //     return std::nullopt;
 // }
@@ -45,8 +46,9 @@
 //     int currentPart = 0;
 //     std::string firstPart;
 //     std::string secondPart;
-//     // iterate through and split based on first part before space vs. second part. any unknown characters are ignored. any spaces after the first space are ignored.
-//     for(const char c : move) { // NOLINT(readability-identifier-length)
+//     // iterate through and split based on first part before space vs. second part. any unknown characters are
+//     ignored. any spaces after the first space are ignored. for(const char c : move) { //
+//     NOLINT(readability-identifier-length)
 //         if(c == ' ' && currentPart == 0) {
 //             currentPart = 1;
 //             continue;
@@ -79,7 +81,8 @@ void runCLIGame() {
 
     while(!game.isFinished()) {
         // Print info to player
-        std::cout << game.to_string() << "\n" << (game.currentTurn() == Color::White ? "White" : "Black") << "'s turn\nMove: ";
+        std::cout << game.to_string() << "\n" << (game.currentTurn() == Color::White ? "White" : "Black") << "'s
+turn\nMove: ";
         // read move from input
         std::string moveS;
         std::getline(std::cin, moveS);

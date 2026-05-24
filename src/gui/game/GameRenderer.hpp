@@ -3,11 +3,8 @@
 #include <SFML/Graphics.hpp>
 
 #include "../../engine/Engine.hpp"
-
 #include "GameInputHandler.hpp"
-
 #include "Highlight.hpp"
-
 
 struct GameRenderState {
     Color playerColor{};
@@ -23,11 +20,13 @@ struct GameRenderState {
 } __attribute__((aligned(128))); // NOLINT[magic numbers] align to 128 bytes
 
 // NOTE: all Game& should be const Game& and should not be expected to modify Game.
-//     However, they require generateLegalMoves...() which is not yet const qualified, due to a design decision in Game which has not yet been fixed.
+//     However, they require generateLegalMoves...() which is not yet const qualified, due to a design decision in Game
+//     which has not yet been fixed.
 //     TODO: Once this is fixed, this should be updated.
 class GameRenderer {
 public:
-    explicit GameRenderer(sf::RenderWindow* window) : window_{window} {}
+    explicit GameRenderer(sf::RenderWindow* window) : window_{window} {
+    }
 
     void render(Game& game, const GameRenderState& state);
 

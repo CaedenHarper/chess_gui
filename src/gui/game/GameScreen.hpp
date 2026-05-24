@@ -2,19 +2,16 @@
 
 #include <SFML/Audio.hpp>
 
+#include "../../engine/Engine.hpp"
+#include "../../game/Game.hpp"
+#include "../resources/Screen.hpp"
+#include "../resources/SoundUtils.hpp"
+#include "GameInputHandler.hpp"
+#include "GameRenderer.hpp"
+
 #include <mutex>
 #include <thread>
 
-#include "../../game/Game.hpp"
-#include "../../engine/Engine.hpp"
-#include "GameRenderer.hpp"
-
-#include "../resources/SoundUtils.hpp"
-
-#include "GameInputHandler.hpp"
-
-
-#include "../resources/Screen.hpp"
 
 struct EngineThreadState {
     std::thread thread;
@@ -30,7 +27,7 @@ struct EngineThreadState {
     sf::Time lastSearchDuration = sf::Time::Zero;
 
     ~EngineThreadState() {
-        if (thread.joinable()) {
+        if(thread.joinable()) {
             thread.join();
         }
     }
@@ -47,18 +44,17 @@ struct EngineThreadState {
 class GameScreen : public Screen {
 public:
     GameScreen(sf::RenderWindow& window, Color playerColor)
-    : renderer_{&window},
-      playerColor_{playerColor},
-      pieceMovementSoundBuffer_{std::string{SoundUtils::PIECE_MOVEMENT_SOUND_FILE}}, 
-      pieceMovementSound_{pieceMovementSoundBuffer_}
-    {
+        : renderer_{&window},
+          playerColor_{playerColor},
+          pieceMovementSoundBuffer_{std::string{SoundUtils::PIECE_MOVEMENT_SOUND_FILE}},
+          pieceMovementSound_{pieceMovementSoundBuffer_} {
         game_.loadFEN(std::string{Utils::STARTING_FEN});
         pieceMovementSound_.setVolume(SoundUtils::VOLUME_PERCENTAGE);
     }
 
     ~GameScreen() override {
         // Make sure engine thread is finished before deleting
-        if (engineThread_.thread.joinable()) {
+        if(engineThread_.thread.joinable()) {
             engineThread_.thread.join();
         }
     }
@@ -71,6 +67,7 @@ public:
     void handleEvent(const sf::Event& event) override;
     void update() override;
     void render() override;
+
 private:
     void handleEngineTurn();
 

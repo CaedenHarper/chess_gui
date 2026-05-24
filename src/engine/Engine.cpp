@@ -25,7 +25,7 @@ int Engine::quiesce(Game& game, int alpha, int beta, int ply) { // NOLINT(misc-n
 
         bool legalMoveExists = false;
 
-        for (int moveIndex = 0; moveIndex < moves.size; moveIndex++) {
+        for(int moveIndex = 0; moveIndex < moves.size; moveIndex++) {
             // make move from indices
             const Move move = moves.data[indices[moveIndex]];
             const UndoInfo undoInfo = game.getUndoInfo(move);
@@ -40,20 +40,20 @@ int Engine::quiesce(Game& game, int alpha, int beta, int ply) { // NOLINT(misc-n
 
             // we have at least one legal move
             legalMoveExists = true;
-            
+
             const int score = -quiesce(game, -beta, -alpha, ply + 1);
             game.undoMove(move, undoInfo);
 
-            if (score >= beta) {
-                return score;  // fail-soft
+            if(score >= beta) {
+                return score; // fail-soft
             }
-            if (score > alpha) {
+            if(score > alpha) {
                 alpha = score;
             }
         }
 
         // No legal evasions means we've been checkmated
-        if (!legalMoveExists) {
+        if(!legalMoveExists) {
             return -Eval::CHECKMATE + ply;
         }
 
@@ -62,12 +62,12 @@ int Engine::quiesce(Game& game, int alpha, int beta, int ply) { // NOLINT(misc-n
 
     // we're not in check, so we can probe normally
     const int standPat = evaluatePosition(game);
-    
-    if (standPat >= beta) {
-        return standPat;  // fail-soft
+
+    if(standPat >= beta) {
+        return standPat; // fail-soft
     }
 
-    if (standPat > alpha) {
+    if(standPat > alpha) {
         alpha = standPat;
     }
 
@@ -80,13 +80,13 @@ int Engine::quiesce(Game& game, int alpha, int beta, int ply) { // NOLINT(misc-n
     std::array<int, MoveList::kMaxMoves> indices{};
     orderMoves(game, moves, indices);
 
-    for (int moveIndex = 0; moveIndex < moves.size; moveIndex++) {
+    for(int moveIndex = 0; moveIndex < moves.size; moveIndex++) {
         // make move from indices
         const Move move = moves.data[indices[moveIndex]];
         const UndoInfo undoInfo = game.getUndoInfo(move);
 
         // only check captures + promotions; TODO: should we also look at checks?
-        if (!(move.isCapture() || move.isPromotion())) {
+        if(!(move.isCapture() || move.isPromotion())) {
             continue;
         }
 
@@ -101,11 +101,11 @@ int Engine::quiesce(Game& game, int alpha, int beta, int ply) { // NOLINT(misc-n
         const int score = -quiesce(game, -beta, -alpha, ply + 1);
         game.undoMove(move, undoInfo);
 
-        if (score >= beta) {
-            return score;  // fail-soft
+        if(score >= beta) {
+            return score; // fail-soft
         }
 
-        if (score > alpha) {
+        if(score > alpha) {
             alpha = score;
         }
     }
@@ -130,23 +130,23 @@ SearchResult Engine::search(Game& game, int depth) {
     // reset stats counter once at root
     stats_.clear();
 
-    Move bestMove{};  // NOTE: this starts as a junk move
+    Move bestMove{}; // NOTE: this starts as a junk move
 
     bool legalMoveExists = false;
     MoveList moves;
     game.generatePseudoLegalMoves(moves);
-    
+
     // order moves to greatly improve alpha-beta pruning
     std::array<int, MoveList::kMaxMoves> indices{};
     orderMoves(game, moves, indices);
 
     // start with the worst possible move
     int bestScore = -Eval::CHECKMATE;
-    for (int moveIndex = 0; moveIndex < moves.size ; moveIndex++) {
+    for(int moveIndex = 0; moveIndex < moves.size; moveIndex++) {
         // make move from indices
         const Move move = moves.data[indices[moveIndex]];
         const UndoInfo undoInfo = game.getUndoInfo(move);
-    
+
         game.makeMove(move);
 
         // this move is not legal
@@ -159,8 +159,8 @@ SearchResult Engine::search(Game& game, int depth) {
         legalMoveExists = true;
 
         // init search with alpha = worst move, beta = best move
-        const int score = -alphaBeta_(game, -Eval::CHECKMATE, Eval::CHECKMATE, depth-1, 1);
-        if (score > bestScore) {
+        const int score = -alphaBeta_(game, -Eval::CHECKMATE, Eval::CHECKMATE, depth - 1, 1);
+        if(score > bestScore) {
             bestScore = score;
             bestMove = move;
         }
@@ -169,8 +169,8 @@ SearchResult Engine::search(Game& game, int depth) {
     }
 
     // if we don't have a legal move, we're done; return nullopt
-    if (!legalMoveExists) {
-        if (game.isInCheck(game.sideToMove())) {
+    if(!legalMoveExists) {
+        if(game.isInCheck(game.sideToMove())) {
             return SearchResult{std::nullopt, -Eval::CHECKMATE, stats_};
         }
 
@@ -188,7 +188,7 @@ void Engine::orderMoves(Game& game, const MoveList& moves, std::array<int, MoveL
     if(numMoves == 0) {
         return;
     }
-    
+
     std::array<int, MoveList::kMaxMoves> scores{};
     for(int moveIndex = 0; moveIndex < numMoves; moveIndex++) {
         // init indices values while iterating
@@ -205,7 +205,7 @@ void Engine::orderMoves(Game& game, const MoveList& moves, std::array<int, MoveL
         }
 
         // Boost promotions
-        if (move.isPromotion()) {
+        if(move.isPromotion()) {
             constexpr int PROMOTION_BONUS = 1000;
             // queen promotion > others
             const int QUEEN_PROMOTION_BONUS = move.promotion() == Promotion::Queen ? 100 : 0;
@@ -216,14 +216,14 @@ void Engine::orderMoves(Game& game, const MoveList& moves, std::array<int, MoveL
     }
 
     // Selection ordering: bring best score to front, one by one
-    for (int picked = 0; picked < numMoves; picked++) {
+    for(int picked = 0; picked < numMoves; picked++) {
         int best = picked;
-        for (int j = picked + 1; j < numMoves; j++) {
-            if (scores[j] > scores[best]) {
+        for(int j = picked + 1; j < numMoves; j++) {
+            if(scores[j] > scores[best]) {
                 best = j;
             }
         }
-        if (best != picked) {
+        if(best != picked) {
             std::swap(scores[picked], scores[best]);
             std::swap(indices[picked], indices[best]);
         }
@@ -233,7 +233,7 @@ void Engine::orderMoves(Game& game, const MoveList& moves, std::array<int, MoveL
 int Engine::alphaBeta_(Game& game, int alpha, int beta, int depth, int ply) { // NOLINT(misc-no-recursion)
     stats_.nodes++;
 
-    if (depth == 0) {
+    if(depth == 0) {
         return quiesce(game, alpha, beta, ply + 1);
     }
 
@@ -245,7 +245,7 @@ int Engine::alphaBeta_(Game& game, int alpha, int beta, int depth, int ply) { //
     std::array<int, MoveList::kMaxMoves> indices{};
     orderMoves(game, moves, indices);
 
-    for (int moveIndex = 0; moveIndex < moves.size; moveIndex++)  {
+    for(int moveIndex = 0; moveIndex < moves.size; moveIndex++) {
         // make move from indices
         const Move move = moves.data[indices[moveIndex]];
         const UndoInfo undoInfo = game.getUndoInfo(move);
@@ -261,17 +261,16 @@ int Engine::alphaBeta_(Game& game, int alpha, int beta, int depth, int ply) { //
         // we have at least one legal move
         legalMoveExists = true;
 
-        const int score = -alphaBeta_(game, -beta, -alpha, depth-1, ply + 1);
+        const int score = -alphaBeta_(game, -beta, -alpha, depth - 1, ply + 1);
         game.undoMove(move, undoInfo);
 
         if(score > alpha) {
             alpha = score;
         }
-        
-        if( score >= beta ) {
-            return alpha;  // fail soft
-        }
 
+        if(score >= beta) {
+            return alpha; // fail soft
+        }
     }
 
     // we don't have any legal moves in the position; return with checkmate / stalemate
@@ -311,48 +310,47 @@ int Engine::evaluatePiecePlacementBonus_(Game& game, const Color color) const {
 
     // Pawns
     currentBitboard = isWhite ? game.bbWhitePawns() : game.bbBlackPawns();
-    while (!currentBitboard.empty()) {
+    while(!currentBitboard.empty()) {
         const int square = currentBitboard.popLsb();
         score += Eval::BLACK_PAWN_EVAL_TABLE[isWhite ? Utils::mirrorSquare(square) : square];
     }
 
     // Knights
     currentBitboard = isWhite ? game.bbWhiteKnights() : game.bbBlackKnights();
-    while (!currentBitboard.empty()) {
+    while(!currentBitboard.empty()) {
         const int square = currentBitboard.popLsb();
         score += Eval::BLACK_KNIGHT_EVAL_TABLE[isWhite ? Utils::mirrorSquare(square) : square];
     }
 
     // Bishops
     currentBitboard = isWhite ? game.bbWhiteBishops() : game.bbBlackBishops();
-    while (!currentBitboard.empty()) {
+    while(!currentBitboard.empty()) {
         const int square = currentBitboard.popLsb();
         score += Eval::BLACK_BISHOP_EVAL_TABLE[isWhite ? Utils::mirrorSquare(square) : square];
     }
 
     // Rooks
     currentBitboard = isWhite ? game.bbWhiteRooks() : game.bbBlackRooks();
-    while (!currentBitboard.empty()) {
+    while(!currentBitboard.empty()) {
         const int square = currentBitboard.popLsb();
         score += Eval::BLACK_ROOK_EVAL_TABLE[isWhite ? Utils::mirrorSquare(square) : square];
     }
 
     // Queens
     currentBitboard = isWhite ? game.bbWhiteQueens() : game.bbBlackQueens();
-    while (!currentBitboard.empty()) {
+    while(!currentBitboard.empty()) {
         const int square = currentBitboard.popLsb();
         score += Eval::BLACK_QUEEN_EVAL_TABLE[isWhite ? Utils::mirrorSquare(square) : square];
     }
 
     // King
     currentBitboard = isWhite ? game.bbWhiteKing() : game.bbBlackKing();
-    while (!currentBitboard.empty()) {
+    while(!currentBitboard.empty()) {
         const int square = currentBitboard.popLsb();
         score += Eval::BLACK_KING_EVAL_TABLE[isWhite ? Utils::mirrorSquare(square) : square];
     }
 
     return score;
 }
-
 
 // NOLINTEND(readability-convert-member-functions-to-static)

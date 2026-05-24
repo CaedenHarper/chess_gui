@@ -1,19 +1,19 @@
 #pragma once
 
-#include <SFML/System/Vector2.hpp>
-
 #include <SFML/Audio.hpp>
 #include <SFML/Graphics.hpp>
-#include <memory>
+#include <SFML/System/Vector2.hpp>
 
 #include "../gui/resources/Screen.hpp"
 #include "AppUtils.hpp"
 
-class Application{
+#include <memory>
+
+class Application {
 public:
     explicit Application()
-        : window_{sf::VideoMode{{AppUtils::STARTING_WINDOW_WIDTH, AppUtils::STARTING_WINDOW_HEIGHT}}, std::string{AppUtils::WINDOW_TITLE}}
-    {
+        : window_{sf::VideoMode{{AppUtils::STARTING_WINDOW_WIDTH, AppUtils::STARTING_WINDOW_HEIGHT}},
+                  std::string{AppUtils::WINDOW_TITLE}} {
         window_.setFramerateLimit(AppUtils::MAX_FPS);
         switchTo(ScreenID::MainMenu);
     }

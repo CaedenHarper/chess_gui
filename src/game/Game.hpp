@@ -1,42 +1,66 @@
 #pragma once
 
+#include "Bitboard.hpp"
+#include "Move.hpp"
+#include "Piece.hpp"
+#include "Utils.hpp"
+
 #include <array>
 #include <cassert>
 #include <cstdint>
 #include <string>
 
-#include "Bitboard.hpp"
-#include "Move.hpp"
-#include "Piece.hpp"
-#include "Utils.hpp"
 
 // Representation of the castling rights of a position, stored in uint8_t for maximum speed.
 struct CastlingRights {
     uint8_t castlingRights;
 
     // Pack the four castling bools into one uint8_t.
-    static constexpr uint8_t pack(bool whiteKingside, bool whiteQueenside, bool blackKingside, bool blackQueenside) noexcept {
-        return (static_cast<uint8_t>(whiteKingside) << 0) |
-                (static_cast<uint8_t>(whiteQueenside) << 1) |
-                (static_cast<uint8_t>(blackKingside) << 2) |
-                (static_cast<uint8_t>(blackQueenside) << 3);
+    static constexpr uint8_t
+    pack(bool whiteKingside, bool whiteQueenside, bool blackKingside, bool blackQueenside) noexcept {
+        return (static_cast<uint8_t>(whiteKingside) << 0) | (static_cast<uint8_t>(whiteQueenside) << 1) |
+               (static_cast<uint8_t>(blackKingside) << 2) | (static_cast<uint8_t>(blackQueenside) << 3);
     }
 
     // Getters extract bits from packed representation.
-    constexpr bool canWhiteKingside() const noexcept { return static_cast<bool>(castlingRights & (1 << 0)); }
-    constexpr bool canWhiteQueenside() const noexcept { return static_cast<bool>(castlingRights & (1 << 1)); }
-    constexpr bool canBlackKingside() const noexcept { return static_cast<bool>(castlingRights & (1 << 2)); }
-    constexpr bool canBlackQueenside() const noexcept { return static_cast<bool>(castlingRights & (1 << 3)); }
+    constexpr bool canWhiteKingside() const noexcept {
+        return static_cast<bool>(castlingRights & (1 << 0));
+    }
+    constexpr bool canWhiteQueenside() const noexcept {
+        return static_cast<bool>(castlingRights & (1 << 1));
+    }
+    constexpr bool canBlackKingside() const noexcept {
+        return static_cast<bool>(castlingRights & (1 << 2));
+    }
+    constexpr bool canBlackQueenside() const noexcept {
+        return static_cast<bool>(castlingRights & (1 << 3));
+    }
 
-    constexpr void setWhiteKingside() noexcept { castlingRights |= (1 << 0); }
-    constexpr void setWhiteQueenside() noexcept { castlingRights |= (1 << 1); }
-    constexpr void setBlackKingside() noexcept { castlingRights |= (1 << 2); }
-    constexpr void setBlackQueenside() noexcept { castlingRights |= (1 << 3); }
+    constexpr void setWhiteKingside() noexcept {
+        castlingRights |= (1 << 0);
+    }
+    constexpr void setWhiteQueenside() noexcept {
+        castlingRights |= (1 << 1);
+    }
+    constexpr void setBlackKingside() noexcept {
+        castlingRights |= (1 << 2);
+    }
+    constexpr void setBlackQueenside() noexcept {
+        castlingRights |= (1 << 3);
+    }
 
-    constexpr void clearWhiteKingside() noexcept { castlingRights &= ~(1 << 0); }
-    constexpr void clearWhiteQueenside() noexcept { castlingRights &= ~(1 << 1); }
-    constexpr void clearBlackKingside() noexcept { castlingRights &= ~(1 << 2); }
-    constexpr void clearBlackQueenside() noexcept { castlingRights &= ~(1 << 3); }
+    constexpr void clearWhiteKingside() noexcept {
+        castlingRights &= ~(1 << 0);
+    }
+    constexpr void clearWhiteQueenside() noexcept {
+        castlingRights &= ~(1 << 1);
+    }
+    constexpr void clearBlackKingside() noexcept {
+        castlingRights &= ~(1 << 2);
+    }
+    constexpr void clearBlackQueenside() noexcept {
+        castlingRights &= ~(1 << 3);
+    }
 };
 
 // Info used to fully undo a move.
@@ -48,12 +72,9 @@ struct UndoInfo {
 
     static constexpr uint8_t noEnPassant = 255;
 
-    constexpr UndoInfo(CastlingRights castlingRights,
-                       uint8_t enPassantSquare,
-                       Piece capturedPiece_) noexcept
-        : prevCastlingRights{castlingRights},
-          prevEnPassantSquare{enPassantSquare},
-          capturedPiece{capturedPiece_} {}
+    constexpr UndoInfo(CastlingRights castlingRights, uint8_t enPassantSquare, Piece capturedPiece_) noexcept
+        : prevCastlingRights{castlingRights}, prevEnPassantSquare{enPassantSquare}, capturedPiece{capturedPiece_} {
+    }
 } __attribute__((aligned(4))); // align to 4 bytes
 
 // Create holder for all AttackBitboards
@@ -72,7 +93,7 @@ class Game {
 public:
     // Construct a new game with an empty board. Current turn defaults to white.
     Game();
-    
+
     // TODO: Rewrite copyInto() into a copy constructor.
     // Disallow default copy / move constructors
     Game(const Game&) = delete;
@@ -116,17 +137,16 @@ public:
         out.piecePackedToBB_.fill(nullptr);
         out.initPieceToBBTable_();
 
-        out.colorToOccupancyBitboard_ = {
-            nullptr,
-            &out.bbWhitePieces_,
-            &out.bbBlackPieces_,
-            nullptr
-        };
+        out.colorToOccupancyBitboard_ = {nullptr, &out.bbWhitePieces_, &out.bbBlackPieces_, nullptr};
     }
     // Retrieve mailbox.
-    constexpr std::array<Piece, Utils::NUM_SQUARES> mailbox() const noexcept { return mailbox_; }
+    constexpr std::array<Piece, Utils::NUM_SQUARES> mailbox() const noexcept {
+        return mailbox_;
+    }
     // Retrieve the color of the current player's turn.
-    constexpr Color sideToMove() const noexcept { return sideToMove_; }
+    constexpr Color sideToMove() const noexcept {
+        return sideToMove_;
+    }
     // Retrieve a string representation of the current state of the board.
     std::string to_string() const;
     // If the game is finished.
@@ -134,20 +154,12 @@ public:
     // Get flags in the form of UndoInfo.
     constexpr UndoInfo getUndoInfo(Piece capturedPiece) const noexcept {
         // pack bools into castling rights uint8_t for speedy lookup
-        return UndoInfo{
-            castlingRights_,
-            enPassantSquare_,
-            capturedPiece
-        };
+        return UndoInfo{castlingRights_, enPassantSquare_, capturedPiece};
     }
 
     constexpr UndoInfo getUndoInfo(Move move) const noexcept {
         // pack bools into castling rights uint8_t for speedy lookup
-        return UndoInfo{
-            castlingRights_,
-            enPassantSquare_,
-            mailbox_[move.targetSquare()]
-        };
+        return UndoInfo{castlingRights_, enPassantSquare_, mailbox_[move.targetSquare()]};
     }
     // Get piece at a square for the GUI. Note this method is relatively slow and should not be used in hot loops.
     Piece pieceAtSquareForGui(int square) const noexcept;
@@ -172,30 +184,34 @@ public:
         if(isInCheck(moveColor)) {
             return true;
         }
-        
+
         // castling legality rules
         if(move.isKingSideCastle()) {
-            const int kingStartingSquare = isSourceWhite ? Utils::WHITE_KING_STARTING_SQUARE : Utils::BLACK_KING_STARTING_SQUARE;
-            const int kingsidePassingSquare = isSourceWhite ? Utils::WHITE_KINGSIDE_PASSING_SQUARE : Utils::BLACK_KINGSIDE_PASSING_SQUARE;
-            const int kingsideTargetSquare = isSourceWhite ? Utils::WHITE_KINGSIDE_TARGET_SQUARE : Utils::BLACK_KINGSIDE_TARGET_SQUARE;
+            const int kingStartingSquare =
+                isSourceWhite ? Utils::WHITE_KING_STARTING_SQUARE : Utils::BLACK_KING_STARTING_SQUARE;
+            const int kingsidePassingSquare =
+                isSourceWhite ? Utils::WHITE_KINGSIDE_PASSING_SQUARE : Utils::BLACK_KINGSIDE_PASSING_SQUARE;
+            const int kingsideTargetSquare =
+                isSourceWhite ? Utils::WHITE_KINGSIDE_TARGET_SQUARE : Utils::BLACK_KINGSIDE_TARGET_SQUARE;
 
-            if(
-                isSquareAttacked(kingStartingSquare, targetColor) ||   // king cant start in check
-                isSquareAttacked(kingsidePassingSquare, targetColor) ||   // king cant pass through check 
-                isSquareAttacked(kingsideTargetSquare, targetColor)      // king cant end in check
+            if(isSquareAttacked(kingStartingSquare, targetColor) || // king cant start in check
+               isSquareAttacked(kingsidePassingSquare, targetColor) || // king cant pass through check
+               isSquareAttacked(kingsideTargetSquare, targetColor) // king cant end in check
             ) {
                 return true;
             }
         }
 
         if(move.isQueenSideCastle()) {
-            const int kingStartingSquare = isSourceWhite ? Utils::WHITE_KING_STARTING_SQUARE : Utils::BLACK_KING_STARTING_SQUARE;
-            const int queensidePassingSquare = isSourceWhite ? Utils::WHITE_QUEENSIDE_PASSING_SQUARE : Utils::BLACK_QUEENSIDE_PASSING_SQUARE;
-            const int queensideTargetSquare = isSourceWhite ? Utils::WHITE_QUEENSIDE_TARGET_SQUARE : Utils::BLACK_QUEENSIDE_TARGET_SQUARE;
-            if(
-                isSquareAttacked(kingStartingSquare, targetColor) ||   // king cant start in check
-                isSquareAttacked(queensidePassingSquare, targetColor) ||   // king cant pass through check 
-                isSquareAttacked(queensideTargetSquare, targetColor)      // king cant end in check
+            const int kingStartingSquare =
+                isSourceWhite ? Utils::WHITE_KING_STARTING_SQUARE : Utils::BLACK_KING_STARTING_SQUARE;
+            const int queensidePassingSquare =
+                isSourceWhite ? Utils::WHITE_QUEENSIDE_PASSING_SQUARE : Utils::BLACK_QUEENSIDE_PASSING_SQUARE;
+            const int queensideTargetSquare =
+                isSourceWhite ? Utils::WHITE_QUEENSIDE_TARGET_SQUARE : Utils::BLACK_QUEENSIDE_TARGET_SQUARE;
+            if(isSquareAttacked(kingStartingSquare, targetColor) || // king cant start in check
+               isSquareAttacked(queensidePassingSquare, targetColor) || // king cant pass through check
+               isSquareAttacked(queensideTargetSquare, targetColor) // king cant end in check
             ) {
                 return true;
             }
@@ -316,7 +332,7 @@ private:
 
     // Castling flags.
     CastlingRights castlingRights_;
-    
+
     // Current en passant square. Is UndoInfo sentinal if no en passant.
     uint8_t enPassantSquare_;
 
@@ -354,11 +370,12 @@ private:
     // init lookup tables
     void initAttackBitboards_();
     void initPieceToBBTable_();
-    
+
     // Add move and all pawn promotion variants to moves. If move is not a pawn promotion, just add move by itself.
-    static constexpr void addAllPawnPromotionsToMoves_(MoveList& moves, int sourceSquare, int targetSquare, Piece sourcePiece, bool isCapture) {
+    static constexpr void addAllPawnPromotionsToMoves_(
+        MoveList& moves, int sourceSquare, int targetSquare, Piece sourcePiece, bool isCapture) {
         const Color pawnColor = sourcePiece.color();
-        const int promotionRow = pawnColor == Color::White ? 0 : 7; 
+        const int promotionRow = pawnColor == Color::White ? 0 : 7;
         if(Utils::getRow(targetSquare) == promotionRow) {
             const MoveFlag flag = isCapture ? MoveFlag::PromotionCapture : MoveFlag::Promotion;
             // add promotions

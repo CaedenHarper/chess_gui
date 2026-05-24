@@ -2,11 +2,7 @@
 
 #include <SFML/Graphics.hpp>
 
-enum class ScreenID : std::uint8_t {
-    MainMenu,
-    Game,
-    GameOver
-};
+enum class ScreenID : std::uint8_t { MainMenu, Game, GameOver };
 
 class Screen {
 public:

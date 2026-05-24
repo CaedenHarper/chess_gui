@@ -1,15 +1,17 @@
-#include <SFML/System/Vector2.hpp>
-#include <optional>
+#include "Application.hpp"
 
 #include <SFML/Audio.hpp>
 #include <SFML/Graphics.hpp>
+#include <SFML/System/Vector2.hpp>
 
-#include "../gui/main_menu/MainMenuScreen.hpp"
 #include "../gui/game/GameScreen.hpp"
-#include "Application.hpp"
+#include "../gui/main_menu/MainMenuScreen.hpp"
+
+#include <optional>
+
 
 void Application::run() {
-    while (window_.isOpen()) {
+    while(window_.isOpen()) {
         handleEvents();
         update();
         render();
@@ -17,12 +19,12 @@ void Application::run() {
 }
 
 void Application::handleEvents() {
-    while (const std::optional<sf::Event> event = window_.pollEvent()) {
+    while(const std::optional<sf::Event> event = window_.pollEvent()) {
         if(!event) {
             continue;
         }
 
-        if (event->is<sf::Event::Closed>()) {
+        if(event->is<sf::Event::Closed>()) {
             window_.close();
             return;
         }

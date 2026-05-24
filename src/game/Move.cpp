@@ -1,7 +1,9 @@
+#include "Move.hpp"
+
+#include "Utils.hpp"
+
 #include <cassert>
 
-#include "Move.hpp"
-#include "Utils.hpp"
 
 Move Move::fromPieces(int sourceSquare, int targetSquare, Piece sourcePiece, Piece targetPiece) {
     const int sourceCol = Utils::getCol(sourceSquare);
@@ -12,7 +14,7 @@ Move Move::fromPieces(int sourceSquare, int targetSquare, Piece sourcePiece, Pie
     const bool isSourcePiecePawn = sourcePiece.type() == PieceType::Pawn;
     const bool isSourcePieceWhite = sourcePiece.color() == Color::White;
     const int promotionRow = isSourcePieceWhite ? 0 : 7; // rank 7 for white, rank 0 for black
-    
+
     // --- Special pawn moves ---
     // Pawn promotion iff a pawn is ending on the promotion row
     if(isSourcePiecePawn && targetRow == promotionRow) {
@@ -32,20 +34,28 @@ Move Move::fromPieces(int sourceSquare, int targetSquare, Piece sourcePiece, Pie
 
     // Update castling related constants based on source piece color
     const bool isSourcePieceKing = sourcePiece.type() == PieceType::King;
-    const int kingStartingSquare = isSourcePieceWhite ? Utils::WHITE_KING_STARTING_SQUARE : Utils::BLACK_KING_STARTING_SQUARE;
-    const int kingsideTargetSquare = isSourcePieceWhite ? Utils::WHITE_KINGSIDE_TARGET_SQUARE : Utils::BLACK_KINGSIDE_TARGET_SQUARE;
-    const int queensideTargetSquare = isSourcePieceWhite ? Utils::WHITE_QUEENSIDE_TARGET_SQUARE : Utils::BLACK_QUEENSIDE_TARGET_SQUARE;
+    const int kingStartingSquare =
+        isSourcePieceWhite ? Utils::WHITE_KING_STARTING_SQUARE : Utils::BLACK_KING_STARTING_SQUARE;
+    const int kingsideTargetSquare =
+        isSourcePieceWhite ? Utils::WHITE_KINGSIDE_TARGET_SQUARE : Utils::BLACK_KINGSIDE_TARGET_SQUARE;
+    const int queensideTargetSquare =
+        isSourcePieceWhite ? Utils::WHITE_QUEENSIDE_TARGET_SQUARE : Utils::BLACK_QUEENSIDE_TARGET_SQUARE;
 
     // --- Special castling moves ---
-    // (note we are just generating a move here, we don't validate it. so its okay if we are castling through a piece for example)
+    // (note we are just generating a move here, we don't validate it. so its okay if we are castling through a piece
+    // for example)
 
-    // Kingside castle iff a king moves from its starting square to the castling target square, and the piece does not exist.
-    if(isSourcePieceKing && sourceSquare == kingStartingSquare && targetSquare == kingsideTargetSquare && !targetPiece.exists()) {
+    // Kingside castle iff a king moves from its starting square to the castling target square, and the piece does not
+    // exist.
+    if(isSourcePieceKing && sourceSquare == kingStartingSquare && targetSquare == kingsideTargetSquare &&
+       !targetPiece.exists()) {
         return Move{sourceSquare, targetSquare, MoveFlag::KingCastle, Promotion::None};
     }
 
-    // Queenside castle iff a king moves from its starting square to the castling target square, and the piece does not exist.
-    if(isSourcePieceKing && sourceSquare == kingStartingSquare && targetSquare == queensideTargetSquare && !targetPiece.exists()) {
+    // Queenside castle iff a king moves from its starting square to the castling target square, and the piece does not
+    // exist.
+    if(isSourcePieceKing && sourceSquare == kingStartingSquare && targetSquare == queensideTargetSquare &&
+       !targetPiece.exists()) {
         return Move{sourceSquare, targetSquare, MoveFlag::QueenCastle, Promotion::None};
     }
 
@@ -60,14 +70,25 @@ std::string Move::toLongAlgebraic() const {
         char promotionRepresentation = '?';
 
         switch(promotion()) {
-            case Promotion::None: assert(false); break; // should never happen
-            case Promotion::Knight: promotionRepresentation = 'n'; break;
-            case Promotion::Bishop: promotionRepresentation = 'b'; break;
-            case Promotion::Rook: promotionRepresentation = 'r'; break;
-            case Promotion::Queen: promotionRepresentation = 'q'; break;
+            case Promotion::None:
+                assert(false);
+                break; // should never happen
+            case Promotion::Knight:
+                promotionRepresentation = 'n';
+                break;
+            case Promotion::Bishop:
+                promotionRepresentation = 'b';
+                break;
+            case Promotion::Rook:
+                promotionRepresentation = 'r';
+                break;
+            case Promotion::Queen:
+                promotionRepresentation = 'q';
+                break;
         }
 
-        return Utils::intToAlgebraicNotation(sourceSquare()) + Utils::intToAlgebraicNotation(targetSquare()) + promotionRepresentation;
+        return Utils::intToAlgebraicNotation(sourceSquare()) + Utils::intToAlgebraicNotation(targetSquare()) +
+               promotionRepresentation;
     }
 
     // normal move
