@@ -30,15 +30,21 @@ endif()
 
 add_executable(chess
     src/main.cpp
+
     src/app/Application.cpp
+
     src/game/Game.cpp
     src/game/Move.cpp
     src/game/Piece.cpp
     src/game/Utils.cpp
+
     src/gui/TextureCache.cpp
     src/gui/InputHandler.cpp
     src/gui/GameRenderer.cpp
     src/gui/GameScreen.cpp
+    src/gui/MainMenuRenderer.cpp
+    src/gui/MainMenuScreen.cpp
+
     src/engine/Engine.cpp
 )
 
@@ -52,14 +58,19 @@ target_compile_options(chess PRIVATE -Wall -Wextra -Wpedantic)
 # Enable testing by exporting chess library
 add_library(chess_lib
     src/app/Application.cpp
+
     src/game/Game.cpp
     src/game/Move.cpp
     src/game/Piece.cpp
     src/game/Utils.cpp
+
     src/gui/TextureCache.cpp
     src/gui/InputHandler.cpp
     src/gui/GameRenderer.cpp
     src/gui/GameScreen.cpp
+    src/gui/MainMenuRenderer.cpp
+    src/gui/MainMenuScreen.cpp
+
     src/engine/Engine.cpp
 )
 target_include_directories(chess_lib PUBLIC include)

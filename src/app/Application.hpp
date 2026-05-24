@@ -15,7 +15,7 @@ public:
         : window_{sf::VideoMode{{AppUtils::STARTING_WINDOW_WIDTH, AppUtils::STARTING_WINDOW_HEIGHT}}, std::string{AppUtils::WINDOW_TITLE}}
     {
         window_.setFramerateLimit(AppUtils::MAX_FPS);
-        switchTo(ScreenID::Game);
+        switchTo(ScreenID::MainMenu);
     }
 
     void run();

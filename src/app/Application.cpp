@@ -4,6 +4,7 @@
 #include <SFML/Audio.hpp>
 #include <SFML/Graphics.hpp>
 
+#include "../gui/MainMenuScreen.hpp"
 #include "../gui/GameScreen.hpp"
 #include "Application.hpp"
 
@@ -41,6 +42,7 @@ void Application::render() {
 void Application::switchTo(ScreenID screen) {
     switch(screen) {
         case ScreenID::MainMenu:
+            currentScreen_ = std::make_unique<MainMenuScreen>(window_);
             break;
         case ScreenID::Game: {
             const Color playerColor = Color::White;
