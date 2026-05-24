@@ -1,5 +1,4 @@
 ---
-# Language and Standard Rules
 Language: Cpp
 Standard: c++17
 
@@ -17,7 +16,7 @@ ColumnLimit: 120
 BinPackParameters: false
 BinPackArguments: false
 
-AlignAfterOpenBracket: Align
+AlignAfterOpenBracket: BlockIndent
 
 BreakBeforeBraces: Custom
 BraceWrapping:
@@ -51,6 +50,11 @@ CompactNamespaces: false
 
 SortIncludes: true
 IncludeBlocks: Regroup
+
+# Prevent return type on different line due to line length
+AlwaysBreakAfterReturnType: None
+PenaltyReturnTypeOnItsOwnLine: 5000
+AllowAllParametersOfDeclarationOnNextLine: false
 
 IncludeCategories:
   # 1. Standard C++ Library Headers (<optional>, <vector>, etc.)
