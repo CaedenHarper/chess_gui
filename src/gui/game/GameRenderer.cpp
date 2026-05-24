@@ -106,7 +106,7 @@ void GameRenderer::drawEngineTimer(sf::Time elapsed, bool thinking) {
 }
 
 void GameRenderer::drawText(const std::string& str, const sf::Vector2f& position, int size) {
-    sf::Text text{font_};
+    sf::Text text{RenderUtils::FONT};
 
     text.setString(str);
     text.setPosition(position);

@@ -55,5 +55,4 @@ private:
     static sf::RectangleShape makeSquareShape(int square, sf::Color color);
 
     sf::RenderWindow* window_;
-    sf::Font font_{"assets/fonts/LiberationSans-Regular.ttf"};
 };

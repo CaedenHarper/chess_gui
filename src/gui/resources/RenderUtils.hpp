@@ -6,7 +6,6 @@
 #include "../../game/Utils.hpp"
 #include "../game/Highlight.hpp"
 
-
 namespace RenderUtils {
 // -- CONSTANTS --
 inline constexpr int BOARD_WIDTH_PX = 800;
@@ -14,6 +13,8 @@ inline constexpr int BOARD_HEIGHT_PX = 800;
 inline constexpr float SQUARE_WIDTH_PX = BOARD_WIDTH_PX / 8.F;
 inline constexpr float SQUARE_HEIGHT_PX = BOARD_HEIGHT_PX / 8.F;
 inline constexpr float SPRITE_SCALE_FACTOR = 0.97F;
+
+inline sf::Font FONT{"assets/fonts/LiberationSans-Regular.ttf"};
 
 // Normal dark square color. Dark brown, rgb(179, 136, 98).
 inline constexpr sf::Color DARK_SQUARE_COLOR{179, 136, 98};

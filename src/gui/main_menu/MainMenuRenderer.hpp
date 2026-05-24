@@ -2,6 +2,8 @@
 
 #include <SFML/Graphics.hpp>
 
+#include "MainMenuLayout.hpp"
+
 class MainMenuRenderer {
 public:
     explicit MainMenuRenderer(sf::RenderWindow* window) : window_{window} {
@@ -16,20 +18,7 @@ private:
 
     void clearWindow(const sf::Color& backgroundColor);
     void drawText(const std::string& str, const sf::Vector2f& position, int size);
-    void drawButton(
-        const sf::Vector2f& size,
-        const sf::Vector2f& position,
-        const sf::Color& fillColor,
-        const sf::Color& outlineColor,
-        float outlineThickness
-    );
-    void drawButtonText(
-        const std::string& str,
-        const sf::Vector2f& buttonPosition,
-        int textSize,
-        const sf::Vector2f& buttonSize
-    );
+    void drawButton(MainMenuButton button);
 
     sf::RenderWindow* window_;
-    sf::Font font_{"assets/fonts/LiberationSans-Regular.ttf"};
 };
