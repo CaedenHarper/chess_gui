@@ -5,13 +5,14 @@
 #include <optional>
 #include <sstream>
 
-#include "../engine/Engine.hpp"
-#include "InputHandler.hpp"
+#include "../../engine/Engine.hpp"
+#include "GameInputHandler.hpp"
 
-#include "RenderUtils.hpp"
+#include "../resources/RenderUtils.hpp"
+#include "../resources/TextureCache.hpp"
 
 #include "GameRenderer.hpp"
-#include "TextureCache.hpp"
+
 
 void GameRenderer::render(Game& game, const GameRenderState& state) {
     clearWindow(sf::Color::Black);

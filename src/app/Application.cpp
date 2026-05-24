@@ -4,8 +4,8 @@
 #include <SFML/Audio.hpp>
 #include <SFML/Graphics.hpp>
 
-#include "../gui/MainMenuScreen.hpp"
-#include "../gui/GameScreen.hpp"
+#include "../gui/main_menu/MainMenuScreen.hpp"
+#include "../gui/game/GameScreen.hpp"
 #include "Application.hpp"
 
 void Application::run() {

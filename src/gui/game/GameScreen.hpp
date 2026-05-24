@@ -5,14 +5,16 @@
 #include <mutex>
 #include <thread>
 
-#include "../game/Game.hpp"
-#include "../engine/Engine.hpp"
+#include "../../game/Game.hpp"
+#include "../../engine/Engine.hpp"
 #include "GameRenderer.hpp"
 
-#include "InputHandler.hpp"
-#include "SoundUtils.hpp"
+#include "../resources/SoundUtils.hpp"
 
-#include "Screen.hpp"
+#include "GameInputHandler.hpp"
+
+
+#include "../resources/Screen.hpp"
 
 struct EngineThreadState {
     std::thread thread;
@@ -83,7 +85,7 @@ private:
     Game game_;
     Engine engine_;
     EngineThreadState engineThread_;
-    InputHandler inputHandler_;
+    GameInputHandler inputHandler_;
     GameRenderer renderer_;
 
     Color playerColor_;

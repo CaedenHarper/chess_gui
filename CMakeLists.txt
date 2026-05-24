@@ -38,12 +38,14 @@ add_executable(chess
     src/game/Piece.cpp
     src/game/Utils.cpp
 
-    src/gui/TextureCache.cpp
-    src/gui/InputHandler.cpp
-    src/gui/GameRenderer.cpp
-    src/gui/GameScreen.cpp
-    src/gui/MainMenuRenderer.cpp
-    src/gui/MainMenuScreen.cpp
+    src/gui/game/GameInputHandler.cpp
+    src/gui/game/GameRenderer.cpp
+    src/gui/game/GameScreen.cpp
+
+    src/gui/main_menu/MainMenuRenderer.cpp
+    src/gui/main_menu/MainMenuScreen.cpp
+
+    src/gui/resources/TextureCache.cpp
 
     src/engine/Engine.cpp
 )
@@ -64,12 +66,14 @@ add_library(chess_lib
     src/game/Piece.cpp
     src/game/Utils.cpp
 
-    src/gui/TextureCache.cpp
-    src/gui/InputHandler.cpp
-    src/gui/GameRenderer.cpp
-    src/gui/GameScreen.cpp
-    src/gui/MainMenuRenderer.cpp
-    src/gui/MainMenuScreen.cpp
+    src/gui/game/GameInputHandler.cpp
+    src/gui/game/GameRenderer.cpp
+    src/gui/game/GameScreen.cpp
+
+    src/gui/main_menu/MainMenuRenderer.cpp
+    src/gui/main_menu/MainMenuScreen.cpp
+
+    src/gui/resources/TextureCache.cpp
 
     src/engine/Engine.cpp
 )

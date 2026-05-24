@@ -4,7 +4,7 @@
 
 #include "MainMenuRenderer.hpp"
 
-#include "Screen.hpp"
+#include "../resources/Screen.hpp"
 
 class MainMenuScreen : public Screen {
 public:

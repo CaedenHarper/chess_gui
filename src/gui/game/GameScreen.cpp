@@ -18,15 +18,15 @@ void GameScreen::handleEngineTurn() {
 
 void GameScreen::handleEvent(const sf::Event& event) {
     const InputMode mode{isPlayerTurn() ? InputMode::FullGameplay : InputMode::BoardAnnotationsOnly};
-    const InputResult result = inputHandler_.handleEvent(event, game_, playerColor_, playerColor_, mode); // take playercolor == displaycolor
+    const GameInputResult result = inputHandler_.handleEvent(event, game_, playerColor_, playerColor_, mode); // take playercolor == displaycolor
     switch(result.type()) {
-        case InputResult::Type::None:
-        case InputResult::Type::InvalidMove: // TODO: consider an invalid move sound
+        case GameInputResult::Type::None:
+        case GameInputResult::Type::InvalidMove: // TODO: consider an invalid move sound
             break;
-        case InputResult::Type::MoveMade:
+        case GameInputResult::Type::MoveMade:
             pieceMovementSound_.play();
             break;
-        case InputResult::Type::RedHighlight:
+        case GameInputResult::Type::RedHighlight:
             if(!result.square()) {
                 assert(false);
                 break;

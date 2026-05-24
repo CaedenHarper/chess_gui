@@ -6,7 +6,7 @@
 #include <SFML/Graphics.hpp>
 #include <memory>
 
-#include "../gui/Screen.hpp"
+#include "../gui/resources/Screen.hpp"
 #include "AppUtils.hpp"
 
 class Application{

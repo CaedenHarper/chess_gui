@@ -2,10 +2,11 @@
 
 #include <SFML/Graphics.hpp>
 
-#include "../engine/Engine.hpp"
+#include "../../engine/Engine.hpp"
+
+#include "GameInputHandler.hpp"
 
 #include "Highlight.hpp"
-#include "InputHandler.hpp"
 
 
 struct GameRenderState {

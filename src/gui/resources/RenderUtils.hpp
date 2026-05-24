@@ -2,11 +2,10 @@
 
 #include <SFML/Graphics.hpp>
 
-#include "Highlight.hpp"
-#include "../game/Piece.hpp"
+#include "../game/Highlight.hpp"
 
-#include "../game/Utils.hpp"
-
+#include "../../game/Piece.hpp"
+#include "../../game/Utils.hpp"
 
 namespace RenderUtils {
     // -- CONSTANTS --

@@ -2,7 +2,7 @@
 
 #include <SFML/Graphics.hpp>
 
-#include "../game/Piece.hpp"
+#include "../../game/Piece.hpp"
 
 // Cache which maintains and retrieves textures for Pieces.
 class TextureCache {
