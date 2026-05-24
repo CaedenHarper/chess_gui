@@ -28,7 +28,7 @@ void GameRenderer::render(Game& game, const GameRenderState& state) {
     window_->display();
 }
 
-void GameRenderer::clearWindow(sf::Color backgroundColor) {
+void GameRenderer::clearWindow(const sf::Color& backgroundColor) {
     window_->clear(backgroundColor);
 }
 
@@ -78,11 +78,13 @@ void GameRenderer::drawEngineStats(SearchStats currentStats) {
     // Nodes Searched: n
     // QNodes Searched: q
     // Positions Searched: n + q
-    drawText("Nodes Searched: " + std::to_string(currentStats.nodes) +
-                 "\nQNodes Searched: " + std::to_string(currentStats.qnodes) +
-                 "\nPositions Searched: " + std::to_string(currentStats.nodes + currentStats.qnodes),
-             statsTextPosition,
-             statsTextFontSize);
+    drawText(
+        "Nodes Searched: " + std::to_string(currentStats.nodes) +
+            "\nQNodes Searched: " + std::to_string(currentStats.qnodes) +
+            "\nPositions Searched: " + std::to_string(currentStats.nodes + currentStats.qnodes),
+        statsTextPosition,
+        statsTextFontSize
+    );
 }
 
 void GameRenderer::drawEngineTimer(sf::Time elapsed, bool thinking) {
@@ -114,10 +116,12 @@ void GameRenderer::drawText(const std::string& str, const sf::Vector2f& position
     window_->draw(text);
 }
 
-void GameRenderer::drawPieceOnSquare(Game& game,
-                                     int square,
-                                     std::optional<HeldPieceState> heldPiece,
-                                     Color displayColor) {
+void GameRenderer::drawPieceOnSquare(
+    Game& game,
+    int square,
+    std::optional<HeldPieceState> heldPiece,
+    Color displayColor
+) {
     if(game.isSquareEmpty(square)) {
         return;
     }

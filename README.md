@@ -55,6 +55,7 @@ ctest --test-dir build-debug --verbose    # debug
 - Investigate struct byte alignments for performance; are they really needed?
 - Investigate noexcept for performance
 - Fix bug where starting to drag when piece is already selected does not work properly
+- Extract shared functions between renderers
 
 ## TODOs (testing)
 - Unit tests for Piece, Move, Game

@@ -31,7 +31,7 @@ public:
     void render(Game& game, const GameRenderState& state);
 
 private:
-    void clearWindow(sf::Color backgroundColor);
+    void clearWindow(const sf::Color& backgroundColor);
     void drawSquares(Color displayColor);
     void drawPieces(Game& game, std::optional<HeldPieceState> heldPiece, Color displayColor);
     void drawDraggedPiece(Game& game, std::optional<HeldPieceState> heldPiece);
