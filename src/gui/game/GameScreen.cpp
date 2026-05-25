@@ -1,6 +1,13 @@
 #include "GameScreen.hpp"
 
+#include "GameRenderer.hpp"
+
 #include <iostream>
+
+void GameScreen::update() {
+    handleEngineTurn();
+    updateMoveAnimation();
+}
 
 void GameScreen::handleEngineTurn() {
     if(!isEngineTurn()) {
@@ -14,6 +21,16 @@ void GameScreen::handleEngineTurn() {
 
     if(auto result = tryTakeEngineResult()) {
         applyEngineResult(*result);
+    }
+}
+
+void GameScreen::updateMoveAnimation() {
+    if(!moveAnimation_) {
+        return;
+    }
+
+    if(moveAnimation_->clock.getElapsedTime() >= moveAnimation_->duration) {
+        moveAnimation_.reset();
     }
 }
 
@@ -34,30 +51,28 @@ ScreenCommand GameScreen::handleEvent(const sf::Event& event) {
                 break;
             }
 
-            redHighlightSquares.at(*result.square()) = !redHighlightSquares.at(*result.square());
+            redHighlightSquares_.at(*result.square()) = !redHighlightSquares_.at(*result.square());
             break;
     }
 
     if(result.clearRedHighlights()) {
-        redHighlightSquares.fill(false);
+        redHighlightSquares_.fill(false);
     }
 
     return ScreenCommand::None;
 }
 
-void GameScreen::update() {
-    handleEngineTurn();
-}
-
 void GameScreen::render() {
     const GameRenderState state{
         playerColor_,
+        playerColor_, // take displayColor == playerColor
         inputHandler_.heldPiece(),
-        currentEval,
-        currentStats,
+        currentEval_,
+        currentStats_,
         engineSearchTime(),
         engineThread_.thinking,
-        redHighlightSquares
+        redHighlightSquares_,
+        moveAnimation_ ? &*moveAnimation_ : nullptr // only pass pointer here if moveAnimation_ exists
     };
     renderer_.render(game_, state);
 }
@@ -125,8 +140,13 @@ void GameScreen::applyEngineResult(const SearchResult& result) {
         return;
     }
 
-    currentEval = possibleCurrentEval;
-    currentStats = possibleCurrentStats;
+    currentEval_ = possibleCurrentEval;
+    currentStats_ = possibleCurrentStats;
+
+    const int fromSquare = engineMove.sourceSquare();
+    const int toSquare = engineMove.targetSquare();
+    moveAnimation_ =
+        MoveAnimation{game_.pieceAtSquareForGui(fromSquare), fromSquare, toSquare, sf::Clock{}, sf::milliseconds(200)};
 
     pieceMovementSound_.play();
 }

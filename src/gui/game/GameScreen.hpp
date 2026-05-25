@@ -69,6 +69,7 @@ public:
 
 private:
     void handleEngineTurn();
+    void updateMoveAnimation();
 
     void startEngineSearch();
     std::optional<SearchResult> tryTakeEngineResult();
@@ -89,8 +90,9 @@ private:
     sf::SoundBuffer pieceMovementSoundBuffer_;
     sf::Sound pieceMovementSound_;
 
-    std::array<bool, Utils::NUM_SQUARES> redHighlightSquares{};
+    std::array<bool, Utils::NUM_SQUARES> redHighlightSquares_{};
 
-    int currentEval{};
-    SearchStats currentStats;
+    int currentEval_{};
+    SearchStats currentStats_;
+    std::optional<MoveAnimation> moveAnimation_;
 };
