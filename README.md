@@ -61,6 +61,7 @@ ctest --test-dir build-debug --verbose    # debug
 - Fix bug where starting to drag when piece is already selected does not work properly
 - Extract shared logic between renderers
 - Extract shared logic between InputHandlers
+- Speed up main menu -> game loading
 
 ## TODOs (testing)
 - Unit tests for Piece, Move, Game
