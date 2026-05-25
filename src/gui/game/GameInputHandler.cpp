@@ -2,9 +2,13 @@
 
 #include "../resources/RenderUtils.hpp"
 
-
 GameInputResult GameInputHandler::handleEvent(
-    const sf::Event& event, Game& game, Color playerColor, Color displayColor, InputMode mode) {
+    const sf::Event& event,
+    Game& game,
+    Color playerColor,
+    Color displayColor,
+    InputMode mode
+) {
     if(mode == InputMode::Disabled) {
         return GameInputResult::none();
     }
@@ -25,7 +29,12 @@ GameInputResult GameInputHandler::handleEvent(
 }
 
 GameInputResult GameInputHandler::mouseClickEvent(
-    const sf::Event::MouseButtonPressed& event, Game& game, Color playerColor, Color displayColor, InputMode mode) {
+    const sf::Event::MouseButtonPressed& event,
+    Game& game,
+    Color playerColor,
+    Color displayColor,
+    InputMode mode
+) {
     if(event.button == sf::Mouse::Button::Right) {
         return rightClickEvent(event, displayColor);
     }
@@ -48,10 +57,12 @@ GameInputResult GameInputHandler::mouseMovementEvent(const sf::Event::MouseMoved
     return GameInputResult::none();
 }
 
-GameInputResult GameInputHandler::mouseUnclickEvent(const sf::Event::MouseButtonReleased& event,
-                                                    Game& game,
-                                                    Color displayColor,
-                                                    InputMode mode) {
+GameInputResult GameInputHandler::mouseUnclickEvent(
+    const sf::Event::MouseButtonReleased& event,
+    Game& game,
+    Color displayColor,
+    InputMode mode
+) {
     // only allow left click releases on the physical board
     if(event.position.x > RenderUtils::BOARD_WIDTH_PX || event.position.y > RenderUtils::BOARD_HEIGHT_PX) {
         // release piece if we click oob
@@ -101,7 +112,12 @@ GameInputResult GameInputHandler::mouseUnclickEvent(const sf::Event::MouseButton
 }
 
 GameInputResult GameInputHandler::leftClickEvent(
-    const sf::Event::MouseButtonPressed& event, Game& game, Color playerColor, Color displayColor, InputMode mode) {
+    const sf::Event::MouseButtonPressed& event,
+    Game& game,
+    Color playerColor,
+    Color displayColor,
+    InputMode mode
+) {
     const sf::Vector2i mousePos = event.position;
 
     // only allow left clicks on the physical board

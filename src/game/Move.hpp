@@ -5,7 +5,6 @@
 #include <array>
 #include <cassert>
 
-
 enum class MoveFlag : uint8_t {
     Normal, // no special flags
     Capture,
@@ -122,8 +121,12 @@ private:
     static constexpr uint32_t FLAG_MASK = (1U << FLAG_BITS) - 1; // 0xF
     static constexpr uint32_t PROMO_MASK = (1U << PROMO_BITS) - 1; // 0x7
 
-    static constexpr uint32_t
-    pack_(uint8_t sourceSquare, uint8_t targetSquare, MoveFlag flag, Promotion promotion) noexcept {
+    static constexpr uint32_t pack_(
+        uint8_t sourceSquare,
+        uint8_t targetSquare,
+        MoveFlag flag,
+        Promotion promotion
+    ) noexcept {
         return (static_cast<uint32_t>(sourceSquare) & SOURCE_MASK) |
                ((static_cast<uint32_t>(targetSquare) & TARGET_MASK) << TARGET_SHIFT) |
                ((static_cast<uint32_t>(flag) & FLAG_MASK) << FLAG_SHIFT) |

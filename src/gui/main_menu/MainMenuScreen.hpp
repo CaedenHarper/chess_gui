@@ -5,7 +5,6 @@
 #include "../resources/Screen.hpp"
 #include "MainMenuRenderer.hpp"
 
-
 class MainMenuScreen : public Screen {
 public:
     explicit MainMenuScreen(sf::RenderWindow& window) : renderer_{&window} {

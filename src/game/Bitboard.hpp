@@ -4,7 +4,6 @@
 #include <bitset>
 #include <cstdint>
 
-
 class Bitboard {
 public:
     constexpr Bitboard() : bitboard_{0} {

@@ -12,4 +12,6 @@ public:
     MainMenuInputResult handleEvent(const sf::Event& event);
 
 private:
+    MainMenuInputResult mouseClickEvent(const sf::Event::MouseButtonPressed& event);
+    MainMenuInputResult leftClickEvent(const sf::Event::MouseButtonPressed& event);
 };

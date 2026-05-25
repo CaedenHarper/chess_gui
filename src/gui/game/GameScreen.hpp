@@ -12,7 +12,6 @@
 #include <mutex>
 #include <thread>
 
-
 struct EngineThreadState {
     std::thread thread;
     std::mutex mutex;

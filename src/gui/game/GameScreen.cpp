@@ -2,7 +2,6 @@
 
 #include <iostream>
 
-
 void GameScreen::handleEngineTurn() {
     if(!isEngineTurn()) {
         return;
@@ -49,13 +48,15 @@ void GameScreen::update() {
 }
 
 void GameScreen::render() {
-    const GameRenderState state{playerColor_,
-                                inputHandler_.heldPiece(),
-                                currentEval,
-                                currentStats,
-                                engineSearchTime(),
-                                engineThread_.thinking,
-                                redHighlightSquares};
+    const GameRenderState state{
+        playerColor_,
+        inputHandler_.heldPiece(),
+        currentEval,
+        currentStats,
+        engineSearchTime(),
+        engineThread_.thinking,
+        redHighlightSquares
+    };
     renderer_.render(game_, state);
 }
 

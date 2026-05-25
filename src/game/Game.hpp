@@ -10,14 +10,17 @@
 #include <cstdint>
 #include <string>
 
-
 // Representation of the castling rights of a position, stored in uint8_t for maximum speed.
 struct CastlingRights {
     uint8_t castlingRights;
 
     // Pack the four castling bools into one uint8_t.
-    static constexpr uint8_t
-    pack(bool whiteKingside, bool whiteQueenside, bool blackKingside, bool blackQueenside) noexcept {
+    static constexpr uint8_t pack(
+        bool whiteKingside,
+        bool whiteQueenside,
+        bool blackKingside,
+        bool blackQueenside
+    ) noexcept {
         return (static_cast<uint8_t>(whiteKingside) << 0) | (static_cast<uint8_t>(whiteQueenside) << 1) |
                (static_cast<uint8_t>(blackKingside) << 2) | (static_cast<uint8_t>(blackQueenside) << 3);
     }
@@ -194,9 +197,10 @@ public:
             const int kingsideTargetSquare =
                 isSourceWhite ? Utils::WHITE_KINGSIDE_TARGET_SQUARE : Utils::BLACK_KINGSIDE_TARGET_SQUARE;
 
-            if(isSquareAttacked(kingStartingSquare, targetColor) || // king cant start in check
-               isSquareAttacked(kingsidePassingSquare, targetColor) || // king cant pass through check
-               isSquareAttacked(kingsideTargetSquare, targetColor) // king cant end in check
+            if(
+                isSquareAttacked(kingStartingSquare, targetColor) || // king cant start in check
+                isSquareAttacked(kingsidePassingSquare, targetColor) || // king cant pass through check
+                isSquareAttacked(kingsideTargetSquare, targetColor) // king cant end in check
             ) {
                 return true;
             }
@@ -209,9 +213,10 @@ public:
                 isSourceWhite ? Utils::WHITE_QUEENSIDE_PASSING_SQUARE : Utils::BLACK_QUEENSIDE_PASSING_SQUARE;
             const int queensideTargetSquare =
                 isSourceWhite ? Utils::WHITE_QUEENSIDE_TARGET_SQUARE : Utils::BLACK_QUEENSIDE_TARGET_SQUARE;
-            if(isSquareAttacked(kingStartingSquare, targetColor) || // king cant start in check
-               isSquareAttacked(queensidePassingSquare, targetColor) || // king cant pass through check
-               isSquareAttacked(queensideTargetSquare, targetColor) // king cant end in check
+            if(
+                isSquareAttacked(kingStartingSquare, targetColor) || // king cant start in check
+                isSquareAttacked(queensidePassingSquare, targetColor) || // king cant pass through check
+                isSquareAttacked(queensideTargetSquare, targetColor) // king cant end in check
             ) {
                 return true;
             }
@@ -373,7 +378,12 @@ private:
 
     // Add move and all pawn promotion variants to moves. If move is not a pawn promotion, just add move by itself.
     static constexpr void addAllPawnPromotionsToMoves_(
-        MoveList& moves, int sourceSquare, int targetSquare, Piece sourcePiece, bool isCapture) {
+        MoveList& moves,
+        int sourceSquare,
+        int targetSquare,
+        Piece sourcePiece,
+        bool isCapture
+    ) {
         const Color pawnColor = sourcePiece.color();
         const int promotionRow = pawnColor == Color::White ? 0 : 7;
         if(Utils::getRow(targetSquare) == promotionRow) {

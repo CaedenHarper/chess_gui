@@ -12,8 +12,10 @@
 class Application {
 public:
     explicit Application()
-        : window_{sf::VideoMode{{AppUtils::STARTING_WINDOW_WIDTH, AppUtils::STARTING_WINDOW_HEIGHT}},
-                  std::string{AppUtils::WINDOW_TITLE}} {
+        : window_{
+              sf::VideoMode{{AppUtils::STARTING_WINDOW_WIDTH, AppUtils::STARTING_WINDOW_HEIGHT}},
+              std::string{AppUtils::WINDOW_TITLE}
+          } {
         window_.setFramerateLimit(AppUtils::MAX_FPS);
         switchTo(ScreenID::MainMenu);
     }

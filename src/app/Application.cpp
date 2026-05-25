@@ -9,7 +9,6 @@
 
 #include <optional>
 
-
 void Application::run() {
     while(window_.isOpen()) {
         handleEvents();

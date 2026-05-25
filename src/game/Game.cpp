@@ -6,7 +6,6 @@
 #include <iostream>
 #include <string>
 
-
 Game::Game() : sideToMove_{Color::White}, castlingRights_{0}, enPassantSquare_{UndoInfo::noEnPassant} {
     // Init lookup tables
     initAttackBitboards_();
@@ -394,7 +393,8 @@ void Game::generatePseudoLegalPawnMoves_(MoveList& out) {
         while(!normal.empty()) {
             const int targetSquare = normal.popLsb();
             addAllPawnPromotionsToMoves_(
-                out, targetSquare + Utils::NORTH, targetSquare, Piece{PieceType::Pawn, Color::White}, false);
+                out, targetSquare + Utils::NORTH, targetSquare, Piece{PieceType::Pawn, Color::White}, false
+            );
         }
 
         // Double push
@@ -405,7 +405,8 @@ void Game::generatePseudoLegalPawnMoves_(MoveList& out) {
             const int targetSquare = doublePush.popLsb();
             // double push can never be a promotion, so we don't need to call addAllPawnPromotionsToMoves_ here
             out.push_back(
-                Move{targetSquare + (2 * Utils::NORTH), targetSquare, MoveFlag::DoublePawnPush, Promotion::None});
+                Move{targetSquare + (2 * Utils::NORTH), targetSquare, MoveFlag::DoublePawnPush, Promotion::None}
+            );
         }
 
         // En Passant
@@ -429,7 +430,8 @@ void Game::generatePseudoLegalPawnMoves_(MoveList& out) {
             while(!captures.empty()) {
                 const int targetSquare = captures.popLsb();
                 addAllPawnPromotionsToMoves_(
-                    out, sourceSquare, targetSquare, Piece{PieceType::Pawn, Color::White}, true);
+                    out, sourceSquare, targetSquare, Piece{PieceType::Pawn, Color::White}, true
+                );
             }
         }
     } else {
@@ -444,7 +446,8 @@ void Game::generatePseudoLegalPawnMoves_(MoveList& out) {
         while(!normal.empty()) {
             const int targetSquare = normal.popLsb();
             addAllPawnPromotionsToMoves_(
-                out, targetSquare + Utils::SOUTH, targetSquare, Piece{PieceType::Pawn, Color::Black}, false);
+                out, targetSquare + Utils::SOUTH, targetSquare, Piece{PieceType::Pawn, Color::Black}, false
+            );
         }
 
         // Double push
@@ -455,7 +458,8 @@ void Game::generatePseudoLegalPawnMoves_(MoveList& out) {
             const int targetSquare = doublePush.popLsb();
             // double push can never be a promotion, so we don't need to call addAllPawnPromotionsToMoves_ here
             out.push_back(
-                Move{targetSquare + (2 * Utils::SOUTH), targetSquare, MoveFlag::DoublePawnPush, Promotion::None});
+                Move{targetSquare + (2 * Utils::SOUTH), targetSquare, MoveFlag::DoublePawnPush, Promotion::None}
+            );
         }
 
         // En Passant
@@ -479,7 +483,8 @@ void Game::generatePseudoLegalPawnMoves_(MoveList& out) {
             while(!captures.empty()) {
                 const int targetSquare = captures.popLsb();
                 addAllPawnPromotionsToMoves_(
-                    out, sourceSquare, targetSquare, Piece{PieceType::Pawn, Color::Black}, true);
+                    out, sourceSquare, targetSquare, Piece{PieceType::Pawn, Color::Black}, true
+                );
             }
         }
     }
@@ -895,18 +900,20 @@ void Game::generatePseudoLegalKingMoves_(MoveList& out) {
 
         // TODO: bitwise masks instead of allPieces.containsSquare(...)
         // King side castling
-        if(canKingside && sourceSquare == kingStartingSquare &&
-           !allPieces.containsSquare(kingsidePassingSquare) && // passing square does not contain a piece
-           !allPieces.containsSquare(kingsideTargetSquare) // target square does not contain a piece
+        if(
+            canKingside && sourceSquare == kingStartingSquare &&
+            !allPieces.containsSquare(kingsidePassingSquare) && // passing square does not contain a piece
+            !allPieces.containsSquare(kingsideTargetSquare) // target square does not contain a piece
         ) {
             out.push_back(Move{sourceSquare, kingsideTargetSquare, MoveFlag::KingCastle, Promotion::None});
         }
 
         // Queen side castling
-        if(canQueenside && sourceSquare == kingStartingSquare &&
-           !allPieces.containsSquare(queensidePassingSquare) && // passing square does not contain a piece
-           !allPieces.containsSquare(queensidePassingSquare - 2) && // queenside has two passing squares
-           !allPieces.containsSquare(queensideTargetSquare) // target square does not contain a piece
+        if(
+            canQueenside && sourceSquare == kingStartingSquare &&
+            !allPieces.containsSquare(queensidePassingSquare) && // passing square does not contain a piece
+            !allPieces.containsSquare(queensidePassingSquare - 2) && // queenside has two passing squares
+            !allPieces.containsSquare(queensideTargetSquare) // target square does not contain a piece
         ) {
             out.push_back(Move{sourceSquare, queensideTargetSquare, MoveFlag::QueenCastle, Promotion::None});
         }
@@ -1002,27 +1009,31 @@ void Game::makeMove(const Move& move) {
     Bitboard& targetColorBitboard = colorToOccupancyBitboard(targetColor);
 
     // update castling flags
-    if(move.sourceSquare() == Utils::WHITE_KING_STARTING_SQUARE ||
-       move.sourceSquare() == Utils::WHITE_KINGSIDE_ROOK_STARTING_SQUARE ||
-       move.targetSquare() == Utils::WHITE_KINGSIDE_ROOK_STARTING_SQUARE // white kingside rook captured
+    if(
+        move.sourceSquare() == Utils::WHITE_KING_STARTING_SQUARE ||
+        move.sourceSquare() == Utils::WHITE_KINGSIDE_ROOK_STARTING_SQUARE ||
+        move.targetSquare() == Utils::WHITE_KINGSIDE_ROOK_STARTING_SQUARE // white kingside rook captured
     ) {
         castlingRights_.clearWhiteKingside();
     }
-    if(move.sourceSquare() == Utils::WHITE_KING_STARTING_SQUARE ||
-       move.sourceSquare() == Utils::WHITE_QUEENSIDE_ROOK_STARTING_SQUARE || // moving white queenside pieces
-       move.targetSquare() == Utils::WHITE_QUEENSIDE_ROOK_STARTING_SQUARE // white queenside rook captured
+    if(
+        move.sourceSquare() == Utils::WHITE_KING_STARTING_SQUARE ||
+        move.sourceSquare() == Utils::WHITE_QUEENSIDE_ROOK_STARTING_SQUARE || // moving white queenside pieces
+        move.targetSquare() == Utils::WHITE_QUEENSIDE_ROOK_STARTING_SQUARE // white queenside rook captured
     ) {
         castlingRights_.clearWhiteQueenside();
     }
-    if(move.sourceSquare() == Utils::BLACK_KING_STARTING_SQUARE ||
-       move.sourceSquare() == Utils::BLACK_KINGSIDE_ROOK_STARTING_SQUARE || // moving black kingside pieces
-       move.targetSquare() == Utils::BLACK_KINGSIDE_ROOK_STARTING_SQUARE // black kingside rook captured
+    if(
+        move.sourceSquare() == Utils::BLACK_KING_STARTING_SQUARE ||
+        move.sourceSquare() == Utils::BLACK_KINGSIDE_ROOK_STARTING_SQUARE || // moving black kingside pieces
+        move.targetSquare() == Utils::BLACK_KINGSIDE_ROOK_STARTING_SQUARE // black kingside rook captured
     ) {
         castlingRights_.clearBlackKingside();
     }
-    if(move.sourceSquare() == Utils::BLACK_KING_STARTING_SQUARE ||
-       move.sourceSquare() == Utils::BLACK_QUEENSIDE_ROOK_STARTING_SQUARE || // moving black queenside pieces
-       move.targetSquare() == Utils::BLACK_QUEENSIDE_ROOK_STARTING_SQUARE // black queenside rook captured
+    if(
+        move.sourceSquare() == Utils::BLACK_KING_STARTING_SQUARE ||
+        move.sourceSquare() == Utils::BLACK_QUEENSIDE_ROOK_STARTING_SQUARE || // moving black queenside pieces
+        move.targetSquare() == Utils::BLACK_QUEENSIDE_ROOK_STARTING_SQUARE // black queenside rook captured
     ) {
         castlingRights_.clearBlackQueenside();
     }
@@ -1387,7 +1398,9 @@ bool Game::isSquareAttacked(const int targetSquare, const Color attackingColor) 
 }
 
 std::string Move::to_string(const Game& game) const {
-    return (game.mailbox()[sourceSquare()].to_string_long() + " on " + Utils::intToAlgebraicNotation(sourceSquare()) +
-            " to " + game.mailbox()[targetSquare()].to_string_long() + " on " +
-            Utils::intToAlgebraicNotation(targetSquare()));
+    return (
+        game.mailbox()[sourceSquare()].to_string_long() + " on " + Utils::intToAlgebraicNotation(sourceSquare()) +
+        " to " + game.mailbox()[targetSquare()].to_string_long() + " on " +
+        Utils::intToAlgebraicNotation(targetSquare())
+    );
 }

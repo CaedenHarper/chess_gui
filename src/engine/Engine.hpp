@@ -4,7 +4,6 @@
 
 #include <optional>
 
-
 struct SearchStats {
     uint64_t nodes = 0; // main search nodes
     uint64_t qnodes = 0; // quiescence nodes
@@ -30,7 +29,8 @@ static constexpr int QUEEN_COST = 900;
 static constexpr std::array<int, Utils::NUM_SQUARES> BLACK_PAWN_EVAL_TABLE = {
     0,  0,   0,  0, 0,  0,  0,  0,   50,  50, 50, 50, 50, 50, 50, 50, 10, 10, 20, 30, 30,  20,
     10, 10,  5,  5, 10, 25, 25, 10,  5,   5,  0,  0,  0,  20, 20, 0,  0,  0,  5,  -5, -10, 0,
-    0,  -10, -5, 5, 5,  10, 10, -20, -20, 10, 10, 5,  0,  0,  0,  0,  0,  0,  0,  0};
+    0,  -10, -5, 5, 5,  10, 10, -20, -20, 10, 10, 5,  0,  0,  0,  0,  0,  0,  0,  0
+};
 
 static constexpr std::array<int, Utils::NUM_SQUARES> BLACK_KNIGHT_EVAL_TABLE = {
     -50, -40, -30, -30, -30, -30, -40, -50, -40, -20, 0,   0,   0,   0,   -20, -40, -30, 0,   10,  15,  15, 10,
@@ -46,17 +46,20 @@ static constexpr std::array<int, Utils::NUM_SQUARES> BLACK_BISHOP_EVAL_TABLE = {
 
 static constexpr std::array<int, Utils::NUM_SQUARES> BLACK_ROOK_EVAL_TABLE = {
     0,  0, 0, 0, 0, 0, 0, 0,  5,  10, 10, 10, 10, 10, 10, 5,  -5, 0, 0, 0, 0, 0, 0, -5, -5, 0, 0, 0, 0, 0, 0, -5,
-    -5, 0, 0, 0, 0, 0, 0, -5, -5, 0,  0,  0,  0,  0,  0,  -5, -5, 0, 0, 0, 0, 0, 0, -5, 0,  0, 0, 5, 5, 0, 0, 0};
+    -5, 0, 0, 0, 0, 0, 0, -5, -5, 0,  0,  0,  0,  0,  0,  -5, -5, 0, 0, 0, 0, 0, 0, -5, 0,  0, 0, 5, 5, 0, 0, 0
+};
 
 static constexpr std::array<int, Utils::NUM_SQUARES> BLACK_QUEEN_EVAL_TABLE = {
     -20, -10, -10, -5,  -5,  -10, -10, -20, -10, 0,  0, 0,   0,   0,   0,   -10, -10, 0,   5,   5,  5, 5,
     0,   -10, -5,  0,   5,   5,   5,   5,   0,   -5, 0, 0,   5,   5,   5,   5,   0,   -5,  -10, 5,  5, 5,
-    5,   5,   0,   -10, -10, 0,   5,   0,   0,   0,  0, -10, -20, -10, -10, -5,  -5,  -10, -10, -20};
+    5,   5,   0,   -10, -10, 0,   5,   0,   0,   0,  0, -10, -20, -10, -10, -5,  -5,  -10, -10, -20
+};
 
 static constexpr std::array<int, Utils::NUM_SQUARES> BLACK_KING_EVAL_TABLE = {
     -30, -40, -40, -50, -50, -40, -40, -30, -30, -40, -40, -50, -50, -40, -40, -30, -30, -40, -40, -50, -50, -40,
     -40, -30, -30, -40, -40, -50, -50, -40, -40, -30, -20, -30, -30, -40, -40, -30, -30, -20, -10, -20, -20, -20,
-    -20, -20, -20, -10, 20,  20,  0,   0,   0,   0,   20,  20,  20,  30,  10,  0,   0,   10,  30,  20};
+    -20, -20, -20, -10, 20,  20,  0,   0,   0,   0,   20,  20,  20,  30,  10,  0,   0,   10,  30,  20
+};
 
 // Search return value constants
 // TODO: is a number different than the arbitrary 2^20 better?
