@@ -133,6 +133,9 @@ void GameScreen::applyEngineResult(const SearchResult& result) {
     }
 
     const Move engineMove = *possibleEngineMove;
+    const int fromSquare = engineMove.sourceSquare();
+    const int toSquare = engineMove.targetSquare();
+    const Piece piece = game_.pieceAtSquareForGui(fromSquare);
 
     if(!game_.tryMove(engineMove)) {
         std::cerr << "Engine tried to make move: " << engineMove.to_string(game_);
@@ -143,10 +146,7 @@ void GameScreen::applyEngineResult(const SearchResult& result) {
     currentEval_ = possibleCurrentEval;
     currentStats_ = possibleCurrentStats;
 
-    const int fromSquare = engineMove.sourceSquare();
-    const int toSquare = engineMove.targetSquare();
-    moveAnimation_ =
-        MoveAnimation{game_.pieceAtSquareForGui(fromSquare), fromSquare, toSquare, sf::Clock{}, sf::milliseconds(200)};
+    moveAnimation_ = MoveAnimation{piece, fromSquare, toSquare, sf::Clock{}, sf::milliseconds(200)};
 
     pieceMovementSound_.play();
 }
