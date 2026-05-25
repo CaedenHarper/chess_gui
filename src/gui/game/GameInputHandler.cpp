@@ -1,9 +1,16 @@
-#include "RenderUtils.hpp"
-#include "InputHandler.hpp"
+#include "GameInputHandler.hpp"
 
-InputResult InputHandler::handleEvent(const sf::Event& event, Game& game, Color playerColor, Color displayColor, InputMode mode) {
+#include "../resources/RenderUtils.hpp"
+
+GameInputResult GameInputHandler::handleEvent(
+    const sf::Event& event,
+    Game& game,
+    Color playerColor,
+    Color displayColor,
+    InputMode mode
+) {
     if(mode == InputMode::Disabled) {
-        return InputResult::none();
+        return GameInputResult::none();
     }
 
     if(const auto* mouseClicked = event.getIf<sf::Event::MouseButtonPressed>()) {
@@ -18,49 +25,62 @@ InputResult InputHandler::handleEvent(const sf::Event& event, Game& game, Color 
         return mouseUnclickEvent(*mouseUnclicked, game, displayColor, mode);
     }
 
-    return InputResult::none();
+    return GameInputResult::none();
 }
 
-InputResult InputHandler::mouseClickEvent(const sf::Event::MouseButtonPressed& event, Game& game, Color playerColor, Color displayColor, InputMode mode) {
-        if(event.button == sf::Mouse::Button::Right) {
-            return rightClickEvent(event, displayColor);
-        }
+GameInputResult GameInputHandler::mouseClickEvent(
+    const sf::Event::MouseButtonPressed& event,
+    Game& game,
+    Color playerColor,
+    Color displayColor,
+    InputMode mode
+) {
+    if(event.button == sf::Mouse::Button::Right) {
+        return rightClickEvent(event, displayColor);
+    }
 
-        if(event.button == sf::Mouse::Button::Left) {
-            return leftClickEvent(event, game, playerColor, displayColor, mode);
-        }
+    if(event.button == sf::Mouse::Button::Left) {
+        return leftClickEvent(event, game, playerColor, displayColor, mode);
+    }
 
-        return InputResult::none();
+    return GameInputResult::none();
 }
 
-InputResult InputHandler::mouseMovementEvent(const sf::Event::MouseMoved& event) {
+GameInputResult GameInputHandler::mouseMovementEvent(const sf::Event::MouseMoved& event) {
     if(!heldPiece_) {
-        return InputResult::none();
+        return GameInputResult::none();
     };
 
-    heldPiece_.value().mousePos = sf::Vector2f{static_cast<float>(event.position.x), static_cast<float>(event.position.y)};
+    heldPiece_.value().mousePos =
+        sf::Vector2f{static_cast<float>(event.position.x), static_cast<float>(event.position.y)};
 
-    return InputResult::none();
+    return GameInputResult::none();
 }
 
-InputResult InputHandler::mouseUnclickEvent(const sf::Event::MouseButtonReleased& event, Game& game, Color displayColor, InputMode mode) {    
+GameInputResult GameInputHandler::mouseUnclickEvent(
+    const sf::Event::MouseButtonReleased& event,
+    Game& game,
+    Color displayColor,
+    InputMode mode
+) {
     // only allow left click releases on the physical board
     if(event.position.x > RenderUtils::BOARD_WIDTH_PX || event.position.y > RenderUtils::BOARD_HEIGHT_PX) {
         // release piece if we click oob
         heldPiece_.reset();
-        return InputResult::none();
+        return GameInputResult::none();
     }
 
-    const int targetSquare = RenderUtils::getSquareIndexFromCoordinates(event.position.x, event.position.y, displayColor);
-    
+    const int targetSquare =
+        RenderUtils::getSquareIndexFromCoordinates(event.position.x, event.position.y, displayColor);
+
     // out of bounds
     if(!Utils::onBoard(targetSquare)) {
-        return InputResult::none();
+        return GameInputResult::none();
     }
 
     // remaining unclick operations require a held piece; exit early if no held piece exists
     if(!heldPiece_) {
-        return InputResult::none();
+        return GameInputResult::none();
     }
 
     const int sourceSquare = heldPiece_->heldSquare;
@@ -69,55 +89,63 @@ InputResult InputHandler::mouseUnclickEvent(const sf::Event::MouseButtonReleased
     // therefore, we do not reset heldSquare
     if(sourceSquare == targetSquare) {
         heldPiece_->isDragging = false;
-        return InputResult::none();
+        return GameInputResult::none();
     }
 
     // We exit early before actually making the move if it's not our turn
     if(mode != InputMode::FullGameplay) {
         heldPiece_.reset();
-        return InputResult::none(true);
+        return GameInputResult::none(true);
     }
 
     // move is on board and different square
-    const Move potentialMove = Move::fromPieces(sourceSquare, targetSquare, game.mailbox().at(sourceSquare), game.mailbox().at(targetSquare));
+    const Move potentialMove =
+        Move::fromPieces(sourceSquare, targetSquare, game.mailbox().at(sourceSquare), game.mailbox().at(targetSquare));
     // if move is legal, try it
-    if (game.tryMove(potentialMove)) {
+    if(game.tryMove(potentialMove)) {
         heldPiece_.reset();
-        return InputResult::moveMade();
+        return GameInputResult::moveMade();
     }
 
     heldPiece_.reset();
-    return InputResult::invalidMove();
+    return GameInputResult::invalidMove();
 }
 
-InputResult InputHandler::leftClickEvent(const sf::Event::MouseButtonPressed& event, Game& game, Color playerColor, Color displayColor, InputMode mode) {
+GameInputResult GameInputHandler::leftClickEvent(
+    const sf::Event::MouseButtonPressed& event,
+    Game& game,
+    Color playerColor,
+    Color displayColor,
+    InputMode mode
+) {
     const sf::Vector2i mousePos = event.position;
 
     // only allow left clicks on the physical board
     if(mousePos.x > RenderUtils::BOARD_WIDTH_PX || mousePos.y > RenderUtils::BOARD_HEIGHT_PX) {
-        return InputResult::none(true);
+        return GameInputResult::none(true);
     }
 
     const int targetSquare = RenderUtils::getSquareIndexFromCoordinates(mousePos.x, mousePos.y, displayColor);
-    
+
     // target square does not exist; reset any selected piece
     if(!Utils::onBoard(targetSquare)) {
         heldPiece_.reset();
-        return InputResult::none(true);
+        return GameInputResult::none(true);
     }
 
     // target square does exist, but no currently held piece
     if(!heldPiece_) {
         // no need to do additional processing for clicking on empty square, or wrong player's piece
-        // TODO: inputHandler should not use mailbox(); rewrite with Game function
+        // TODO: GameInputHandler should not use mailbox(); rewrite with Game function
         if(!game.mailbox().at(targetSquare).exists() || game.mailbox().at(targetSquare).color() != playerColor) {
-            return InputResult::none(true);
+            return GameInputResult::none(true);
         }
 
         // hold square
-        heldPiece_ = HeldPieceState{targetSquare, {static_cast<float>(mousePos.x), static_cast<float>(mousePos.y)}, true};
+        heldPiece_ =
+            HeldPieceState{targetSquare, {static_cast<float>(mousePos.x), static_cast<float>(mousePos.y)}, true};
 
-        return InputResult::none(true);
+        return GameInputResult::none(true);
     }
 
     // currently held piece exists; click-click move
@@ -125,43 +153,44 @@ InputResult InputHandler::leftClickEvent(const sf::Event::MouseButtonPressed& ev
     // if same square, we cancel move
     if(sourceSquare == targetSquare) {
         heldPiece_.reset();
-        return InputResult::none(true);
+        return GameInputResult::none(true);
     }
-    
+
     // We exit early before actually making the move if it's not our turn
     if(mode != InputMode::FullGameplay) {
-        return InputResult::none(true);
+        return GameInputResult::none(true);
     }
 
     // Try to make click-click move
-    const Move potentialMove = Move::fromPieces(sourceSquare, targetSquare, game.mailbox().at(sourceSquare), game.mailbox().at(targetSquare));
+    const Move potentialMove =
+        Move::fromPieces(sourceSquare, targetSquare, game.mailbox().at(sourceSquare), game.mailbox().at(targetSquare));
     if(game.tryMove(potentialMove)) {
         heldPiece_.reset();
-        return InputResult::moveMade();
+        return GameInputResult::moveMade();
     }
-    
+
     heldPiece_.reset();
-    return InputResult::invalidMove();
+    return GameInputResult::invalidMove();
 }
 
-InputResult InputHandler::rightClickEvent(const sf::Event::MouseButtonPressed& event, Color displayColor) {
+GameInputResult GameInputHandler::rightClickEvent(const sf::Event::MouseButtonPressed& event, Color displayColor) {
     // right click cancels any held square
     if(heldPiece_) {
         heldPiece_.reset();
-        return InputResult::none();
+        return GameInputResult::none();
     }
 
     // only allow right clicks on the physical board
     const sf::Vector2i mousePos = event.position;
     if(mousePos.x > RenderUtils::BOARD_WIDTH_PX || mousePos.y > RenderUtils::BOARD_HEIGHT_PX) {
-        return InputResult::none();
+        return GameInputResult::none();
     }
 
     // swap highlight status of square
     const int targetSquare = RenderUtils::getSquareIndexFromCoordinates(mousePos.x, mousePos.y, displayColor);
     if(!Utils::onBoard(targetSquare)) {
-        return InputResult::none();
+        return GameInputResult::none();
     }
 
-    return InputResult::redHighlight(targetSquare);
+    return GameInputResult::redHighlight(targetSquare);
 }

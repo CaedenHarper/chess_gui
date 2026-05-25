@@ -30,14 +30,24 @@ endif()
 
 add_executable(chess
     src/main.cpp
+
     src/app/Application.cpp
+
     src/game/Game.cpp
     src/game/Move.cpp
     src/game/Piece.cpp
     src/game/Utils.cpp
-    src/gui/TextureCache.cpp
-    src/gui/InputHandler.cpp
-    src/gui/Renderer.cpp
+
+    src/gui/game/GameInputHandler.cpp
+    src/gui/game/GameRenderer.cpp
+    src/gui/game/GameScreen.cpp
+
+    src/gui/main_menu/MainMenuInputHandler.cpp
+    src/gui/main_menu/MainMenuRenderer.cpp
+    src/gui/main_menu/MainMenuScreen.cpp
+
+    src/gui/resources/TextureCache.cpp
+
     src/engine/Engine.cpp
 )
 
@@ -51,13 +61,22 @@ target_compile_options(chess PRIVATE -Wall -Wextra -Wpedantic)
 # Enable testing by exporting chess library
 add_library(chess_lib
     src/app/Application.cpp
+
     src/game/Game.cpp
     src/game/Move.cpp
     src/game/Piece.cpp
     src/game/Utils.cpp
-    src/gui/TextureCache.cpp
-    src/gui/InputHandler.cpp
-    src/gui/Renderer.cpp
+
+    src/gui/game/GameInputHandler.cpp
+    src/gui/game/GameRenderer.cpp
+    src/gui/game/GameScreen.cpp
+
+    src/gui/main_menu/MainMenuInputHandler.cpp
+    src/gui/main_menu/MainMenuRenderer.cpp
+    src/gui/main_menu/MainMenuScreen.cpp
+
+    src/gui/resources/TextureCache.cpp
+
     src/engine/Engine.cpp
 )
 target_include_directories(chess_lib PUBLIC include)

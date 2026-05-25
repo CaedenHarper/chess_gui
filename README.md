@@ -42,19 +42,26 @@ ctest --test-dir build-prof --verbose     # profling
 ctest --test-dir build-debug --verbose    # debug
 ```
 
-## TODOs
-- Incrementally update material in Game
-- Create 'en passant square' class
+## TODOs (general)
 - Look into migrating as many int types to their smallest representation as possible (e.g., uint8_t), and reducing static_cast<>'s
-- Consider splitting makeMove and undoMove into dispatch functions based on move type (e.g., makeMoveCastle_); they are a bit complex and hard to debug as of right now
-- Implement magic bitboards
-- Add proper finish / checkmate screen
-- PGN support
-- Halfmove / fullmove support, in loadFEN and otherwise
-- Incrementally update full board occupancy
 - Investigate struct byte alignments for performance; are they really needed?
 - Investigate noexcept for performance
+
+## TODOs (game)
+- Incrementally update full board occupancy
+- Create 'en passant square' class
+- Split makeMove and undoMove into dispatch functions based on move type (e.g., makeMoveCastle_); they are a bit complex and hard to debug as of right now
+- Implement magic bitboards
+- PGN support
+- Halfmove / fullmove support, in loadFEN and otherwise
+- Drawing logic -- zobrist hashing
+
+## TODOs (gui)
+- Add proper finish / checkmate screen
 - Fix bug where starting to drag when piece is already selected does not work properly
+- Extract shared logic between renderers
+- Extract shared logic between InputHandlers
+- Speed up main menu -> game loading
 
 ## TODOs (testing)
 - Unit tests for Piece, Move, Game
