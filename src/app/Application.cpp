@@ -45,18 +45,13 @@ void Application::switchToMainMenu() {
     currentScreen_ = std::make_unique<MainMenuScreen>(window_);
 }
 
-void Application::switchToGame(Color color) {
-    if(color == Color::White) {
-        currentScreen_ = std::make_unique<GameScreen>(window_, Color::White);
+void Application::switchToGame(Color playerColor) {
+    if(playerColor == Color::None) {
+        assert(false);
         return;
     }
 
-    if(color == Color::Black) {
-        currentScreen_ = std::make_unique<GameScreen>(window_, Color::Black);
-        return;
-    }
-
-    assert(false);
+    currentScreen_ = std::make_unique<GameScreen>(window_, playerColor);
 }
 
 void Application::handleScreenCommand(ScreenCommand command) {
