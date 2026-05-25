@@ -3,7 +3,7 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/System/Vector2.hpp>
 
-class MainMenuInputResult {};
+enum MainMenuInputResult { None, WhiteButton, BlackButton };
 
 class MainMenuInputHandler {
 public:
