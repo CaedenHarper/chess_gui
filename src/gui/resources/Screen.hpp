@@ -2,7 +2,8 @@
 
 #include <SFML/Graphics.hpp>
 
-enum class ScreenID : std::uint8_t { MainMenu, Game, GameOver };
+enum class ScreenID { MainMenu, WhiteGame, BlackGame, GameOver };
+enum class ScreenCommand { None, StartWhiteGame, StartBlackGame };
 
 class Screen {
 public:
@@ -14,7 +15,7 @@ public:
     Screen(Screen&& other) = delete;
     Screen& operator=(Screen&& other) = delete;
 
-    virtual void handleEvent(const sf::Event& event) = 0;
+    virtual ScreenCommand handleEvent(const sf::Event& event) = 0;
     virtual void update() = 0;
     virtual void render() = 0;
 };

@@ -35,12 +35,16 @@ public:
         text_.setPosition({position_.x + size_.x / 2.F, position_.y + size_.y / 2.F});
     }
 
-    sf::RectangleShape button() const {
+    const sf::RectangleShape& button() const {
         return button_;
     }
 
-    sf::Text text() const {
+    const sf::Text& text() const {
         return text_;
+    }
+
+    bool contains(const sf::Vector2f& position) const {
+        return button_.getGlobalBounds().contains(position);
     }
 
 private:

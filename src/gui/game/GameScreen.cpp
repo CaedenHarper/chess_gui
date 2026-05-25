@@ -17,7 +17,7 @@ void GameScreen::handleEngineTurn() {
     }
 }
 
-void GameScreen::handleEvent(const sf::Event& event) {
+ScreenCommand GameScreen::handleEvent(const sf::Event& event) {
     const InputMode mode{isPlayerTurn() ? InputMode::FullGameplay : InputMode::BoardAnnotationsOnly};
     const GameInputResult result =
         inputHandler_.handleEvent(event, game_, playerColor_, playerColor_, mode); // take playercolor == displaycolor
@@ -41,6 +41,8 @@ void GameScreen::handleEvent(const sf::Event& event) {
     if(result.clearRedHighlights()) {
         redHighlightSquares.fill(false);
     }
+
+    return ScreenCommand::None;
 }
 
 void GameScreen::update() {

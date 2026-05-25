@@ -63,7 +63,7 @@ public:
     GameScreen(GameScreen&& other) = delete;
     GameScreen& operator=(GameScreen&& other) = delete;
 
-    void handleEvent(const sf::Event& event) override;
+    ScreenCommand handleEvent(const sf::Event& event) override;
     void update() override;
     void render() override;
 

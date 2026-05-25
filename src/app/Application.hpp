@@ -27,6 +27,7 @@ private:
     void update();
     void render();
     void switchTo(ScreenID screen);
+    void handleScreenCommand(ScreenCommand command);
 
     sf::RenderWindow window_;
     std::unique_ptr<Screen> currentScreen_;

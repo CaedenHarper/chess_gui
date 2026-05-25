@@ -28,7 +28,8 @@ void Application::handleEvents() {
             return;
         }
 
-        currentScreen_->handleEvent(*event);
+        const ScreenCommand command = currentScreen_->handleEvent(*event);
+        handleScreenCommand(command);
     }
 }
 
@@ -45,12 +46,26 @@ void Application::switchTo(ScreenID screen) {
         case ScreenID::MainMenu:
             currentScreen_ = std::make_unique<MainMenuScreen>(window_);
             break;
-        case ScreenID::Game: {
-            const Color playerColor = Color::White;
-            currentScreen_ = std::make_unique<GameScreen>(window_, playerColor);
+        case ScreenID::WhiteGame: {
+            currentScreen_ = std::make_unique<GameScreen>(window_, Color::White);
+            break;
+        }
+        case ScreenID::BlackGame: {
+            currentScreen_ = std::make_unique<GameScreen>(window_, Color::Black);
             break;
         }
         case ScreenID::GameOver:
             break;
+    }
+}
+
+void Application::handleScreenCommand(ScreenCommand command) {
+    switch(command) {
+        case ScreenCommand::None:
+            break;
+        case ScreenCommand::StartWhiteGame:
+            switchTo(ScreenID::WhiteGame);
+        case ScreenCommand::StartBlackGame:
+            switchTo(ScreenID::BlackGame);
     }
 }

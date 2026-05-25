@@ -42,6 +42,7 @@ add_executable(chess
     src/gui/game/GameRenderer.cpp
     src/gui/game/GameScreen.cpp
 
+    src/gui/main_menu/MainMenuInputHandler.cpp
     src/gui/main_menu/MainMenuRenderer.cpp
     src/gui/main_menu/MainMenuScreen.cpp
 
@@ -70,6 +71,7 @@ add_library(chess_lib
     src/gui/game/GameRenderer.cpp
     src/gui/game/GameScreen.cpp
 
+    src/gui/main_menu/MainMenuInputHandler.cpp
     src/gui/main_menu/MainMenuRenderer.cpp
     src/gui/main_menu/MainMenuScreen.cpp
 
