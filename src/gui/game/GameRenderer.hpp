@@ -9,14 +9,14 @@
 struct GameRenderState {
     Color playerColor{};
 
-    std::optional<HeldPieceState> heldPiece;
+    const std::optional<HeldPieceState>& heldPiece;
 
     int currentEval{};
-    SearchStats currentStats;
-    sf::Time engineSearchTime;
+    const SearchStats& currentStats;
+    const sf::Time& engineSearchTime;
     bool engineThinking{};
 
-    std::array<bool, Utils::NUM_SQUARES> redHighlightSquares{};
+    const std::array<bool, Utils::NUM_SQUARES>& redHighlightSquares;
 } __attribute__((aligned(128))); // NOLINT[magic numbers] align to 128 bytes
 
 // NOTE: all Game& should be const Game& and should not be expected to modify Game.
