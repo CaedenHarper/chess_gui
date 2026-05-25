@@ -18,7 +18,7 @@ void GameRenderer::render(Game& game, const GameRenderState& state) {
 
     drawSquares(state.displayColor);
     drawHighlights(game, state);
-    drawPieces(game, state.heldPiece, state.displayColor);
+    drawPieces(game, state.heldPiece, state.displayColor, state.moveAnimation);
 
     if(state.moveAnimation != nullptr) {
         drawMoveAnimation(*state.moveAnimation);
@@ -42,9 +42,26 @@ void GameRenderer::drawSquares(Color displayColor) {
     }
 }
 
-void GameRenderer::drawPieces(Game& game, const std::optional<HeldPieceState>& heldPiece, Color displayColor) {
+void GameRenderer::drawPieces(
+    Game& game,
+    const std::optional<HeldPieceState>& heldPiece,
+    Color displayColor,
+    const MoveAnimation* animation
+) {
+    // -1 sentinel which never gets hit by square loop if does not exist
+    int heldPieceSkipSquare = heldPiece && heldPiece->isDragging ? heldPiece->heldSquare : -1;
+    int animationSkipSquare = animation != nullptr ? animation->toSquare : -1;
+
     for(int square = 0; square < Utils::NUM_SQUARES; square++) {
-        drawPieceOnSquare(game, square, heldPiece, displayColor);
+        if(square == heldPieceSkipSquare) {
+            continue;
+        }
+
+        if(square == animationSkipSquare) {
+            continue;
+        }
+
+        drawPieceOnSquare(game, square, displayColor);
     }
 }
 
@@ -137,27 +154,14 @@ void GameRenderer::drawText(const std::string& str, const sf::Vector2f& position
     window_->draw(text);
 }
 
-void GameRenderer::drawPieceOnSquare(
-    Game& game,
-    int square,
-    const std::optional<HeldPieceState>& heldPiece,
-    Color displayColor
-) {
+void GameRenderer::drawPieceOnSquare(Game& game, int square, Color displayColor) {
     if(game.isSquareEmpty(square)) {
-        return;
-    }
-
-    // skip squares with a held piece that is being dragged
-    if(heldPiece && heldPiece->isDragging && heldPiece->heldSquare == square) {
         return;
     }
 
     const Piece piece = game.pieceAtSquareForGui(square);
 
-    if(!piece.exists()) {
-        assert(false);
-        return;
-    }
+    assert(piece.exists());
 
     sf::Sprite sprite = makePieceSprite(piece);
     sprite.setPosition(RenderUtils::squareCenterPx(RenderUtils::getSquareFromDisplayPerspective(square, displayColor)));

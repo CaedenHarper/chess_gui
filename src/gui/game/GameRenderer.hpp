@@ -47,14 +47,19 @@ public:
 private:
     void clearWindow(const sf::Color& backgroundColor);
     void drawSquares(Color displayColor);
-    void drawPieces(Game& game, const std::optional<HeldPieceState>& heldPiece, Color displayColor);
+    void drawPieces(
+        Game& game,
+        const std::optional<HeldPieceState>& heldPiece,
+        Color displayColor,
+        const MoveAnimation* animation
+    );
     void drawMoveAnimation(const MoveAnimation& animation);
     void drawDraggedPiece(Game& game, const std::optional<HeldPieceState>& heldPiece);
     void drawEngineEval(int currentEval, Color playerColor);
     void drawEngineStats(const SearchStats& currentStats);
     void drawEngineTimer(const sf::Time& elapsed, bool thinking);
 
-    void drawPieceOnSquare(Game& game, int square, const std::optional<HeldPieceState>& heldPiece, Color displayColor);
+    void drawPieceOnSquare(Game& game, int square, Color displayColor);
     void drawSquare(int square, Color displayColor);
     void drawSquare(int square, const sf::Color& color, Color displayColor);
     void drawText(const std::string& str, const sf::Vector2f& position, int size);
