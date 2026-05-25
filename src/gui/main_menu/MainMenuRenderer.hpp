@@ -12,13 +12,20 @@ public:
     void render();
 
 private:
+    void drawBackground();
     void drawTitle();
-    void drawWhiteButton();
-    void drawBlackButton();
+    void drawSubtitle();
+    void drawFooter();
 
     void clearWindow(const sf::Color& backgroundColor);
-    void drawText(const std::string& str, const sf::Vector2f& position, int size);
-    void drawButton(MainMenuButton button);
+    void drawText(
+        const std::string& str,
+        const sf::Vector2f& position,
+        int size,
+        const sf::Color& color,
+        bool centered
+    );
+    void drawButton(const MainMenuButton& button);
 
     sf::RenderWindow* window_;
 };
