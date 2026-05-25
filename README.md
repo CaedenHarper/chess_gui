@@ -1,6 +1,6 @@
 # Chess (C++)
 
-A C++ chess project with a working GUI, CLI, and engine.
+A C++ chess project with a working GUI, CLI (WIP!), and engine.
 
 ## Features
 - Move generation and validation.
@@ -10,7 +10,7 @@ A C++ chess project with a working GUI, CLI, and engine.
 ## Requirements
 - C++17 compiled with clang.
 - CMake >= 4.2.1.
-- Written in windows, should also compile with Unix (may have to change some commands below).
+- Written for windows, should also compile with Unix (may have to change some commands below).
 
 ## Build
 1. Create the build directory:
