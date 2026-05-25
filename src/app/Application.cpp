@@ -41,22 +41,22 @@ void Application::render() {
     currentScreen_->render();
 }
 
-void Application::switchTo(ScreenID screen) {
-    switch(screen) {
-        case ScreenID::MainMenu:
-            currentScreen_ = std::make_unique<MainMenuScreen>(window_);
-            break;
-        case ScreenID::WhiteGame: {
-            currentScreen_ = std::make_unique<GameScreen>(window_, Color::White);
-            break;
-        }
-        case ScreenID::BlackGame: {
-            currentScreen_ = std::make_unique<GameScreen>(window_, Color::Black);
-            break;
-        }
-        case ScreenID::GameOver:
-            break;
+void Application::switchToMainMenu() {
+    currentScreen_ = std::make_unique<MainMenuScreen>(window_);
+}
+
+void Application::switchToGame(Color color) {
+    if(color == Color::White) {
+        currentScreen_ = std::make_unique<GameScreen>(window_, Color::White);
+        return;
     }
+
+    if(color == Color::Black) {
+        currentScreen_ = std::make_unique<GameScreen>(window_, Color::Black);
+        return;
+    }
+
+    assert(false);
 }
 
 void Application::handleScreenCommand(ScreenCommand command) {
@@ -64,8 +64,10 @@ void Application::handleScreenCommand(ScreenCommand command) {
         case ScreenCommand::None:
             break;
         case ScreenCommand::StartWhiteGame:
-            switchTo(ScreenID::WhiteGame);
+            switchToGame(Color::White);
+            break;
         case ScreenCommand::StartBlackGame:
-            switchTo(ScreenID::BlackGame);
+            switchToGame(Color::Black);
+            break;
     }
 }

@@ -2,7 +2,6 @@
 
 #include <SFML/Graphics.hpp>
 
-enum class ScreenID { MainMenu, WhiteGame, BlackGame, GameOver };
 enum class ScreenCommand { None, StartWhiteGame, StartBlackGame };
 
 class Screen {

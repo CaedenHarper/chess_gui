@@ -4,6 +4,7 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/System/Vector2.hpp>
 
+#include "../game/Piece.hpp"
 #include "../gui/resources/Screen.hpp"
 #include "AppUtils.hpp"
 
@@ -17,7 +18,7 @@ public:
               std::string{AppUtils::WINDOW_TITLE}
           } {
         window_.setFramerateLimit(AppUtils::MAX_FPS);
-        switchTo(ScreenID::MainMenu);
+        switchToMainMenu(); // start program on main menu
     }
 
     void run();
@@ -26,7 +27,8 @@ private:
     void handleEvents();
     void update();
     void render();
-    void switchTo(ScreenID screen);
+    void switchToMainMenu();
+    void switchToGame(Color color);
     void handleScreenCommand(ScreenCommand command);
 
     sf::RenderWindow window_;
