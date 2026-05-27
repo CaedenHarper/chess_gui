@@ -2,7 +2,6 @@
 
 #include <SFML/Graphics.hpp>
 
-#include "../../engine/Engine.hpp"
 #include "GameInputHandler.hpp"
 #include "Highlight.hpp"
 
@@ -24,7 +23,6 @@ struct GameRenderState {
     const std::optional<HeldPieceState>& heldPiece;
 
     int currentEval{};
-    const SearchStats& currentStats;
     const sf::Time& engineSearchTime;
     bool engineThinking{};
 
@@ -56,7 +54,6 @@ private:
     void drawMoveAnimation(const MoveAnimation& animation);
     void drawDraggedPiece(Game& game, const std::optional<HeldPieceState>& heldPiece);
     void drawEngineEval(int currentEval, Color playerColor);
-    void drawEngineStats(const SearchStats& currentStats);
     void drawEngineTimer(const sf::Time& elapsed, bool thinking);
 
     void drawPieceOnSquare(Game& game, int square, Color displayColor);

@@ -68,7 +68,6 @@ void GameScreen::render() {
         playerColor_, // take displayColor == playerColor
         inputHandler_.heldPiece(),
         currentEval_,
-        currentStats_,
         engineSearchTime(),
         engineThread_.thinking,
         redHighlightSquares_,

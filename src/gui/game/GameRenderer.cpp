@@ -26,7 +26,6 @@ void GameRenderer::render(Game& game, const GameRenderState& state) {
 
     drawDraggedPiece(game, state.heldPiece);
     drawEngineEval(state.currentEval, state.displayColor);
-    drawEngineStats(state.currentStats);
     drawEngineTimer(state.engineSearchTime, state.engineThinking);
 
     window_->display();
@@ -107,22 +106,6 @@ void GameRenderer::drawEngineEval(int currentEval, Color playerColor) {
     }
 
     drawText("Eval: " + Eval::evalToString(whiteRelativeEval), evalTextPosition, evalTextFontSize);
-}
-
-void GameRenderer::drawEngineStats(const SearchStats& currentStats) {
-    constexpr sf::Vector2f statsTextPosition = {20.F, 875.F};
-    const int statsTextFontSize = 25;
-
-    // Nodes Searched: n
-    // QNodes Searched: q
-    // Positions Searched: n + q
-    drawText(
-        "Nodes Searched: " + std::to_string(currentStats.nodes) +
-            "\nQNodes Searched: " + std::to_string(currentStats.qnodes) +
-            "\nPositions Searched: " + std::to_string(currentStats.nodes + currentStats.qnodes),
-        statsTextPosition,
-        statsTextFontSize
-    );
 }
 
 void GameRenderer::drawEngineTimer(const sf::Time& elapsed, bool thinking) {
