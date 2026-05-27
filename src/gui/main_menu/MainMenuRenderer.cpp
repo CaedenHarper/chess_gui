@@ -10,10 +10,8 @@ void MainMenuRenderer::render() {
     drawBackground();
     drawButton(MainMenuLayout::menuCard);
     drawTitle();
-    drawSubtitle();
     drawButton(MainMenuLayout::whiteButton);
     drawButton(MainMenuLayout::blackButton);
-    drawFooter();
 
     window_->display();
 }
@@ -53,14 +51,6 @@ void MainMenuRenderer::drawTitle() {
     underline.setFillColor(sf::Color{212, 175, 55});
 
     window_->draw(underline);
-}
-
-void MainMenuRenderer::drawSubtitle() {
-    drawText("Choose your side", {500.F, 300.F}, 28, sf::Color{180, 180, 180}, true);
-}
-
-void MainMenuRenderer::drawFooter() {
-    drawText("SFML Chess Engine", {500.F, 625.F}, 20, sf::Color{120, 120, 120}, true);
 }
 
 void MainMenuRenderer::clearWindow(const sf::Color& backgroundColor) {

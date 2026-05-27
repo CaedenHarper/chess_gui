@@ -14,8 +14,6 @@ public:
 private:
     void drawBackground();
     void drawTitle();
-    void drawSubtitle();
-    void drawFooter();
 
     void clearWindow(const sf::Color& backgroundColor);
     void drawText(
