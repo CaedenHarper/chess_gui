@@ -79,6 +79,7 @@ public:
     }
 
 private:
+    GameInputResult keyPressEvent(const sf::Event::KeyPressed);
     GameInputResult mouseClickEvent(
         const sf::Event::MouseButtonPressed& event,
         Game& game,

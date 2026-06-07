@@ -1,5 +1,8 @@
 #include "GameInputHandler.hpp"
 
+#include <SFML/Window/Event.hpp>
+#include <SFML/Window/Keyboard.hpp>
+
 #include "../resources/RenderUtils.hpp"
 
 GameInputResult GameInputHandler::handleEvent(
@@ -9,6 +12,12 @@ GameInputResult GameInputHandler::handleEvent(
     Color displayColor,
     InputMode mode
 ) {
+    // Allow unpausing (keyboard input) before handling disabled input mode
+    if(const auto* keyPressed = event.getIf<sf::Event::KeyPressed>()) {
+        return keyPressEvent(*keyPressed);
+    }
+
+    // possible mouse clicks
     if(mode == InputMode::Disabled) {
         return GameInputResult::none();
     }
@@ -23,6 +32,14 @@ GameInputResult GameInputHandler::handleEvent(
 
     if(const auto* mouseUnclicked = event.getIf<sf::Event::MouseButtonReleased>()) {
         return mouseUnclickEvent(*mouseUnclicked, game, displayColor, mode);
+    }
+
+    return GameInputResult::none();
+}
+
+GameInputResult GameInputHandler::keyPressEvent(const sf::Event::KeyPressed event) {
+    if(event.code == sf::Keyboard::Key::Escape) {
+        return GameInputResult::pause();
     }
 
     return GameInputResult::none();
