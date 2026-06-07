@@ -71,7 +71,8 @@ void GameScreen::render() {
         engineSearchTime(),
         engineThread_.thinking,
         redHighlightSquares_,
-        moveAnimation_ ? &*moveAnimation_ : nullptr // only pass pointer here if moveAnimation_ exists
+        moveAnimation_ ? &*moveAnimation_ : nullptr, // only pass pointer here if moveAnimation_ exists
+        isPaused_
     };
     renderer_.render(game_, state);
 }

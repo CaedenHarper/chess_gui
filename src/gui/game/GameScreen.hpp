@@ -95,4 +95,6 @@ private:
     int currentEval_{};
     SearchStats currentStats_;
     std::optional<MoveAnimation> moveAnimation_;
+
+    bool isPaused_;
 };

@@ -28,6 +28,10 @@ void GameRenderer::render(Game& game, const GameRenderState& state) {
     drawEngineEval(state.currentEval, state.displayColor);
     drawEngineTimer(state.engineSearchTime, state.engineThinking);
 
+    if(state.isPaused) {
+        drawPauseScreen();
+    }
+
     window_->display();
 }
 
@@ -126,6 +130,18 @@ void GameRenderer::drawEngineTimer(const sf::Time& elapsed, bool thinking) {
     }
 
     drawText(out.str(), engineTimerPosition, engineTextFontSize);
+}
+
+void GameRenderer::drawPauseScreen() {
+    // Draw gray overlay
+    const sf::Vector2u windowSize = window_->getSize();
+    sf::RectangleShape grayPauseOverlay{{static_cast<float>(windowSize.x), static_cast<float>(windowSize.y)}};
+    grayPauseOverlay.setFillColor({59, 59, 59, 225});
+    grayPauseOverlay.setPosition({0, 0});
+    window_->draw(grayPauseOverlay);
+
+    // Draw PAUSED! text
+    drawText("PAUSED!", {windowSize.x / 3.f, windowSize.y / 3.f}, 80);
 }
 
 void GameRenderer::drawText(const std::string& str, const sf::Vector2f& position, int size) {
