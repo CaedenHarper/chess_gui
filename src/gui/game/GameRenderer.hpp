@@ -51,7 +51,7 @@ private:
         Color displayColor,
         const MoveAnimation* animation
     );
-    void drawMoveAnimation(const MoveAnimation& animation);
+    void drawMoveAnimation(const MoveAnimation& animation, Color displayColor);
     void drawDraggedPiece(Game& game, const std::optional<HeldPieceState>& heldPiece);
     void drawEngineEval(int currentEval, Color playerColor);
     void drawEngineTimer(const sf::Time& elapsed, bool thinking);

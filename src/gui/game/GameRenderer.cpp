@@ -21,7 +21,7 @@ void GameRenderer::render(Game& game, const GameRenderState& state) {
     drawPieces(game, state.heldPiece, state.displayColor, state.moveAnimation);
 
     if(state.moveAnimation != nullptr) {
-        drawMoveAnimation(*state.moveAnimation);
+        drawMoveAnimation(*state.moveAnimation, state.displayColor);
     }
 
     drawDraggedPiece(game, state.heldPiece);
@@ -64,14 +64,16 @@ void GameRenderer::drawPieces(
     }
 }
 
-void GameRenderer::drawMoveAnimation(const MoveAnimation& animation) {
+void GameRenderer::drawMoveAnimation(const MoveAnimation& animation, Color displayColor) {
     const float elapsed = animation.clock.getElapsedTime().asSeconds();
     const float duration = animation.duration.asSeconds();
 
     const float progress = std::min(elapsed / duration, 1.0F);
 
-    const sf::Vector2f fromPx = RenderUtils::squareCenterPx(animation.fromSquare);
-    const sf::Vector2f toPx = RenderUtils::squareCenterPx(animation.toSquare);
+    const sf::Vector2f fromPx =
+        RenderUtils::squareCenterPx(RenderUtils::getSquareFromDisplayPerspective(animation.fromSquare, displayColor));
+    const sf::Vector2f toPx =
+        RenderUtils::squareCenterPx(RenderUtils::getSquareFromDisplayPerspective(animation.toSquare, displayColor));
 
     const sf::Vector2f position{fromPx.x + (toPx.x - fromPx.x) * progress, fromPx.y + (toPx.y - fromPx.y) * progress};
 
