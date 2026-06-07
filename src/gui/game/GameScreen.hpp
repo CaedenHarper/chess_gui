@@ -78,6 +78,7 @@ private:
     bool isEngineTurn();
     bool isPlayerTurn();
     sf::Time engineSearchTime() const;
+    InputMode inputMode();
 
     Game game_;
     Engine engine_;

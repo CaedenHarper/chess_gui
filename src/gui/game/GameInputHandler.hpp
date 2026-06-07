@@ -9,7 +9,7 @@
 
 class GameInputResult {
 public:
-    enum class Type : std::int8_t { None, InvalidMove, MoveMade, RedHighlight };
+    enum class Type : std::int8_t { None, InvalidMove, MoveMade, RedHighlight, Pause };
 
     static GameInputResult none(bool cancelRedHighlights = false) {
         return GameInputResult{Type::None, std::nullopt, cancelRedHighlights};
@@ -25,6 +25,10 @@ public:
 
     static GameInputResult redHighlight(int square) {
         return GameInputResult{Type::RedHighlight, square, false};
+    }
+
+    static GameInputResult pause() {
+        return GameInputResult{Type::Pause, std::nullopt, false};
     }
 
     Type type() const {

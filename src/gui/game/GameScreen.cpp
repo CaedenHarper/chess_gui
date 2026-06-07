@@ -1,5 +1,6 @@
 #include "GameScreen.hpp"
 
+#include "GameInputHandler.hpp"
 #include "GameRenderer.hpp"
 
 #include <iostream>
@@ -35,9 +36,9 @@ void GameScreen::updateMoveAnimation() {
 }
 
 ScreenCommand GameScreen::handleEvent(const sf::Event& event) {
-    const InputMode mode{isPlayerTurn() ? InputMode::FullGameplay : InputMode::BoardAnnotationsOnly};
-    const GameInputResult result =
-        inputHandler_.handleEvent(event, game_, playerColor_, playerColor_, mode); // take playercolor == displaycolor
+    const GameInputResult result = inputHandler_.handleEvent(
+        event, game_, playerColor_, playerColor_, inputMode()
+    ); // take playercolor == displaycolor
     switch(result.type()) {
         case GameInputResult::Type::None:
         case GameInputResult::Type::InvalidMove: // TODO: consider an invalid move sound
@@ -52,6 +53,9 @@ ScreenCommand GameScreen::handleEvent(const sf::Event& event) {
             }
 
             redHighlightSquares_.at(*result.square()) = !redHighlightSquares_.at(*result.square());
+            break;
+        case GameInputResult::Type::Pause:
+            isPaused_ = !isPaused_;
             break;
     }
 
@@ -165,4 +169,16 @@ sf::Time GameScreen::engineSearchTime() const {
     }
 
     return engineThread_.lastSearchDuration;
+}
+
+InputMode GameScreen::inputMode() {
+    if(isPaused_) {
+        return InputMode::Disabled;
+    }
+
+    if(!isPlayerTurn()) {
+        return InputMode::BoardAnnotationsOnly;
+    }
+
+    return InputMode::FullGameplay;
 }
