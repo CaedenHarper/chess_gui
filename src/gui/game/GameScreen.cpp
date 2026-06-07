@@ -20,6 +20,11 @@ void GameScreen::handleEngineTurn() {
         return;
     }
 
+    // Don't apply engine result if we're paused
+    if(isPaused_) {
+        return;
+    }
+
     if(auto result = tryTakeEngineResult()) {
         applyEngineResult(*result);
     }
