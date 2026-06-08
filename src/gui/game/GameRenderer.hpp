@@ -45,7 +45,6 @@ public:
     void render(Game& game, const GameRenderState& state);
 
 private:
-    void clearWindow(const sf::Color& backgroundColor);
     void drawSquares(Color displayColor);
     void drawPieces(
         Game& game,
@@ -62,7 +61,6 @@ private:
     void drawPieceOnSquare(Game& game, int square, Color displayColor);
     void drawSquare(int square, Color displayColor);
     void drawSquare(int square, const sf::Color& color, Color displayColor);
-    void drawText(const std::string& str, const sf::Vector2f& position, int size);
 
     void drawHighlights(Game& game, const GameRenderState& state);
     void drawSelectedSquareHighlight(const std::optional<HeldPieceState>& heldPiece, Color displayColor);
