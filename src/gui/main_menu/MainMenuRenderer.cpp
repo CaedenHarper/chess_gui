@@ -5,13 +5,13 @@
 #include "MainMenuLayout.hpp"
 
 void MainMenuRenderer::render() {
-    clearWindow(sf::Color::Black);
+    RenderUtils::clearWindow(window_, sf::Color::Black);
 
     drawBackground();
-    drawButton(MainMenuLayout::menuCard);
+    RenderUtils::drawButton(window_, MainMenuLayout::menuCard);
     drawTitle();
-    drawButton(MainMenuLayout::whiteButton);
-    drawButton(MainMenuLayout::blackButton);
+    RenderUtils::drawButton(window_, MainMenuLayout::whiteButton);
+    RenderUtils::drawButton(window_, MainMenuLayout::blackButton);
 
     window_->display();
 }
@@ -37,10 +37,12 @@ void MainMenuRenderer::drawTitle() {
     constexpr int titleSize = 96;
 
     // Shadow
-    drawText("CHESS", {titlePosition.x + 4.F, titlePosition.y + 4.F}, titleSize, sf::Color{20, 20, 20}, true);
+    RenderUtils::drawText(
+        window_, "CHESS", {titlePosition.x + 4.F, titlePosition.y + 4.F}, titleSize, sf::Color{20, 20, 20}, true
+    );
 
     // Main title
-    drawText("CHESS", titlePosition, titleSize, sf::Color{245, 245, 245}, true);
+    RenderUtils::drawText(window_, "CHESS", titlePosition, titleSize, sf::Color{245, 245, 245}, true);
 
     // Gold underline
     constexpr sf::Vector2f underlineSize{180.F, 3.F};
@@ -51,38 +53,4 @@ void MainMenuRenderer::drawTitle() {
     underline.setFillColor(sf::Color{212, 175, 55});
 
     window_->draw(underline);
-}
-
-void MainMenuRenderer::clearWindow(const sf::Color& backgroundColor) {
-    window_->clear(backgroundColor);
-}
-
-void MainMenuRenderer::drawText(
-    const std::string& str,
-    const sf::Vector2f& position,
-    int size,
-    const sf::Color& color,
-    bool centered
-) {
-    sf::Text text{RenderUtils::FONT};
-
-    text.setString(str);
-    text.setCharacterSize(size);
-    text.setFillColor(color);
-
-    if(centered) {
-        const sf::FloatRect bounds = text.getLocalBounds();
-        text.setOrigin({bounds.position.x + bounds.size.x / 2.F, bounds.position.y + bounds.size.y / 2.F});
-    }
-
-    text.setPosition(position);
-
-    window_->draw(text);
-}
-
-void MainMenuRenderer::drawButton(const MainMenuButton& button) {
-    window_->draw(button.button());
-    if(button.hasText()) {
-        window_->draw(*button.text());
-    }
 }

@@ -1,10 +1,12 @@
 #pragma once
 
 #include <SFML/Graphics.hpp>
+#include <SFML/Graphics/RenderWindow.hpp>
 
 #include "../../game/Piece.hpp"
 #include "../../game/Utils.hpp"
 #include "../game/Highlight.hpp"
+#include "Button.hpp"
 
 namespace RenderUtils {
 // -- CONSTANTS --
@@ -47,6 +49,42 @@ inline constexpr sf::Color LIGHT_CYAN_SQUARE_COLOR{99, 208, 228};
 inline constexpr Highlight CYAN_HIGHLIGHT{LIGHT_CYAN_SQUARE_COLOR, DARK_CYAN_SQUARE_COLOR};
 
 // -- HELPER FUNCTIONS --
+
+constexpr void clearWindow(sf::RenderWindow* window, const sf::Color& backgroundColor) {
+    window->clear(backgroundColor);
+}
+
+inline void drawText(
+    sf::RenderWindow* window,
+    const std::string& str,
+    const sf::Vector2f& position,
+    int size,
+    const sf::Color& color,
+    bool centered
+) {
+    sf::Text text{RenderUtils::FONT};
+
+    text.setString(str);
+    text.setCharacterSize(size);
+    text.setFillColor(color);
+
+    if(centered) {
+        const sf::FloatRect bounds = text.getLocalBounds();
+        text.setOrigin({bounds.position.x + bounds.size.x / 2.F, bounds.position.y + bounds.size.y / 2.F});
+    }
+
+    text.setPosition(position);
+
+    window->draw(text);
+}
+
+constexpr void drawButton(sf::RenderWindow* window, const Button& button) {
+    window->draw(button.button());
+    if(button.hasText()) {
+        window->draw(*button.text());
+    }
+}
+
 constexpr int getSquareFromDisplayPerspective(int square, Color displayColor) {
     if(displayColor == Color::White) {
         return square;

@@ -9,12 +9,13 @@
 #include "../resources/RenderUtils.hpp"
 #include "../resources/TextureCache.hpp"
 #include "GameInputHandler.hpp"
+#include "PauseLayout.hpp"
 
 #include <optional>
 #include <sstream>
 
 void GameRenderer::render(Game& game, const GameRenderState& state) {
-    clearWindow(sf::Color::Black);
+    RenderUtils::clearWindow(window_, sf::Color::Black);
 
     drawSquares(state.displayColor);
     drawHighlights(game, state);
@@ -28,11 +29,11 @@ void GameRenderer::render(Game& game, const GameRenderState& state) {
     drawEngineEval(state.currentEval, state.displayColor);
     drawEngineTimer(state.engineSearchTime, state.engineThinking);
 
-    window_->display();
-}
+    if(state.isPaused) {
+        drawPauseScreen();
+    }
 
-void GameRenderer::clearWindow(const sf::Color& backgroundColor) {
-    window_->clear(backgroundColor);
+    window_->display();
 }
 
 void GameRenderer::drawSquares(Color displayColor) {
@@ -107,7 +108,14 @@ void GameRenderer::drawEngineEval(int currentEval, Color playerColor) {
         whiteRelativeEval = -whiteRelativeEval;
     }
 
-    drawText("Eval: " + Eval::evalToString(whiteRelativeEval), evalTextPosition, evalTextFontSize);
+    RenderUtils::drawText(
+        window_,
+        "Eval: " + Eval::evalToString(whiteRelativeEval),
+        evalTextPosition,
+        evalTextFontSize,
+        sf::Color::White,
+        false
+    );
 }
 
 void GameRenderer::drawEngineTimer(const sf::Time& elapsed, bool thinking) {
@@ -125,18 +133,23 @@ void GameRenderer::drawEngineTimer(const sf::Time& elapsed, bool thinking) {
         out << "Last move: " << seconds << "s";
     }
 
-    drawText(out.str(), engineTimerPosition, engineTextFontSize);
+    RenderUtils::drawText(window_, out.str(), engineTimerPosition, engineTextFontSize, sf::Color::White, false);
 }
 
-void GameRenderer::drawText(const std::string& str, const sf::Vector2f& position, int size) {
-    sf::Text text{RenderUtils::FONT};
+void GameRenderer::drawPauseScreen() {
+    // Draw gray overlay
+    const sf::Vector2u windowSize = window_->getSize();
+    sf::RectangleShape grayPauseOverlay{{static_cast<float>(windowSize.x), static_cast<float>(windowSize.y)}};
+    grayPauseOverlay.setFillColor({59, 59, 59, 225});
+    grayPauseOverlay.setPosition({0, 0});
+    window_->draw(grayPauseOverlay);
 
-    text.setString(str);
-    text.setPosition(position);
-    text.setFillColor(sf::Color::White);
-    text.setCharacterSize(size);
+    // Draw PAUSED! text
+    RenderUtils::drawText(window_, "PAUSED!", {windowSize.x / 3.f, windowSize.y / 3.f}, 80, sf::Color::White, false);
 
-    window_->draw(text);
+    // Draw buttons
+    RenderUtils::drawButton(window_, PauseLayout::restartGameButton);
+    RenderUtils::drawButton(window_, PauseLayout::mainMenuButton);
 }
 
 void GameRenderer::drawPieceOnSquare(Game& game, int square, Color displayColor) {

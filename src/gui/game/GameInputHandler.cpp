@@ -1,28 +1,42 @@
 #include "GameInputHandler.hpp"
 
+#include <SFML/Window/Event.hpp>
+#include <SFML/Window/Keyboard.hpp>
+
 #include "../resources/RenderUtils.hpp"
+#include "PauseLayout.hpp"
 
 GameInputResult GameInputHandler::handleEvent(
     const sf::Event& event,
     Game& game,
     Color playerColor,
     Color displayColor,
+    bool isPaused,
     InputMode mode
 ) {
-    if(mode == InputMode::Disabled) {
-        return GameInputResult::none();
+    // Allow unpausing (keyboard input) before handling disabled input mode
+    if(const auto* keyPressed = event.getIf<sf::Event::KeyPressed>()) {
+        return keyPressEvent(*keyPressed);
     }
 
     if(const auto* mouseClicked = event.getIf<sf::Event::MouseButtonPressed>()) {
-        return mouseClickEvent(*mouseClicked, game, playerColor, displayColor, mode);
+        return mouseClickEvent(*mouseClicked, game, playerColor, displayColor, isPaused, mode);
     }
 
     if(const auto* mouseMoved = event.getIf<sf::Event::MouseMoved>()) {
-        return mouseMovementEvent(*mouseMoved);
+        return mouseMovementEvent(*mouseMoved, mode);
     }
 
     if(const auto* mouseUnclicked = event.getIf<sf::Event::MouseButtonReleased>()) {
         return mouseUnclickEvent(*mouseUnclicked, game, displayColor, mode);
+    }
+
+    return GameInputResult::none();
+}
+
+GameInputResult GameInputHandler::keyPressEvent(const sf::Event::KeyPressed event) {
+    if(event.code == sf::Keyboard::Key::Escape) {
+        return GameInputResult::pause();
     }
 
     return GameInputResult::none();
@@ -33,20 +47,25 @@ GameInputResult GameInputHandler::mouseClickEvent(
     Game& game,
     Color playerColor,
     Color displayColor,
+    bool isPaused,
     InputMode mode
 ) {
     if(event.button == sf::Mouse::Button::Right) {
-        return rightClickEvent(event, displayColor);
+        return rightClickEvent(event, displayColor, mode);
     }
 
     if(event.button == sf::Mouse::Button::Left) {
-        return leftClickEvent(event, game, playerColor, displayColor, mode);
+        return leftClickEvent(event, game, playerColor, displayColor, isPaused, mode);
     }
 
     return GameInputResult::none();
 }
 
-GameInputResult GameInputHandler::mouseMovementEvent(const sf::Event::MouseMoved& event) {
+GameInputResult GameInputHandler::mouseMovementEvent(const sf::Event::MouseMoved& event, InputMode mode) {
+    if(mode == InputMode::Disabled) {
+        return GameInputResult::none();
+    }
+
     if(!heldPiece_) {
         return GameInputResult::none();
     };
@@ -63,6 +82,10 @@ GameInputResult GameInputHandler::mouseUnclickEvent(
     Color displayColor,
     InputMode mode
 ) {
+    if(mode == InputMode::Disabled) {
+        return GameInputResult::none();
+    }
+
     // only allow left click releases on the physical board
     if(event.position.x > RenderUtils::BOARD_WIDTH_PX || event.position.y > RenderUtils::BOARD_HEIGHT_PX) {
         // release piece if we click oob
@@ -116,9 +139,24 @@ GameInputResult GameInputHandler::leftClickEvent(
     Game& game,
     Color playerColor,
     Color displayColor,
+    bool isPaused,
     InputMode mode
 ) {
     const sf::Vector2i mousePos = event.position;
+
+    // handle pause buttons
+    if(isPaused && PauseLayout::restartGameButton.contains(mousePos)) {
+        return GameInputResult::restartGame();
+    }
+
+    if(isPaused && PauseLayout::mainMenuButton.contains(mousePos)) {
+        return GameInputResult::mainMenu();
+    }
+
+    // all remaining actions are only allowed when in full gameplay mode
+    if(mode == InputMode::Disabled) {
+        return GameInputResult::none(false);
+    }
 
     // only allow left clicks on the physical board
     if(mousePos.x > RenderUtils::BOARD_WIDTH_PX || mousePos.y > RenderUtils::BOARD_HEIGHT_PX) {
@@ -173,7 +211,15 @@ GameInputResult GameInputHandler::leftClickEvent(
     return GameInputResult::invalidMove();
 }
 
-GameInputResult GameInputHandler::rightClickEvent(const sf::Event::MouseButtonPressed& event, Color displayColor) {
+GameInputResult GameInputHandler::rightClickEvent(
+    const sf::Event::MouseButtonPressed& event,
+    Color displayColor,
+    InputMode mode
+) {
+    if(mode == InputMode::Disabled) {
+        return GameInputResult::none();
+    }
+
     // right click cancels any held square
     if(heldPiece_) {
         heldPiece_.reset();

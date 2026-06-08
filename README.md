@@ -63,6 +63,7 @@ ctest --test-dir build-debug --verbose    # debug
 - Extract shared logic between InputHandlers
 - Speed up main menu -> game loading
 - Allow resizing to work properly
+- Fix engine timer incrementing even when paused
 
 ## TODOs (testing)
 - Unit tests for Piece, Move, Game

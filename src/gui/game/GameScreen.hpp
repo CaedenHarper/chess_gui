@@ -78,6 +78,7 @@ private:
     bool isEngineTurn();
     bool isPlayerTurn();
     sf::Time engineSearchTime() const;
+    InputMode inputMode();
 
     Game game_;
     Engine engine_;
@@ -95,4 +96,6 @@ private:
     int currentEval_{};
     SearchStats currentStats_;
     std::optional<MoveAnimation> moveAnimation_;
+
+    bool isPaused_ = false;
 };
