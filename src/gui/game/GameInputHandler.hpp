@@ -9,7 +9,7 @@
 
 class GameInputResult {
 public:
-    enum class Type : std::int8_t { None, InvalidMove, MoveMade, RedHighlight, Pause };
+    enum class Type : std::int8_t { None, InvalidMove, MoveMade, RedHighlight, Pause, RestartGame, MainMenu };
 
     static GameInputResult none(bool cancelRedHighlights = false) {
         return GameInputResult{Type::None, std::nullopt, cancelRedHighlights};
@@ -29,6 +29,14 @@ public:
 
     static GameInputResult pause() {
         return GameInputResult{Type::Pause, std::nullopt, false};
+    }
+
+    static GameInputResult restartGame() {
+        return GameInputResult{Type::RestartGame, std::nullopt, false};
+    }
+
+    static GameInputResult mainMenu() {
+        return GameInputResult{Type::MainMenu, std::nullopt, false};
     }
 
     Type type() const {
@@ -71,6 +79,7 @@ public:
         Game& game,
         Color playerColor,
         Color displayColor,
+        bool isPaused,
         InputMode mode
     );
 
@@ -85,9 +94,10 @@ private:
         Game& game,
         Color playerColor,
         Color displayColor,
+        bool isPaused,
         InputMode mode
     );
-    GameInputResult mouseMovementEvent(const sf::Event::MouseMoved& event);
+    GameInputResult mouseMovementEvent(const sf::Event::MouseMoved& event, InputMode mode);
     GameInputResult mouseUnclickEvent(
         const sf::Event::MouseButtonReleased& event,
         Game& game,
@@ -99,9 +109,10 @@ private:
         Game& game,
         Color playerColor,
         Color displayColor,
+        bool isPaused,
         InputMode mode
     );
-    GameInputResult rightClickEvent(const sf::Event::MouseButtonPressed& event, Color displayColor);
+    GameInputResult rightClickEvent(const sf::Event::MouseButtonPressed& event, Color displayColor, InputMode mode);
 
     std::optional<HeldPieceState> heldPiece_;
 };

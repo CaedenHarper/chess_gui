@@ -97,5 +97,5 @@ private:
     SearchStats currentStats_;
     std::optional<MoveAnimation> moveAnimation_;
 
-    bool isPaused_;
+    bool isPaused_ = false;
 };

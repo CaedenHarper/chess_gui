@@ -42,7 +42,7 @@ void GameScreen::updateMoveAnimation() {
 
 ScreenCommand GameScreen::handleEvent(const sf::Event& event) {
     const GameInputResult result = inputHandler_.handleEvent(
-        event, game_, playerColor_, playerColor_, inputMode()
+        event, game_, playerColor_, playerColor_, isPaused_, inputMode()
     ); // take playercolor == displaycolor
     switch(result.type()) {
         case GameInputResult::Type::None:
@@ -62,6 +62,13 @@ ScreenCommand GameScreen::handleEvent(const sf::Event& event) {
         case GameInputResult::Type::Pause:
             isPaused_ = !isPaused_;
             break;
+        case GameInputResult::Type::RestartGame:
+            if(playerColor_ == Color::White) {
+                return ScreenCommand::StartWhiteGame;
+            }
+            return ScreenCommand::StartBlackGame;
+        case GameInputResult::Type::MainMenu:
+            return ScreenCommand::GoToMainMenu;
     }
 
     if(result.clearRedHighlights()) {

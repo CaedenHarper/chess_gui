@@ -64,5 +64,8 @@ void Application::handleScreenCommand(ScreenCommand command) {
         case ScreenCommand::StartBlackGame:
             switchToGame(Color::Black);
             break;
+        case ScreenCommand::GoToMainMenu:
+            switchToMainMenu();
+            break;
     }
 }

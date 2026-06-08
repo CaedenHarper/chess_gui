@@ -2,7 +2,7 @@
 
 #include <SFML/Graphics.hpp>
 
-enum class ScreenCommand { None, StartWhiteGame, StartBlackGame };
+enum class ScreenCommand { None, StartWhiteGame, StartBlackGame, GoToMainMenu };
 
 class Screen {
 public:

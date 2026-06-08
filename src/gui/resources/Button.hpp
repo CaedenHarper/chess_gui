@@ -65,6 +65,10 @@ public:
         return button_.getGlobalBounds().contains(position);
     }
 
+    bool contains(const sf::Vector2i& position) const {
+        return button_.getGlobalBounds().contains({static_cast<float>(position.x), static_cast<float>(position.y)});
+    }
+
 private:
     const sf::Vector2f size_;
     const sf::Vector2f position_;
